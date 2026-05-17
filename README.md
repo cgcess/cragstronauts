@@ -1,4 +1,4 @@
-# Climbing Trip Planner
+# Cragstronauts
 
 A small webapp for coordinating a single group climbing trip: the organizer sets up the trip (location, dates, accommodation, gear categories), and other participants land on the app, join, complete a signup swipe, and contribute cars and gear from the main tabs.
 
@@ -43,3 +43,7 @@ Then open http://localhost:3000. The Vite dev server proxies API calls to the ba
 
 - **Wipe the trip:** stop the backend, delete `backend/trip.db`, and restart. The schema is recreated on startup.
 - **Switch user in the browser:** use the "switch user" action in the UI, or clear the `climbingTrip.userId` and `climbingTrip.signupDone.*` keys from localStorage.
+
+## TODO
+- When initially joining a trip, the app should immediately ask the initial questions upon entering the user's name
+- Make the UI nicer

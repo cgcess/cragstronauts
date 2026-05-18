@@ -1,0 +1,21 @@
+{
+  "name": "@cragstronauts/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "echo 'no build step'",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "do-orm": "github:juanibiapina/do-orm",
+    "hono": "^4.12.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "wrangler": "^4.68.1"
+  }
+}

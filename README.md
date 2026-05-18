@@ -4,44 +4,38 @@ A small webapp for coordinating a single group climbing trip: the organizer sets
 
 ## Architecture
 
-- **Backend** — FastAPI + SQLite (`backend/app.py`). The database file `trip.db` is created automatically on first startup. Runs on port `8000` and exposes a JSON API under `/api/*`.
-- **Frontend** — React 18 + Vite + framer-motion (`frontend/`). Runs on port `3000`. A stage machine in `src/App.jsx` routes between the Organizer Wizard, Landing, Signup Swipe, and the Main Tabs (Info / Cars / Gear).
-- **Schema** is single-trip today (everything is scoped to `DEFAULT_TRIP_ID = 1`), but each row carries a `trip_id` so multi-trip is a future change.
+- **Worker** (`apps/api`) — Cloudflare Worker using Hono. Serves the JSON API under `/api/*` and the frontend as static assets.
+- **Durable Object** — `TripDO` with SQLite storage holds all state in a single instance (named `"default"`). Schema managed via do-orm migrations.
+- **Frontend** (`apps/web`) — React 18 + Vite + framer-motion. A state machine in `src/App.jsx` routes between the Organizer Wizard, Landing, Signup Swipe, and the Main Tabs (Info / Cars / Gear).
 
 ## Requirements
 
-- Python 3.10+ (uses PEP 604 type syntax)
-- Node.js 18+ and npm
-
-Python packages are listed in `requirements_python.txt`. JS packages are listed in `frontend/package.json` (also mirrored in `requirements_javascript.txt` for reference).
+- Node.js 18+ and pnpm
 
 ## Running locally
 
-### 1. Backend
-
 ```bash
-cd backend
-pip install -r ../requirements_python.txt
-python3 -m uvicorn app:app --host 0.0.0.0 --port 8000
+pnpm install
+pnpm turbo dev
 ```
 
-The backend will create `backend/trip.db` on first run. Delete that file to reset all state.
+This starts both servers:
+- **Frontend (Vite + HMR)**: http://localhost:3000
+- **API (Wrangler)**: http://localhost:8787
 
-### 2. Frontend
+Open http://localhost:3000 for development.
 
-In a second terminal:
+## Deploying
 
 ```bash
-cd frontend
-npm install
-npm run dev
+pnpm turbo deploy
 ```
 
-Then open http://localhost:3000. The Vite dev server proxies API calls to the backend on port 8000 (CORS is also wide open on the backend, so direct calls work too).
+Builds the frontend, then deploys the worker + static assets to Cloudflare.
 
 ## Resetting
 
-- **Wipe the trip:** stop the backend, delete `backend/trip.db`, and restart. The schema is recreated on startup.
+- **Wipe the trip:** Delete the `.wrangler` directory to reset local dev state.
 - **Switch user in the browser:** use the "switch user" action in the UI, or clear the `climbingTrip.userId` and `climbingTrip.signupDone.*` keys from localStorage.
 
 ## TODO

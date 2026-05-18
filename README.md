@@ -1,6 +1,6 @@
 # Cragstronauts
 
-A small webapp for coordinating a single group climbing trip: the organizer sets up the trip (location, dates, accommodation, gear categories), and other participants land on the app, join, complete a signup swipe, and contribute cars and gear from the main tabs.
+A small webapp for coordinating a single group climbing trip: the organizer sets up the trip (location, dates, accommodation, gear categories), and other participants load the app, join, complete a signup swipe, and contribute cars and gear from the main tabs.
 
 ## Architecture
 

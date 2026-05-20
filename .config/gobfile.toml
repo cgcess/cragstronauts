@@ -1,0 +1,4 @@
+[[job]]
+command = "pnpm turbo dev"
+description = "Run development servers. Frontend on port 3000, backend on port 8787"
+autostart = true

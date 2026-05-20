@@ -1,2 +1,7 @@
+node_modules/
+dist/
+.wrangler/
+.turbo/
+*.db
+__pycache__/
 claude_instructions.md
-

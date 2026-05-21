@@ -1,74 +1,146 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { api } from "./api.js";
+import TripListing from "./screens/TripListing.jsx";
 import OrganizerWizard from "./screens/OrganizerWizard.jsx";
 import Landing from "./screens/Landing.jsx";
 import SignupSwipe from "./screens/SignupSwipe.jsx";
 import MainTabs from "./screens/MainTabs.jsx";
 
-const USER_KEY = "climbingTrip.userId";
+const TRIP_KEY = "climbingTrip.tripId";
+const userKey = (tripId) => `climbingTrip.userId.${tripId}`;
 
-function computeStage({ tripLoaded, trip, currentUserId, users }) {
+function readNum(key) {
+  const v = localStorage.getItem(key);
+  return v ? Number(v) : null;
+}
+
+function computeStage({
+  tripLoaded,
+  creatingTrip,
+  currentTripId,
+  trip,
+  currentUserId,
+  users,
+}) {
   if (!tripLoaded) return "loading";
-  if (!trip) return "organizer";
+  if (creatingTrip) return "organizer";
+  if (currentTripId == null) return "trip-list";
+  if (!trip || trip.id !== currentTripId) return "loading";
   if (!currentUserId) return "landing";
   const me = users.find((u) => u.id === currentUserId);
-  if (!me) return "landing-stale"; // signal: stored id no longer exists
+  if (!me) return "landing-stale";
   return me.signup_completed ? "main" : "signup";
 }
 
 export default function App() {
+  const [trips, setTrips] = useState([]);
   const [trip, setTrip] = useState(null);
   const [tripLoaded, setTripLoaded] = useState(false);
   const [users, setUsers] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [currentUserId, setCurrentUserId] = useState(() => {
-    const v = localStorage.getItem(USER_KEY);
-    return v ? Number(v) : null;
+  const [currentTripId, setCurrentTripIdState] = useState(() =>
+    readNum(TRIP_KEY)
+  );
+  const [currentUserId, setCurrentUserIdState] = useState(() => {
+    const tid = readNum(TRIP_KEY);
+    return tid != null ? readNum(userKey(tid)) : null;
   });
-  // Forced stage override (e.g., right after finishing the wizard) so we don't
-  // wait for refetched state before transitioning.
-  const [forcedStage, setForcedStage] = useState(null);
+  const [creatingTrip, setCreatingTrip] = useState(false);
 
-  const refreshAll = useCallback(async () => {
-    const t = await api.getTrip();
-    setTrip(t);
-    if (t) {
-      const [u, c] = await Promise.all([api.listUsers(), api.listCategories()]);
-      setUsers(u);
-      setCategories(c);
+  // Stable; takes the trip id explicitly to avoid stale-closure races.
+  const refreshAll = useCallback(async (tripId) => {
+    const tripList = await api.listTrips();
+    setTrips(tripList);
+    if (tripId != null) {
+      const t = tripList.find((x) => x.id === tripId);
+      if (t) {
+        setTrip(t);
+        const [u, c] = await Promise.all([
+          api.listUsers(tripId),
+          api.listCategories(tripId),
+        ]);
+        setUsers(u);
+        setCategories(c);
+      } else {
+        // Trip was deleted out from under us
+        localStorage.removeItem(TRIP_KEY);
+        setCurrentTripIdState(null);
+        setCurrentUserIdState(null);
+        setTrip(null);
+        setUsers([]);
+        setCategories([]);
+      }
     } else {
+      setTrip(null);
       setUsers([]);
       setCategories([]);
     }
     setTripLoaded(true);
-    return t;
   }, []);
 
   useEffect(() => {
-    refreshAll().catch((e) => console.error(e));
-  }, [refreshAll]);
+    refreshAll(currentTripId).catch((e) => console.error(e));
+  }, [currentTripId, refreshAll]);
 
-  let stage =
-    forcedStage ||
-    computeStage({ tripLoaded, trip, currentUserId, users });
+  const refresh = useCallback(
+    () => refreshAll(currentTripId),
+    [refreshAll, currentTripId]
+  );
 
-  // Self-heal stale localStorage if the stored user no longer exists.
+  const stage = computeStage({
+    tripLoaded,
+    creatingTrip,
+    currentTripId,
+    trip,
+    currentUserId,
+    users,
+  });
+
+  // Self-heal stale stored user id within current trip
   useEffect(() => {
-    if (stage === "landing-stale") {
-      localStorage.removeItem(USER_KEY);
-      setCurrentUserId(null);
+    if (stage === "landing-stale" && currentTripId != null) {
+      localStorage.removeItem(userKey(currentTripId));
+      setCurrentUserIdState(null);
     }
-  }, [stage]);
+  }, [stage, currentTripId]);
 
-  const setUser = (id) => {
-    localStorage.setItem(USER_KEY, String(id));
-    setCurrentUserId(id);
+  const setUser = (userId) => {
+    if (currentTripId == null) return;
+    if (userId == null) {
+      localStorage.removeItem(userKey(currentTripId));
+    } else {
+      localStorage.setItem(userKey(currentTripId), String(userId));
+    }
+    setCurrentUserIdState(userId);
+  };
+
+  const selectTrip = (tripId) => {
+    localStorage.setItem(TRIP_KEY, String(tripId));
+    setCurrentTripIdState(tripId);
+    setCurrentUserIdState(readNum(userKey(tripId)));
+  };
+
+  const exitTrip = () => {
+    localStorage.removeItem(TRIP_KEY);
+    setCurrentTripIdState(null);
+    setCurrentUserIdState(null);
   };
 
   const switchUser = () => {
-    localStorage.removeItem(USER_KEY);
-    setCurrentUserId(null);
-    setForcedStage(null);
+    if (currentTripId != null) {
+      localStorage.removeItem(userKey(currentTripId));
+    }
+    setCurrentUserIdState(null);
+  };
+
+  const deleteCurrentTrip = async () => {
+    if (currentTripId == null) return;
+    const id = currentTripId;
+    await api.deleteTrip(id);
+    localStorage.removeItem(TRIP_KEY);
+    localStorage.removeItem(userKey(id));
+    setCurrentTripIdState(null);
+    setCurrentUserIdState(null);
   };
 
   if (stage === "loading" || stage === "landing-stale") {
@@ -81,12 +153,26 @@ export default function App() {
     );
   }
 
+  if (stage === "trip-list") {
+    return (
+      <TripListing
+        trips={trips}
+        onCreate={() => setCreatingTrip(true)}
+        onSelect={selectTrip}
+      />
+    );
+  }
+
   if (stage === "organizer") {
     return (
       <OrganizerWizard
-        onComplete={async (organizerUserId) => {
-          setUser(organizerUserId);
-          await refreshAll();
+        onCancel={() => setCreatingTrip(false)}
+        onComplete={async ({ trip_id, organizer_user_id }) => {
+          localStorage.setItem(TRIP_KEY, String(trip_id));
+          localStorage.setItem(userKey(trip_id), String(organizer_user_id));
+          setCurrentTripIdState(trip_id);
+          setCurrentUserIdState(organizer_user_id);
+          setCreatingTrip(false);
         }}
       />
     );
@@ -98,9 +184,10 @@ export default function App() {
         trip={trip}
         users={users}
         onPickExisting={(id) => setUser(id)}
+        onBack={exitTrip}
         onJoinNew={async (name) => {
-          const u = await api.createUser(name);
-          await refreshAll();
+          const u = await api.createUser(currentTripId, name);
+          await refreshAll(currentTripId);
           setUser(u.id);
         }}
       />
@@ -121,36 +208,27 @@ export default function App() {
               console.error(e);
             }
           }
-          await refreshAll();
+          await refresh();
         }}
         onNotJoining={async () => {
-          await refreshAll();
           switchUser();
+          await refresh();
         }}
       />
     );
   }
 
   // stage === "main"
-  if (!trip) {
-    // shouldn't happen given computeStage, but guard anyway
-    return (
-      <div className="app-shell">
-        <div className="center-screen">
-          <p className="muted">No trip configured.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <MainTabs
       trip={trip}
       users={users}
       categories={categories}
       currentUserId={currentUserId}
-      onRefresh={refreshAll}
+      onRefresh={refresh}
       onSwitchUser={switchUser}
+      onExitTrip={exitTrip}
+      onDeleteTrip={deleteCurrentTrip}
     />
   );
 }

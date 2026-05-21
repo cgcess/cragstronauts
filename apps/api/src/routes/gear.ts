@@ -5,16 +5,18 @@ import { getTripDO } from "../do";
 export const gearRoutes = new Hono<{ Bindings: Env }>();
 
 // Gear categories
-gearRoutes.get("/api/gear-categories", async (c) => {
+gearRoutes.get("/api/trips/:trip_id/gear-categories", async (c) => {
   const stub = getTripDO(c.env);
-  const categories = await stub.listCategories();
+  const tripId = Number(c.req.param("trip_id"));
+  const categories = await stub.listCategories(tripId);
   return c.json(categories);
 });
 
-gearRoutes.post("/api/gear-categories", async (c) => {
+gearRoutes.post("/api/trips/:trip_id/gear-categories", async (c) => {
   const stub = getTripDO(c.env);
+  const tripId = Number(c.req.param("trip_id"));
   const body = await c.req.json();
-  const cat = await stub.addCategory(body);
+  const cat = await stub.addCategory(tripId, body);
   return c.json(cat);
 });
 
@@ -26,17 +28,23 @@ gearRoutes.delete("/api/gear-categories/:cat_id", async (c) => {
 });
 
 // Gear contributions
-gearRoutes.get("/api/gear", async (c) => {
+gearRoutes.get("/api/trips/:trip_id/gear", async (c) => {
   const stub = getTripDO(c.env);
-  const gear = await stub.listGear();
+  const tripId = Number(c.req.param("trip_id"));
+  const gear = await stub.listGear(tripId);
   return c.json(gear);
 });
 
-gearRoutes.post("/api/gear", async (c) => {
+gearRoutes.post("/api/trips/:trip_id/gear", async (c) => {
   const stub = getTripDO(c.env);
   const body = await c.req.json();
-  const contrib = await stub.addGear(body);
-  return c.json(contrib);
+  try {
+    const contrib = await stub.addGear(body);
+    return c.json(contrib);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return c.json({ detail: msg }, 400);
+  }
 });
 
 gearRoutes.delete("/api/gear/:contrib_id", async (c) => {

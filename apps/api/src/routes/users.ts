@@ -4,20 +4,25 @@ import { getTripDO } from "../do";
 
 export const userRoutes = new Hono<{ Bindings: Env }>();
 
-userRoutes.get("/api/users", async (c) => {
+userRoutes.get("/api/trips/:trip_id/users", async (c) => {
   const stub = getTripDO(c.env);
-  const users = await stub.listUsers();
+  const tripId = Number(c.req.param("trip_id"));
+  const users = await stub.listUsers(tripId);
   return c.json(users);
 });
 
-userRoutes.post("/api/users", async (c) => {
+userRoutes.post("/api/trips/:trip_id/users", async (c) => {
   const stub = getTripDO(c.env);
+  const tripId = Number(c.req.param("trip_id"));
   const body = await c.req.json();
   try {
-    const user = await stub.createUser(body);
+    const user = await stub.createUser(tripId, body);
     return c.json(user);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
+    if (msg === "Trip not found") {
+      return c.json({ detail: msg }, 404);
+    }
     return c.json({ detail: msg }, 400);
   }
 });

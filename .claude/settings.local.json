@@ -18,7 +18,17 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8787/api/trip)",
       "Bash(curl -s http://localhost:8787/api/trip)",
       "Bash(curl -s http://localhost:8787/api/users)",
-      "Bash(curl -s -X POST http://localhost:8787/api/users -H \"Content-Type: application/json\" -d '{\"name\":\"smoketest\",\"joining\":true}')"
+      "Bash(curl -s -X POST http://localhost:8787/api/users -H \"Content-Type: application/json\" -d '{\"name\":\"smoketest\",\"joining\":true}')",
+      "Bash(pkill -f \"workerd\")",
+      "Bash(curl -s -o /dev/null -w \"vite=%{http_code} worker=\" http://localhost:3000/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8787/)",
+      "Bash(curl -s http://localhost:8787/api/trips)",
+      "Bash(curl -s -X POST http://localhost:8787/api/trips -H 'Content-Type: application/json' -d '{ *)",
+      "Bash(curl -s http://localhost:8787/api/trips/2/users)",
+      "Bash(curl -s http://localhost:8787/api/trips/2/gear-categories)",
+      "Bash(curl -s http://localhost:8787/api/trips/1/users)",
+      "Bash(curl -s http://localhost:8787/api/trips/2/cars)",
+      "Bash(curl -s -X DELETE http://localhost:8787/api/trips/2)"
     ]
   }
 }

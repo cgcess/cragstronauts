@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { api } from "../api.js";
 
-export default function InfoTab({ trip, users, categories, isOrganizer, onChanged }) {
+export default function InfoTab({ trip, users, categories, isOrganizer, onChanged, onDeleteTrip }) {
   const joining = users.filter((u) => u.joining);
   const notJoining = users.filter((u) => !u.joining);
   const [addingCat, setAddingCat] = useState(false);
@@ -63,6 +63,26 @@ export default function InfoTab({ trip, users, categories, isOrganizer, onChange
           </span>
         </div>
       ))}
+      {isOrganizer && onDeleteTrip && (
+        <div className="card" style={{ marginTop: 20, borderColor: "var(--danger)" }}>
+          <div className="h2" style={{ marginTop: 0, color: "var(--danger)" }}>Danger zone</div>
+          <p className="muted" style={{ fontSize: 13 }}>
+            Deleting the trip removes it for everyone, along with all cars and gear.
+          </p>
+          <button
+            className="secondary"
+            style={{ color: "var(--danger)", borderColor: "var(--danger)" }}
+            onClick={async () => {
+              if (confirm(`Delete the "${trip.location}" trip? This can't be undone.`)) {
+                await onDeleteTrip();
+              }
+            }}
+          >
+            Delete trip
+          </button>
+        </div>
+      )}
+
       {isOrganizer && (
         <div style={{ marginTop: 8 }}>
           {!addingCat ? (
@@ -85,7 +105,7 @@ export default function InfoTab({ trip, users, categories, isOrganizer, onChange
                   style={{ flex: 1 }}
                   disabled={!newCatName.trim()}
                   onClick={async () => {
-                    await api.addCategory({ name: newCatName.trim(), fields: [] });
+                    await api.addCategory(trip.id, { name: newCatName.trim(), fields: [] });
                     setNewCatName("");
                     setAddingCat(false);
                     onChanged();

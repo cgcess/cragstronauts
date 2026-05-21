@@ -1,7 +1,7 @@
 import { table, column, ref } from "do-orm";
 
 export const trip = table("trip", {
-  id: column.integer().notNull().primaryKey(),
+  id: column.integer().notNull().primaryKey().autoIncrement(),
   location: column.text().notNull(),
   start_date: column.text(),
   end_date: column.text(),

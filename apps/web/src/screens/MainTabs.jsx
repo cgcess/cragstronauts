@@ -11,6 +11,8 @@ export default function MainTabs({
   currentUserId,
   onRefresh,
   onSwitchUser,
+  onExitTrip,
+  onDeleteTrip,
 }) {
   const [tab, setTab] = useState("info");
   const [cars, setCars] = useState([]);
@@ -20,7 +22,10 @@ export default function MainTabs({
   const reload = async () => {
     setError(null);
     try {
-      const [c, g] = await Promise.all([api.listCars(), api.listGear()]);
+      const [c, g] = await Promise.all([
+        api.listCars(trip.id),
+        api.listGear(trip.id),
+      ]);
       setCars(c);
       setGear(g);
       await onRefresh();
@@ -32,7 +37,7 @@ export default function MainTabs({
   useEffect(() => {
     reload();
     // eslint-disable-next-line
-  }, []);
+  }, [trip.id]);
 
   const me = users.find((u) => u.id === currentUserId);
 
@@ -41,8 +46,11 @@ export default function MainTabs({
       <div className="content">
         {error && <div className="error-banner">{error}</div>}
         <div className="row between">
+          <button className="ghost" onClick={onExitTrip}>
+            ← Trips
+          </button>
           <div className="muted" style={{ fontSize: 13 }}>
-            Signed in as <strong style={{ color: "var(--fg)" }}>{me?.name}</strong>
+            <strong style={{ color: "var(--fg)" }}>{me?.name}</strong>
             {me?.is_organizer && " 👑"}
           </div>
           <button className="ghost" onClick={onSwitchUser}>
@@ -58,10 +66,12 @@ export default function MainTabs({
             currentUserId={currentUserId}
             isOrganizer={me?.is_organizer}
             onChanged={reload}
+            onDeleteTrip={onDeleteTrip}
           />
         )}
         {tab === "cars" && (
           <CarsTab
+            trip={trip}
             cars={cars}
             users={users}
             currentUserId={currentUserId}
@@ -70,6 +80,7 @@ export default function MainTabs({
         )}
         {tab === "gear" && (
           <GearTab
+            trip={trip}
             categories={categories}
             gear={gear}
             currentUserId={currentUserId}

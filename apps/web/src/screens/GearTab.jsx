@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { api } from "../api.js";
 
-export default function GearTab({ categories, gear, currentUserId, onChanged }) {
+export default function GearTab({ trip, categories, gear, currentUserId, onChanged }) {
   const [addingFor, setAddingFor] = useState(null); // category id
   const [values, setValues] = useState({});
   const [error, setError] = useState(null);
@@ -15,7 +15,7 @@ export default function GearTab({ categories, gear, currentUserId, onChanged }) 
   const addContribution = async (cat) => {
     setError(null);
     try {
-      await api.addGear({
+      await api.addGear(trip.id, {
         user_id: currentUserId,
         category_id: cat.id,
         details: values,

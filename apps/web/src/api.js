@@ -1,4 +1,4 @@
-// Thin fetch wrappers around the FastAPI backend.
+// Thin fetch wrappers around the backend.
 
 async function req(method, path, body) {
   const opts = { method, headers: {} };
@@ -20,27 +20,37 @@ async function req(method, path, body) {
 }
 
 export const api = {
-  getTrip: () => req("GET", "/api/trip"),
-  createTrip: (data) => req("POST", "/api/trip", data),
+  // Trips
+  listTrips: () => req("GET", "/api/trips"),
+  createTrip: (data) => req("POST", "/api/trips", data),
+  getTrip: (tripId) => req("GET", `/api/trips/${tripId}`),
+  deleteTrip: (tripId) => req("DELETE", `/api/trips/${tripId}`),
 
-  listUsers: () => req("GET", "/api/users"),
-  createUser: (name) => req("POST", "/api/users", { name, joining: true }),
+  // Users (within a trip)
+  listUsers: (tripId) => req("GET", `/api/trips/${tripId}/users`),
+  createUser: (tripId, name) =>
+    req("POST", `/api/trips/${tripId}/users`, { name, joining: true }),
   updateUser: (id, data) => req("PATCH", `/api/users/${id}`, data),
   deleteUser: (id) => req("DELETE", `/api/users/${id}`),
   completeSignup: (id) => req("POST", `/api/users/${id}/complete-signup`),
 
-  listCategories: () => req("GET", "/api/gear-categories"),
-  addCategory: (data) => req("POST", "/api/gear-categories", data),
+  // Gear categories
+  listCategories: (tripId) =>
+    req("GET", `/api/trips/${tripId}/gear-categories`),
+  addCategory: (tripId, data) =>
+    req("POST", `/api/trips/${tripId}/gear-categories`, data),
 
-  listCars: () => req("GET", "/api/cars"),
-  createCar: (data) => req("POST", "/api/cars", data),
+  // Cars
+  listCars: (tripId) => req("GET", `/api/trips/${tripId}/cars`),
+  createCar: (tripId, data) => req("POST", `/api/trips/${tripId}/cars`, data),
   deleteCar: (id) => req("DELETE", `/api/cars/${id}`),
   carSignup: (carId, userId) =>
     req("POST", `/api/cars/${carId}/signup`, { user_id: userId }),
   carSignoff: (carId, userId) =>
     req("DELETE", `/api/cars/${carId}/signup/${userId}`),
 
-  listGear: () => req("GET", "/api/gear"),
-  addGear: (data) => req("POST", "/api/gear", data),
+  // Gear contributions
+  listGear: (tripId) => req("GET", `/api/trips/${tripId}/gear`),
+  addGear: (tripId, data) => req("POST", `/api/trips/${tripId}/gear`, data),
   deleteGear: (id) => req("DELETE", `/api/gear/${id}`),
 };

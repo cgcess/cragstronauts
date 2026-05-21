@@ -50,14 +50,14 @@ export default function SignupSwipe({ trip, categories, userId, onComplete, onNo
       // "joining" question: user is created with joining=true; nothing to persist on yes,
       // and the no-path is handled above by short-circuiting to onComplete.
       if (qq.kind === "gear" && yes) {
-        await api.addGear({
+        await api.addGear(trip.id, {
           user_id: userId,
           category_id: qq.category.id,
           details: extra || {},
         });
       }
       if (qq.kind === "driving" && yes) {
-        await api.createCar({
+        await api.createCar(trip.id, {
           driver_user_id: userId,
           total_seats: Number(extra?.seats || 1),
           notes: extra?.notes || null,

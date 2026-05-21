@@ -15,7 +15,7 @@ const defaultCategories = [
   },
 ];
 
-export default function OrganizerWizard({ onComplete }) {
+export default function OrganizerWizard({ onComplete, onCancel }) {
   const [step, setStep] = useState(0);
   const [location, setLocation] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -47,7 +47,10 @@ export default function OrganizerWizard({ onComplete }) {
             fields: c.fields.filter((f) => f.key.trim() && f.label.trim()),
           })),
       });
-      onComplete(res.organizer_user_id);
+      onComplete({
+        trip_id: res.trip_id,
+        organizer_user_id: res.organizer_user_id,
+      });
     } catch (e) {
       setError(e.message);
     } finally {
@@ -58,7 +61,14 @@ export default function OrganizerWizard({ onComplete }) {
   return (
     <div className="app-shell">
       <div className="content">
-        <div className="h1">Set up the trip</div>
+        <div className="row between">
+          <div className="h1">Set up the trip</div>
+          {onCancel && (
+            <button className="ghost" onClick={onCancel}>
+              Cancel
+            </button>
+          )}
+        </div>
         <p className="muted">Step {step + 1} of 3</p>
 
         {error && <div className="error-banner">{error}</div>}

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-export default function Landing({ trip, users, onPickExisting, onJoinNew }) {
+export default function Landing({ trip, users, onPickExisting, onJoinNew, onBack }) {
   const [mode, setMode] = useState("choose"); // choose | new
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -21,6 +21,15 @@ export default function Landing({ trip, users, onPickExisting, onJoinNew }) {
   return (
     <div className="app-shell">
       <div className="content">
+        {onBack && (
+          <button
+            className="ghost"
+            onClick={onBack}
+            style={{ marginBottom: 8 }}
+          >
+            ← Trips
+          </button>
+        )}
         <div className="h1">🧗 {trip.location}</div>
         {trip.start_date && (
           <p className="muted">

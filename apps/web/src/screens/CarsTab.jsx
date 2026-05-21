@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { api } from "../api.js";
 
-export default function CarsTab({ cars, users, currentUserId, onChanged }) {
+export default function CarsTab({ trip, cars, users, currentUserId, onChanged }) {
   const [adding, setAdding] = useState(false);
   const [seats, setSeats] = useState(4);
   const [notes, setNotes] = useState("");
@@ -12,7 +12,7 @@ export default function CarsTab({ cars, users, currentUserId, onChanged }) {
   const submitCar = async () => {
     setError(null);
     try {
-      await api.createCar({
+      await api.createCar(trip.id, {
         driver_user_id: currentUserId,
         total_seats: Number(seats),
         notes: notes.trim() || null,

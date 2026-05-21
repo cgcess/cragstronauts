@@ -24,11 +24,15 @@ export class TripDO extends DurableObject<Env> {
     });
   }
 
-  // ---- Trip ----
+  // ---- Trips ----
 
-  async getTrip(): Promise<Record<string, unknown> | null> {
-    const row = this.db.get(trip, { where: eq("id", 1) });
-    return row ?? null;
+  async listTrips(): Promise<Record<string, unknown>[]> {
+    return this.db.all(trip).map(formatTrip);
+  }
+
+  async getTrip(tripId: number): Promise<Record<string, unknown> | null> {
+    const row = this.db.get(trip, { where: eq("id", tripId) });
+    return row ? formatTrip(row) : null;
   }
 
   async createTrip(data: {
@@ -44,18 +48,19 @@ export class TripDO extends DurableObject<Env> {
     }[];
     organizer_name: string;
   }): Promise<{ trip_id: number; organizer_user_id: number }> {
-    const existing = this.db.get(trip, { where: eq("id", 1) });
-    if (existing) throw new Error("Trip already exists");
-
-    this.db.insert(trip, {
-      id: 1,
-      location: data.location,
-      start_date: data.start_date,
-      end_date: data.end_date,
-      accommodation_type: data.accommodation_type,
-      accommodation_details: data.accommodation_details,
-      notes: data.notes,
-    });
+    const tripRow = this.db.insertReturning(
+      trip,
+      {
+        location: data.location,
+        start_date: data.start_date,
+        end_date: data.end_date,
+        accommodation_type: data.accommodation_type,
+        accommodation_details: data.accommodation_details,
+        notes: data.notes,
+      },
+      ["id"]
+    );
+    const tripId = tripRow.id;
 
     for (const cat of data.gear_categories) {
       if (!cat.name?.trim()) continue;
@@ -63,7 +68,7 @@ export class TripDO extends DurableObject<Env> {
         (f) => f.key?.trim() && f.label?.trim()
       );
       this.db.insert(gearCategory, {
-        trip_id: 1,
+        trip_id: tripId,
         name: cat.name.trim(),
         fields: JSON.stringify(fields),
       });
@@ -72,7 +77,7 @@ export class TripDO extends DurableObject<Env> {
     const userRow = this.db.insertReturning(
       user,
       {
-        trip_id: 1,
+        trip_id: tripId,
         name: data.organizer_name,
         joining: 1,
         is_organizer: 1,
@@ -81,31 +86,43 @@ export class TripDO extends DurableObject<Env> {
       ["id"]
     );
 
-    return { trip_id: 1, organizer_user_id: userRow.id };
+    return { trip_id: tripId, organizer_user_id: userRow.id };
+  }
+
+  async deleteTrip(tripId: number): Promise<{ ok: boolean }> {
+    const existing = this.db.get(trip, { where: eq("id", tripId) });
+    if (!existing) throw new Error("Trip not found");
+    this.db.delete(trip, { where: eq("id", tripId) });
+    return { ok: true };
   }
 
   // ---- Users ----
 
-  async listUsers(): Promise<Record<string, unknown>[]> {
-    return this.db.all(user, { where: eq("trip_id", 1) }).map(formatUser);
+  async listUsers(tripId: number): Promise<Record<string, unknown>[]> {
+    return this.db.all(user, { where: eq("trip_id", tripId) }).map(formatUser);
   }
 
-  async createUser(data: {
-    name: string;
-    joining: boolean;
-  }): Promise<Record<string, unknown>> {
+  async createUser(
+    tripId: number,
+    data: { name: string; joining: boolean }
+  ): Promise<Record<string, unknown>> {
     const name = data.name.trim();
     if (!name) throw new Error("Name required");
 
-    const t = this.db.get(trip, { where: eq("id", 1) });
-    if (!t) throw new Error("Trip not configured yet");
+    const t = this.db.get(trip, { where: eq("id", tripId) });
+    if (!t) throw new Error("Trip not found");
 
     const row = this.db.insertReturning(
       user,
-      { trip_id: 1, name, joining: data.joining ? 1 : 0 },
+      { trip_id: tripId, name, joining: data.joining ? 1 : 0 },
       ["id", "name", "joining", "is_organizer", "signup_completed"]
     );
     return formatUser(row);
+  }
+
+  async deleteUser(userId: number): Promise<{ ok: boolean }> {
+    this.db.delete(user, { where: eq("id", userId) });
+    return { ok: true };
   }
 
   async completeSignup(userId: number): Promise<Record<string, unknown>> {
@@ -116,11 +133,6 @@ export class TripDO extends DurableObject<Env> {
 
     const updated = this.db.get(user, { where: eq("id", userId) })!;
     return formatUser(updated);
-  }
-
-  async deleteUser(userId: number): Promise<{ ok: boolean }> {
-    this.db.delete(user, { where: eq("id", userId) });
-    return { ok: true };
   }
 
   async updateUser(
@@ -146,19 +158,22 @@ export class TripDO extends DurableObject<Env> {
 
   // ---- Gear Categories ----
 
-  async listCategories(): Promise<Record<string, unknown>[]> {
+  async listCategories(tripId: number): Promise<Record<string, unknown>[]> {
     return this.db
-      .all(gearCategory, { where: eq("trip_id", 1) })
+      .all(gearCategory, { where: eq("trip_id", tripId) })
       .map(formatCategory);
   }
 
-  async addCategory(data: {
-    name: string;
-    fields: { key: string; label: string; type: string }[];
-  }): Promise<Record<string, unknown>> {
+  async addCategory(
+    tripId: number,
+    data: {
+      name: string;
+      fields: { key: string; label: string; type: string }[];
+    }
+  ): Promise<Record<string, unknown>> {
     const row = this.db.insertReturning(
       gearCategory,
-      { trip_id: 1, name: data.name, fields: JSON.stringify(data.fields) },
+      { trip_id: tripId, name: data.name, fields: JSON.stringify(data.fields) },
       ["id", "name", "fields"]
     );
     return formatCategory(row);
@@ -171,8 +186,8 @@ export class TripDO extends DurableObject<Env> {
 
   // ---- Cars ----
 
-  async listCars(): Promise<Record<string, unknown>[]> {
-    const rows = this.db.all(car, { where: eq("trip_id", 1) });
+  async listCars(tripId: number): Promise<Record<string, unknown>[]> {
+    const rows = this.db.all(car, { where: eq("trip_id", tripId) });
     return rows.map((r) => this.formatCar(r));
   }
 
@@ -182,6 +197,9 @@ export class TripDO extends DurableObject<Env> {
     notes: string | null;
   }): Promise<Record<string, unknown>> {
     if (data.total_seats < 1) throw new Error("total_seats must be >= 1");
+
+    const driver = this.db.get(user, { where: eq("id", data.driver_user_id) });
+    if (!driver) throw new Error("Driver not found");
 
     const existing = this.db.get(car, {
       where: eq("driver_user_id", data.driver_user_id),
@@ -199,7 +217,7 @@ export class TripDO extends DurableObject<Env> {
       const row = this.db.insertReturning(
         car,
         {
-          trip_id: 1,
+          trip_id: driver.trip_id,
           driver_user_id: data.driver_user_id,
           total_seats: data.total_seats,
           notes: data.notes,
@@ -258,9 +276,9 @@ export class TripDO extends DurableObject<Env> {
 
   // ---- Gear Contributions ----
 
-  async listGear(): Promise<Record<string, unknown>[]> {
+  async listGear(tripId: number): Promise<Record<string, unknown>[]> {
     const rows = this.db.all(gearContribution, {
-      where: eq("trip_id", 1),
+      where: eq("trip_id", tripId),
     });
     return rows.map((r) => this.formatContribution(r));
   }
@@ -270,10 +288,13 @@ export class TripDO extends DurableObject<Env> {
     category_id: number;
     details: Record<string, unknown>;
   }): Promise<Record<string, unknown>> {
+    const u = this.db.get(user, { where: eq("id", data.user_id) });
+    if (!u) throw new Error("User not found");
+
     const row = this.db.insertReturning(
       gearContribution,
       {
-        trip_id: 1,
+        trip_id: u.trip_id,
         user_id: data.user_id,
         category_id: data.category_id,
         details: JSON.stringify(data.details),
@@ -337,6 +358,26 @@ export class TripDO extends DurableObject<Env> {
       details: typeof r.details === "string" ? JSON.parse(r.details) : r.details,
     };
   }
+}
+
+function formatTrip(r: {
+  id: number;
+  location: string;
+  start_date: string | null;
+  end_date: string | null;
+  accommodation_type: string | null;
+  accommodation_details: string | null;
+  notes: string | null;
+}): Record<string, unknown> {
+  return {
+    id: r.id,
+    location: r.location,
+    start_date: r.start_date,
+    end_date: r.end_date,
+    accommodation_type: r.accommodation_type,
+    accommodation_details: r.accommodation_details,
+    notes: r.notes,
+  };
 }
 
 function formatUser(r: {

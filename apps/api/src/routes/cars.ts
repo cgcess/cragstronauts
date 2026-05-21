@@ -4,13 +4,14 @@ import { getTripDO } from "../do";
 
 export const carRoutes = new Hono<{ Bindings: Env }>();
 
-carRoutes.get("/api/cars", async (c) => {
+carRoutes.get("/api/trips/:trip_id/cars", async (c) => {
   const stub = getTripDO(c.env);
-  const cars = await stub.listCars();
+  const tripId = Number(c.req.param("trip_id"));
+  const cars = await stub.listCars(tripId);
   return c.json(cars);
 });
 
-carRoutes.post("/api/cars", async (c) => {
+carRoutes.post("/api/trips/:trip_id/cars", async (c) => {
   const stub = getTripDO(c.env);
   const body = await c.req.json();
   try {

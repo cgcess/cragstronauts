@@ -115,8 +115,19 @@ button {
   padding: 12px 18px;
   font-weight: 600;
   cursor: pointer;
+  /* Universal "button heard you" press feedback (Emil) */
+  transition: transform 160ms var(--ease-out), box-shadow 160ms var(--ease-out),
+    background 160ms var(--ease-out), color 160ms var(--ease-out);
+}
+button:active {
+  transform: scale(0.97);
+}
+/* btn-3d has its own translate-Y press animation — don't double-scale */
+button.btn-3d:active {
+  transform: translateY(5px);
 }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
+button:disabled:active { transform: none; }
 
 button.secondary {
   background: white;
@@ -261,6 +272,45 @@ label {
   font-weight: 500;
   display: block;
   margin-bottom: 6px;
+}
+
+/* Side-by-side date pickers — min-width: 0 stops native date input
+   intrinsic width from blowing past its flex share. */
+.date-row {
+  display: flex;
+  gap: 10px;
+}
+.date-row__field {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.date-row__field input {
+  width: 100%;
+}
+
+/* Inline form warning (less alarming than .error-banner) */
+.inline-warn {
+  font-size: 13px;
+  color: var(--brown-700);
+  background: rgba(200, 152, 135, 0.18);
+  border-left: 3px solid var(--brown-500);
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+/* Step indicator under the wizard headline */
+.step-tag {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brown-500);
+  background: rgba(200, 152, 135, 0.18);
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin: -4px 0 18px;
 }
 
 /* ----------  App shell  ---------- */

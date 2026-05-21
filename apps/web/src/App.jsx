@@ -5,6 +5,7 @@ import OrganizerWizard from "./screens/OrganizerWizard.jsx";
 import Landing from "./screens/Landing.jsx";
 import SignupSwipe from "./screens/SignupSwipe.jsx";
 import MainTabs from "./screens/MainTabs.jsx";
+import AlpsBackground from "./components/AlpsBackground.jsx";
 
 const TRIP_KEY = "climbingTrip.tripId";
 const userKey = (tripId) => `climbingTrip.userId.${tripId}`;
@@ -143,28 +144,25 @@ export default function App() {
     setCurrentUserIdState(null);
   };
 
+  let screen;
   if (stage === "loading" || stage === "landing-stale") {
-    return (
+    screen = (
       <div className="app-shell">
         <div className="center-screen">
           <p className="muted">Loading…</p>
         </div>
       </div>
     );
-  }
-
-  if (stage === "trip-list") {
-    return (
+  } else if (stage === "trip-list") {
+    screen = (
       <TripListing
         trips={trips}
         onCreate={() => setCreatingTrip(true)}
         onSelect={selectTrip}
       />
     );
-  }
-
-  if (stage === "organizer") {
-    return (
+  } else if (stage === "organizer") {
+    screen = (
       <OrganizerWizard
         onCancel={() => setCreatingTrip(false)}
         onComplete={async ({ trip_id, organizer_user_id }) => {
@@ -176,10 +174,8 @@ export default function App() {
         }}
       />
     );
-  }
-
-  if (stage === "landing") {
-    return (
+  } else if (stage === "landing") {
+    screen = (
       <Landing
         trip={trip}
         users={users}
@@ -192,10 +188,8 @@ export default function App() {
         }}
       />
     );
-  }
-
-  if (stage === "signup") {
-    return (
+  } else if (stage === "signup") {
+    screen = (
       <SignupSwipe
         trip={trip}
         categories={categories}
@@ -216,19 +210,26 @@ export default function App() {
         }}
       />
     );
+  } else {
+    // stage === "main"
+    screen = (
+      <MainTabs
+        trip={trip}
+        users={users}
+        categories={categories}
+        currentUserId={currentUserId}
+        onRefresh={refresh}
+        onSwitchUser={switchUser}
+        onExitTrip={exitTrip}
+        onDeleteTrip={deleteCurrentTrip}
+      />
+    );
   }
 
-  // stage === "main"
   return (
-    <MainTabs
-      trip={trip}
-      users={users}
-      categories={categories}
-      currentUserId={currentUserId}
-      onRefresh={refresh}
-      onSwitchUser={switchUser}
-      onExitTrip={exitTrip}
-      onDeleteTrip={deleteCurrentTrip}
-    />
+    <>
+      <AlpsBackground />
+      {screen}
+    </>
   );
 }

@@ -68,8 +68,12 @@ export default function TripListing({ trips, onCreate, onSelect }) {
       <div className="content">
         <div className="h1">Climbing trips</div>
 
-        <button onClick={onCreate} style={{ marginBottom: 20 }}>
-          + New trip
+        <button
+          className="cta-primary"
+          onClick={onCreate}
+          style={{ marginBottom: 20 }}
+        >
+          New trip →
         </button>
 
         {trips.length === 0 && (

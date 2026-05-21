@@ -13,9 +13,7 @@ function computeStage({ tripLoaded, trip, currentUserId, users }) {
   if (!currentUserId) return "landing";
   const me = users.find((u) => u.id === currentUserId);
   if (!me) return "landing-stale"; // signal: stored id no longer exists
-  if (me.is_organizer) return "main";
-  const done = localStorage.getItem(`climbingTrip.signupDone.${currentUserId}`);
-  return done ? "main" : "signup";
+  return me.signup_completed ? "main" : "signup";
 }
 
 export default function App() {
@@ -87,7 +85,6 @@ export default function App() {
     return (
       <OrganizerWizard
         onComplete={async (organizerUserId) => {
-          localStorage.setItem(`climbingTrip.signupDone.${organizerUserId}`, "1");
           setUser(organizerUserId);
           await refreshAll();
         }}
@@ -103,8 +100,8 @@ export default function App() {
         onPickExisting={(id) => setUser(id)}
         onJoinNew={async (name) => {
           const u = await api.createUser(name);
-          setUser(u.id);
           await refreshAll();
+          setUser(u.id);
         }}
       />
     );
@@ -118,12 +115,17 @@ export default function App() {
         userId={currentUserId}
         onComplete={async () => {
           if (currentUserId) {
-            localStorage.setItem(
-              `climbingTrip.signupDone.${currentUserId}`,
-              "1"
-            );
+            try {
+              await api.completeSignup(currentUserId);
+            } catch (e) {
+              console.error(e);
+            }
           }
           await refreshAll();
+        }}
+        onNotJoining={async () => {
+          await refreshAll();
+          switchUser();
         }}
       />
     );

@@ -76,6 +76,7 @@ export class TripDO extends DurableObject<Env> {
         name: data.organizer_name,
         joining: 1,
         is_organizer: 1,
+        signup_completed: 1,
       },
       ["id"]
     );
@@ -102,9 +103,24 @@ export class TripDO extends DurableObject<Env> {
     const row = this.db.insertReturning(
       user,
       { trip_id: 1, name, joining: data.joining ? 1 : 0 },
-      ["id", "name", "joining", "is_organizer"]
+      ["id", "name", "joining", "is_organizer", "signup_completed"]
     );
     return formatUser(row);
+  }
+
+  async completeSignup(userId: number): Promise<Record<string, unknown>> {
+    const row = this.db.get(user, { where: eq("id", userId) });
+    if (!row) throw new Error("User not found");
+
+    this.db.update(user, { signup_completed: 1 }, { where: eq("id", userId) });
+
+    const updated = this.db.get(user, { where: eq("id", userId) })!;
+    return formatUser(updated);
+  }
+
+  async deleteUser(userId: number): Promise<{ ok: boolean }> {
+    this.db.delete(user, { where: eq("id", userId) });
+    return { ok: true };
   }
 
   async updateUser(
@@ -328,12 +344,14 @@ function formatUser(r: {
   name: string;
   joining: number;
   is_organizer: number;
+  signup_completed: number;
 }): Record<string, unknown> {
   return {
     id: r.id,
     name: r.name,
     joining: Boolean(r.joining),
     is_organizer: Boolean(r.is_organizer),
+    signup_completed: Boolean(r.signup_completed),
   };
 }
 

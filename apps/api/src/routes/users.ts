@@ -22,6 +22,33 @@ userRoutes.post("/api/users", async (c) => {
   }
 });
 
+userRoutes.delete("/api/users/:user_id", async (c) => {
+  const stub = getTripDO(c.env);
+  const userId = Number(c.req.param("user_id"));
+  try {
+    const result = await stub.deleteUser(userId);
+    return c.json(result);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return c.json({ detail: msg }, 400);
+  }
+});
+
+userRoutes.post("/api/users/:user_id/complete-signup", async (c) => {
+  const stub = getTripDO(c.env);
+  const userId = Number(c.req.param("user_id"));
+  try {
+    const user = await stub.completeSignup(userId);
+    return c.json(user);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg === "User not found") {
+      return c.json({ detail: msg }, 404);
+    }
+    return c.json({ detail: msg }, 400);
+  }
+});
+
 userRoutes.patch("/api/users/:user_id", async (c) => {
   const stub = getTripDO(c.env);
   const userId = Number(c.req.param("user_id"));

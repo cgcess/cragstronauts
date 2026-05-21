@@ -5,3 +5,4 @@ dist/
 *.db
 __pycache__/
 claude_instructions.md
+.pnpm-store

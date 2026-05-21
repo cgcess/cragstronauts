@@ -26,6 +26,8 @@ export const api = {
   listUsers: () => req("GET", "/api/users"),
   createUser: (name) => req("POST", "/api/users", { name, joining: true }),
   updateUser: (id, data) => req("PATCH", `/api/users/${id}`, data),
+  deleteUser: (id) => req("DELETE", `/api/users/${id}`),
+  completeSignup: (id) => req("POST", `/api/users/${id}/complete-signup`),
 
   listCategories: () => req("GET", "/api/gear-categories"),
   addCategory: (data) => req("POST", "/api/gear-categories", data),

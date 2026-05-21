@@ -31,7 +31,7 @@ function buildQuestions(categories) {
   return qs;
 }
 
-export default function SignupSwipe({ trip, categories, userId, onComplete }) {
+export default function SignupSwipe({ trip, categories, userId, onComplete, onNotJoining }) {
   const questions = useMemo(() => buildQuestions(categories), [categories]);
   const [idx, setIdx] = useState(0);
   const [details, setDetails] = useState(null); // for showing detail form
@@ -91,11 +91,12 @@ export default function SignupSwipe({ trip, categories, userId, onComplete }) {
     }
     if (q.id === "joining" && !yes) {
       try {
-        await api.updateUser(userId, { joining: false });
+        await api.deleteUser(userId);
       } catch (e) {
         setError(e.message);
+        return;
       }
-      onComplete();
+      onNotJoining();
       return;
     }
     try {

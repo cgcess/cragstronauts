@@ -39,7 +39,9 @@ export default function Landing({ trip, users, onPickExisting, onJoinNew, onBack
 
         {mode === "choose" && (
           <div className="col" style={{ marginTop: 20 }}>
-            <button onClick={() => setMode("new")}>+ Join the trip</button>
+            <button className="cta-primary" onClick={() => setMode("new")}>
+              Join the trip →
+            </button>
             {users.length > 0 && (
               <>
                 <p className="muted" style={{ marginTop: 16 }}>

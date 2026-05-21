@@ -259,3 +259,21 @@ label { font-size: 14px; color: var(--muted); display: block; margin-bottom: 6px
   margin-bottom: 12px;
   font-size: 14px;
 }
+
+button.cta-primary {
+  font-size: 18px;
+  padding: 18px 28px;
+  border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(74, 222, 128, 0.28);
+  transition:
+    transform 140ms cubic-bezier(0.2, 0.8, 0.4, 1),
+    box-shadow 140ms cubic-bezier(0.2, 0.8, 0.4, 1);
+}
+button.cta-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(74, 222, 128, 0.36);
+}
+button.cta-primary:active {
+  transform: translateY(1px);
+  box-shadow: 0 4px 12px rgba(74, 222, 128, 0.22);
+}

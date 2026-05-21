@@ -1,4 +1,5 @@
 import React from "react";
+import { motion, useReducedMotion } from "framer-motion";
 
 function today() {
   const d = new Date();
@@ -32,26 +33,25 @@ function daysUntil(trip, todayStr) {
   if (!ref) return null;
   const a = new Date(todayStr + "T00:00:00").getTime();
   const b = new Date(ref + "T00:00:00").getTime();
-  const d = Math.round((b - a) / 86400000);
-  return d;
+  return Math.round((b - a) / 86400000);
 }
 
 // Deterministic but pleasingly imperfect rotation per card.
-// Returns degrees in [-4, +4] range, weighted toward smaller deltas.
 function rotForIndex(i) {
-  // Hand-tuned for the first few cards in the stack
   const seq = [-2.5, 2.0, -1.2, 1.6, -3.0, 1.0];
   return seq[i % seq.length];
 }
 function offsetForIndex(i) {
-  // Each successive card peeks out beneath the previous one
-  return i * 10; // px down
+  return i * 10;
 }
 function scaleForIndex(i) {
   return Math.max(0.94, 1 - i * 0.025);
 }
 
+const EASE_OUT = [0.23, 1, 0.32, 1];
+
 export default function TripListing({ trips, onCreate, onSelect }) {
+  const reduceMotion = useReducedMotion();
   const t = today();
   const upcoming = trips
     .filter((trip) => !isPast(trip, t))
@@ -68,46 +68,66 @@ export default function TripListing({ trips, onCreate, onSelect }) {
       return bd.localeCompare(ad);
     });
 
+  const fade = reduceMotion
+    ? { initial: false, animate: {}, transition: {} }
+    : {
+        initial: { opacity: 0, y: -10 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: 0.36, ease: EASE_OUT },
+      };
+
   return (
     <div className="app-shell">
       <div className="content">
         {/* Brand wordmark */}
-        <div>
+        <motion.div {...fade}>
           <div className="brand-mark">
             <span className="mark-glyph" aria-hidden="true">🧗</span>
             Cragstronauts
           </div>
-          <div className="brand-sub">Plan the climb. Pack the car.</div>
-        </div>
+          <motion.div
+            className="brand-sub"
+            initial={reduceMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.32, delay: 0.1, ease: EASE_OUT }}
+          >
+            Plan the climb. Pack the car.
+          </motion.div>
+        </motion.div>
 
         {/* Stacked card deck of upcoming trips */}
         {upcoming.length === 0 ? (
-          <button
+          <motion.button
             type="button"
             className="deck-empty"
             onClick={onCreate}
             aria-label="Create your first trip"
+            initial={reduceMotion ? false : { opacity: 0, y: 24, rotate: -6 }}
+            animate={{ opacity: 1, y: 0, rotate: -2 }}
+            transition={{ duration: 0.5, delay: 0.18, ease: EASE_OUT }}
+            whileHover={
+              reduceMotion ? undefined : { rotate: -2, y: -4 }
+            }
+            whileTap={reduceMotion ? undefined : { scale: 0.98 }}
           >
             <div className="deck-empty__plus" aria-hidden="true">+</div>
             <div className="deck-empty__title">No trips on the wall</div>
             <div className="deck-empty__sub">
               Tap to plan your first cragstronaut mission.
             </div>
-          </button>
+          </motion.button>
         ) : (
           <div
             className="deck-stack"
             style={{
-              // Reserve enough height for the deepest card in the stack
               minHeight: 280 + offsetForIndex(Math.min(upcoming.length - 1, 5)),
             }}
           >
-            {/* Render bottom-to-top so the soonest trip sits visually on top */}
             {[...upcoming]
-              .slice(0, 6) // cap stack height — past 6 doesn't read
+              .slice(0, 6)
               .reverse()
               .map((trip, revIdx, arr) => {
-                const i = arr.length - 1 - revIdx; // original sorted index
+                const i = arr.length - 1 - revIdx;
                 const rot = rotForIndex(i);
                 const top = i === 0;
                 const days = daysUntil(trip, t);
@@ -121,18 +141,43 @@ export default function TripListing({ trips, onCreate, onSelect }) {
                     : days < 14
                     ? `In ${days} days`
                     : `In ${Math.round(days / 7)} wk`;
+                const finalTransform = `translateY(${offsetForIndex(i)}px) rotate(${rot}deg) scale(${scaleForIndex(i)})`;
                 return (
-                  <button
+                  <motion.button
                     key={trip.id}
                     type="button"
                     className="deck-card"
                     onClick={() => onSelect(trip.id)}
                     style={{
-                      transform: `translateY(${offsetForIndex(i)}px) rotate(${rot}deg) scale(${scaleForIndex(i)})`,
                       transformOrigin: "50% 0%",
                       zIndex: 20 - i,
                       "--card-rot": `${rot}deg`,
                     }}
+                    initial={
+                      reduceMotion
+                        ? { transform: finalTransform }
+                        : {
+                            opacity: 0,
+                            // Cards swoop in from above the stack
+                            transform: `translateY(${offsetForIndex(i) - 60}px) rotate(${rot * 0.3}deg) scale(${scaleForIndex(i)})`,
+                          }
+                    }
+                    animate={{
+                      opacity: 1,
+                      transform: finalTransform,
+                    }}
+                    transition={
+                      reduceMotion
+                        ? { duration: 0 }
+                        : {
+                            // Spring per card so they settle naturally,
+                            // staggered so the deck assembles top-down.
+                            type: "spring",
+                            stiffness: 220,
+                            damping: 24,
+                            delay: 0.22 + (arr.length - 1 - i) * 0.07,
+                          }
+                    }
                   >
                     <div className="deck-card__topline">
                       <span className="deck-card__date">
@@ -158,15 +203,20 @@ export default function TripListing({ trips, onCreate, onSelect }) {
                     <div className="deck-card__footer">
                       <span className="deck-card__cta">Open trip →</span>
                     </div>
-                  </button>
+                  </motion.button>
                 );
               })}
           </div>
         )}
 
-        {/* Past trips — quieter list below the stack */}
+        {/* Past trips */}
         {past.length > 0 && (
-          <div className="past-trips-list">
+          <motion.div
+            className="past-trips-list"
+            initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.32, delay: 0.5, ease: EASE_OUT }}
+          >
             <div className="h2">Past climbs</div>
             {past.map((trip) => (
               <button
@@ -186,18 +236,30 @@ export default function TripListing({ trips, onCreate, onSelect }) {
                 </div>
               </button>
             ))}
-          </div>
+          </motion.div>
         )}
       </div>
 
-      {/* Floating thumb-zone CTA (only when there's already a stack — empty
-          state has its own giant tap target). */}
+      {/* Floating thumb-zone CTA */}
       {upcoming.length > 0 && (
-        <div className="bottom-cta bottom-cta--center">
-          <button className="btn-3d" onClick={onCreate}>
+        <motion.div
+          className="bottom-cta bottom-cta--center"
+          initial={reduceMotion ? false : { opacity: 0, y: 48 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={
+            reduceMotion
+              ? { duration: 0 }
+              : { type: "spring", stiffness: 300, damping: 28, delay: 0.55 }
+          }
+        >
+          <motion.button
+            className="btn-3d"
+            onClick={onCreate}
+            whileTap={reduceMotion ? undefined : { translateY: 5 }}
+          >
             Plan new trip →
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       )}
     </div>
   );

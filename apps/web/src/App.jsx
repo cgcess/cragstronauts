@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { api } from "./api.js";
 import TripListing from "./screens/TripListing.jsx";
 import OrganizerWizard from "./screens/OrganizerWizard.jsx";
@@ -6,6 +7,8 @@ import Landing from "./screens/Landing.jsx";
 import SignupSwipe from "./screens/SignupSwipe.jsx";
 import MainTabs from "./screens/MainTabs.jsx";
 import AlpsBackground from "./components/AlpsBackground.jsx";
+
+const EASE_OUT = [0.23, 1, 0.32, 1];
 
 const TRIP_KEY = "climbingTrip.tripId";
 const userKey = (tripId) => `climbingTrip.userId.${tripId}`;
@@ -229,7 +232,33 @@ export default function App() {
   return (
     <>
       <AlpsBackground />
-      {screen}
+      <StagePresence stageKey={stage}>{screen}</StagePresence>
     </>
+  );
+}
+
+/**
+ * Crossfades + slide between stages. Each stage exits up-and-out,
+ * the next enters from below — like flipping to the next page in
+ * a paper field journal.
+ */
+function StagePresence({ stageKey, children }) {
+  const reduceMotion = useReducedMotion();
+  if (reduceMotion) {
+    return children;
+  }
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={stageKey}
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -12 }}
+        transition={{ duration: 0.32, ease: EASE_OUT }}
+        style={{ height: "100%" }}
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
   );
 }

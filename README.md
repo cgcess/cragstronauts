@@ -40,4 +40,3 @@ Builds the frontend, then deploys the worker + static assets to Cloudflare.
 
 ## TODO
 - When initially joining a trip, the app should immediately ask the initial questions upon entering the user's name
-- Make the UI nicer.

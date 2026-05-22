@@ -433,13 +433,29 @@ label {
   padding: 24px 20px;
 }
 
-/* Landing wants to fit a single viewport (no scroll). The deck flexes
-   into whatever space remains between brand and hint+CTA. */
+/* Landing: brand at top, the trip-deck (shell + hint) vertically centered
+   in the remaining space. Only scrolls when the viewport truly can't fit
+   the natural layout. */
 .content--landing {
-  overflow: hidden;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-height: 0;
+}
+/* Sandwich the deck group (shell + hint) in the vertical center of the
+   remaining flex space — pure-CSS centering without restructuring JSX. */
+.content--landing > .deck-shell { margin-top: auto; }
+.content--landing > .deck-hint { margin-bottom: auto; }
+.content--landing > .deck-empty { margin-block: auto; }
+
+/* Signup swipe screen: vertically center the card stack and only scroll
+   if the viewport is truly too short for the natural layout. */
+.content--swipe {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 16px 20px calc(8px + env(safe-area-inset-bottom));
 }
 
 /* ----------  Tabbar — floating liquid-glass capsule  ----------
@@ -602,13 +618,13 @@ label {
 */
 .deck-shell {
   position: relative;
-  margin: 24px auto 0;
+  margin: 0 auto;
   width: 100%;
   max-width: 340px;
-  /* Flexes to fit available vertical space, capped at 360 */
-  flex: 1 1 0;
-  min-height: 260px;
-  max-height: 380px;
+  /* Natural size so margin-auto centering can take effect; shrinks
+     gracefully on short viewports. */
+  flex: 0 0 auto;
+  height: clamp(280px, 50vh, 380px);
 }
 .deck-card {
   position: absolute;
@@ -900,16 +916,20 @@ label {
   flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  align-items: center;
   justify-content: center;
-  padding: 16px 16px 8px;
-  gap: 24px;
+  padding: 8px 16px;
+  gap: 20px;
   user-select: none;
+  min-height: 0; /* allow shrinking on short viewports */
 }
 .deck-stage {
   position: relative;
-  flex: 1;
-  min-height: 380px;
+  width: 100%;
+  max-width: 380px;
+  /* Natural card height — fits comfortably without stretching the deck.
+     Shrinks gracefully on short viewports. */
+  height: clamp(360px, 56vh, 500px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -931,7 +951,6 @@ label {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  min-height: 380px;
   overflow: hidden;
   cursor: grab;
   -webkit-tap-highlight-color: transparent;

@@ -9,15 +9,14 @@ import {
 
 const EASE_OUT = [0.23, 1, 0.32, 1];
 const SWIPE_THRESHOLD = 90; // px past which a swipe commits
-const ROTATIONS = [0, 1.6, -2.0]; // slot 0 (top) is flat, peeks wobble
 
-// Each slot in the visible stack has a resting transform. Opacity is
-// always 1 so a peek card never bleeds the card above through it; depth
-// reads from y-offset, scale, and box-shadow.
+// Slot transforms. Top is centred; peeks sit slightly lower and rotated.
+// `x: 0` is included so cards that get dragged then transition to a peek
+// slot animate cleanly back to centre.
 const SLOTS = [
-  { y: 0, scale: 1, opacity: 1, rotate: ROTATIONS[0] },     // top
-  { y: 12, scale: 0.96, opacity: 1, rotate: ROTATIONS[1] }, // peek 1
-  { y: 24, scale: 0.92, opacity: 1, rotate: ROTATIONS[2] }, // peek 2
+  { x: 0, y: 0,  scale: 1,    opacity: 1, rotate: 0 },
+  { x: 0, y: 12, scale: 0.96, opacity: 1, rotate: 1.6 },
+  { x: 0, y: 24, scale: 0.92, opacity: 1, rotate: -2.0 },
 ];
 
 function todayISO() {
@@ -111,11 +110,21 @@ function TripCardFace({ trip, todayStr }) {
 }
 
 /**
- * One card layer. Rendered for each visible trip; its slot is whatever
- * its offset from the active index resolves to. When `active` changes,
- * cards that remain visible animate between slots (smooth rise/fall);
- * new cards enter via AnimatePresence; the swiped-off card exits to
- * the side it was thrown.
+ * DeckLayer — one card layer.
+ *
+ * Owns its own `x` and `dragRotate` motion values so the drag state of
+ * one card never leaks to another. When the user releases without
+ * committing, framer-motion's own dragConstraints + elastic spring
+ * snaps `x` back to 0 — we never call `.set(0)` manually.
+ *
+ * Variants:
+ *   • staggerDelay > 0  → first-mount swoop from below (the assembly).
+ *   • dir > 0           → forward shuffle: this card enters as the new
+ *                         bottom peek (fades in below the stack).
+ *   • dir < 0           → backward shuffle: this card enters as the
+ *                         new top, sliding in from above.
+ *   • exit dir > 0      → old top flies off-left (user threw it).
+ *   • exit dir < 0      → old bottom peek fades down (nobody touched it).
  */
 const DeckLayer = React.forwardRef(function DeckLayer(
   {
@@ -124,9 +133,9 @@ const DeckLayer = React.forwardRef(function DeckLayer(
     isTop,
     todayStr,
     onSelect,
-    dragX,
-    dragRotate,
-    onDragEnd,
+    onCommit,
+    canGoNext,
+    canGoPrev,
     reduceMotion,
     staggerDelay,
     dir,
@@ -135,25 +144,63 @@ const DeckLayer = React.forwardRef(function DeckLayer(
 ) {
   const target = SLOTS[slot];
 
-  // Two distinct entrances:
-  //   • First mount  — cards swoop up from below the screen (the
-  //     "stack assembles" feel from the original design).
-  //   • Mid-shuffle  — new card fades in BEHIND the stack at its
-  //     target Y but smaller, so it doesn't traverse through the
-  //     other cards and bleed text on the way up.
-  const enterFromBelow = {
-    y: target.y + 90,
-    scale: target.scale * 0.94,
-    opacity: 0,
-    rotate: target.rotate,
+  // Per-card motion values — *not* shared with siblings.
+  const x = useMotionValue(0);
+  const dragRotate = useTransform(x, [-220, 0, 220], [-14, 0, 14]);
+
+  const handleDragEnd = (_e, info) => {
+    if (info.offset.x < -SWIPE_THRESHOLD && canGoNext) {
+      onCommit(1);
+    } else if (info.offset.x > SWIPE_THRESHOLD && canGoPrev) {
+      onCommit(-1);
+    }
+    // else: do NOTHING — framer-motion's dragConstraints/dragElastic
+    // will spring `x` back to 0 on release naturally. Calling
+    // `x.set(0)` here teleports and fights the spring.
   };
-  const enterFromBehind = {
-    y: target.y,
-    scale: target.scale * 0.82,
-    opacity: 0,
-    rotate: target.rotate,
-  };
-  const initialState = staggerDelay > 0 ? enterFromBelow : enterFromBehind;
+
+  // Crucial: `initial` and `animate` must have IDENTICAL keys. If a key
+  // appears in one but not the other, framer-motion 11 silently fails to
+  // interpolate (the element stays stuck at the initial state). Top
+  // cards skip `rotate` everywhere — style.dragRotate owns it.
+  const animateState = isTop
+    ? { x: target.x, y: target.y, scale: target.scale, opacity: target.opacity }
+    : {
+        x: target.x,
+        y: target.y,
+        scale: target.scale,
+        opacity: target.opacity,
+        rotate: target.rotate,
+      };
+
+  let initialState;
+  if (staggerDelay > 0) {
+    // First mount — swoop in from below the stack.
+    initialState = isTop
+      ? { x: 0, y: target.y + 90, scale: target.scale * 0.94, opacity: 0 }
+      : {
+          x: 0,
+          y: target.y + 90,
+          scale: target.scale * 0.94,
+          opacity: 0,
+          rotate: target.rotate,
+        };
+  } else if (dir < 0 && slot === 0) {
+    // Backward shuffle — new top slides in from above.
+    initialState = { x: 0, y: target.y - 70, scale: target.scale * 0.92, opacity: 0 };
+  } else {
+    // Forward shuffle or peek entry — fade in at target Y, slightly
+    // smaller, BEHIND the stack so we never traverse through other cards.
+    initialState = isTop
+      ? { x: 0, y: target.y, scale: target.scale * 0.85, opacity: 0 }
+      : {
+          x: 0,
+          y: target.y,
+          scale: target.scale * 0.85,
+          opacity: 0,
+          rotate: target.rotate,
+        };
+  }
 
   return (
     <motion.button
@@ -162,47 +209,27 @@ const DeckLayer = React.forwardRef(function DeckLayer(
       className={`deck-card ${isTop ? "deck-card--top" : "deck-card--peek"}`}
       style={{
         zIndex: 10 - slot,
-        // Top card alone gets drag-controlled x + a rotation derived
-        // from the drag distance. Peek cards stay still.
-        ...(isTop && !reduceMotion ? { x: dragX, rotate: dragRotate } : {}),
+        // Top card alone binds style to the drag motion values.
+        // Peek cards leave x/rotate to the animate prop.
+        ...(isTop && !reduceMotion ? { x, rotate: dragRotate } : {}),
       }}
-      custom={dir}
-      initial={reduceMotion ? false : initialState}
-      animate={{
-        // Top card's rotate is owned by style (dragRotate). Animating
-        // rotate here would fight the motion value, so only set it for
-        // peek cards.
-        y: target.y,
-        scale: target.scale,
-        opacity: target.opacity,
-        ...(isTop ? {} : { rotate: target.rotate }),
-      }}
-      exit={
-        reduceMotion
-          ? { opacity: 0 }
-          : (custom) => ({
-              x: custom > 0 ? -460 : 460,
-              rotate: custom > 0 ? -22 : 22,
-              opacity: 0,
-              transition: { duration: 0.28, ease: EASE_OUT },
-            })
-      }
+      initial={false}
+      animate={reduceMotion ? { opacity: 1 } : animateState}
       transition={{
         type: "spring",
         stiffness: 240,
         damping: 26,
-        // Stagger only on first mount, otherwise instant transition
         delay: staggerDelay,
       }}
       drag={isTop && !reduceMotion ? "x" : false}
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={0.65}
-      onDragEnd={isTop ? onDragEnd : undefined}
+      onDragEnd={isTop ? handleDragEnd : undefined}
       onClick={
         isTop
           ? () => {
               // Suppress click if a real drag just happened
-              if (dragX && Math.abs(dragX.get()) > 4) return;
+              if (Math.abs(x.get()) > 4) return;
               onSelect(trip.id);
             }
           : undefined
@@ -232,37 +259,27 @@ function TripDeck({ trips, todayStr, onSelect }) {
   const [active, setActive] = useState(initialActive);
   const [dir, setDir] = useState(0);
 
-  // Track whether this is the first paint so we only stagger on entry.
   const isFirstRender = useRef(true);
   useEffect(() => {
-    // Defer the flip past the first commit so cards see the staggered initial.
     const id = requestAnimationFrame(() => {
       isFirstRender.current = false;
     });
     return () => cancelAnimationFrame(id);
   }, []);
 
-  const dragX = useMotionValue(0);
-  const dragRotate = useTransform(dragX, [-220, 0, 220], [-14, 0, 14]);
-
   const canGoPrev = active > 0;
   const canGoNext = active < ordered.length - 1;
 
   const commit = (direction) => {
-    if (direction > 0 && canGoNext) {
-      setDir(1);
-      setActive((i) => i + 1);
-    } else if (direction < 0 && canGoPrev) {
-      setDir(-1);
-      setActive((i) => i - 1);
-    }
-    dragX.set(0);
-  };
-
-  const onDragEnd = (_e, info) => {
-    if (info.offset.x < -SWIPE_THRESHOLD && canGoNext) commit(1);
-    else if (info.offset.x > SWIPE_THRESHOLD && canGoPrev) commit(-1);
-    else dragX.set(0);
+    // Bounds check INSIDE the updater so rapid-fire clicks can't
+    // accumulate setActive calls past the end of the deck (was causing
+    // all cards to fly away when you spammed past the last trip).
+    setActive((i) => {
+      if (direction > 0 && i < ordered.length - 1) return i + 1;
+      if (direction < 0 && i > 0) return i - 1;
+      return i;
+    });
+    setDir(direction);
   };
 
   // Visible window: top + up to 2 peek cards.
@@ -271,28 +288,31 @@ function TripDeck({ trips, todayStr, onSelect }) {
   return (
     <>
       <div className="deck-shell">
-        <AnimatePresence custom={dir} initial={true} mode="popLayout">
-          {visible.map((trip, slot) => (
-            <DeckLayer
-              key={trip.id}
-              trip={trip}
-              slot={slot}
-              isTop={slot === 0}
-              todayStr={todayStr}
-              onSelect={onSelect}
-              dragX={dragX}
-              dragRotate={dragRotate}
-              onDragEnd={onDragEnd}
-              reduceMotion={reduceMotion}
-              dir={dir}
-              staggerDelay={
-                isFirstRender.current && !reduceMotion
-                  ? (2 - slot) * 0.09 + 0.15
-                  : 0
-              }
-            />
-          ))}
-        </AnimatePresence>
+        {/* No AnimatePresence — it was leaving cards stuck at their
+            initial opacity 0 in dev (StrictMode-related deadlock). Cards
+            still animate from initial → animate via plain motion props,
+            and the exiting top card is handled by an imperative animation
+            in the commit handler. */}
+        {visible.map((trip, slot) => (
+          <DeckLayer
+            key={trip.id}
+            trip={trip}
+            slot={slot}
+            isTop={slot === 0}
+            todayStr={todayStr}
+            onSelect={onSelect}
+            onCommit={commit}
+            canGoNext={canGoNext}
+            canGoPrev={canGoPrev}
+            reduceMotion={reduceMotion}
+            dir={dir}
+            staggerDelay={
+              isFirstRender.current && !reduceMotion
+                ? (2 - slot) * 0.09 + 0.15
+                : 0
+            }
+          />
+        ))}
       </div>
 
       <div className="deck-hint">

@@ -121,7 +121,7 @@ export default function SignupSwipe({ trip, categories, userId, onComplete, onNo
 
   return (
     <div className="app-shell">
-      <div className="content" style={{ display: "flex", flexDirection: "column" }}>
+      <div className="content content--swipe">
         <div className="row between">
           <div className="pill">
             {idx + 1} / {questions.length}

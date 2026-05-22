@@ -232,23 +232,25 @@ export default function App() {
   return (
     <>
       <AlpsBackground />
-      <StagePresence stageKey={stage}>{screen}</StagePresence>
+      {screen}
     </>
   );
 }
 
-/**
- * Crossfades + slide between stages. Each stage exits up-and-out,
- * the next enters from below — like flipping to the next page in
- * a paper field journal.
- */
-function StagePresence({ stageKey, children }) {
+// Stage-level page transitions removed: AnimatePresence around the
+// outer screen wrapper kept locking up under StrictMode (either via
+// `mode="wait"`'s onExitComplete deadlock or `mode="popLayout"`'s
+// indefinite mid-transition state where neither child resolves). The
+// inner screen-level animations already give a satisfying transition
+// feel; the outer wrapper was redundant polish at the cost of stability.
+// eslint-disable-next-line no-unused-vars
+function _StagePresence_disabled({ stageKey, children }) {
   const reduceMotion = useReducedMotion();
   if (reduceMotion) {
     return children;
   }
   return (
-    <AnimatePresence mode="wait" initial={false}>
+    <AnimatePresence mode="popLayout" initial={false}>
       <motion.div
         key={stageKey}
         initial={{ opacity: 0, y: 18 }}

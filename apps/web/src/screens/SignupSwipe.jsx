@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { motion, useMotionValue, useTransform, AnimatePresence } from "framer-motion";
+import React, { useEffect, useMemo, useState } from "react";
+import { animate, motion, useMotionValue, useTransform, AnimatePresence } from "framer-motion";
 import { api } from "../api.js";
 
 // Build the question list from gear categories
@@ -37,6 +37,7 @@ export default function SignupSwipe({ trip, categories, userId, onComplete, onNo
   const [details, setDetails] = useState(null); // for showing detail form
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [exitDir, setExitDir] = useState(null); // "left" | "right" — drives exit animation
   // answers shape:
   // { joining: bool, driving: {seats}|null, gear: { [catId]: details|null } }
   const [answers, setAnswers] = useState({ joining: true, driving: null, gear: {} });
@@ -99,6 +100,7 @@ export default function SignupSwipe({ trip, categories, userId, onComplete, onNo
       onNotJoining();
       return;
     }
+    setExitDir(yes ? "right" : "left");
     try {
       await persistAnswer(q, yes, null);
       next();
@@ -132,16 +134,27 @@ export default function SignupSwipe({ trip, categories, userId, onComplete, onNo
         {error && <div className="error-banner" style={{ marginTop: 12 }}>{error}</div>}
 
         <div className="deck">
-          <AnimatePresence>
-            {!details && (
-              <SwipeCard
-                key={q.id}
-                question={q}
-                onAnswer={handleAnswer}
-                disabled={submitting}
-              />
-            )}
-          </AnimatePresence>
+          <div className="deck-stage">
+            <AnimatePresence custom={exitDir} initial={false}>
+              {!details && (
+                <SwipeCard
+                  key={q.id}
+                  question={q}
+                  onAnswer={handleAnswer}
+                  exitDir={exitDir}
+                  hint={idx === 0}
+                />
+              )}
+            </AnimatePresence>
+          </div>
+
+          {!details && (
+            <SwipeActions
+              disabled={submitting}
+              onNo={() => handleAnswer(false)}
+              onYes={() => handleAnswer(true)}
+            />
+          )}
         </div>
 
         {details && (
@@ -158,11 +171,27 @@ export default function SignupSwipe({ trip, categories, userId, onComplete, onNo
   );
 }
 
-function SwipeCard({ question, onAnswer, disabled }) {
+function SwipeCard({ question, onAnswer, exitDir, hint }) {
   const x = useMotionValue(0);
-  const rotate = useTransform(x, [-200, 200], [-18, 18]);
-  const yesOp = useTransform(x, [0, 120], [0, 1]);
-  const noOp = useTransform(x, [-120, 0], [1, 0]);
+  const rotate = useTransform(x, [-220, 220], [-14, 14]);
+  const yesOp = useTransform(x, [20, 140], [0, 1]);
+  const noOp = useTransform(x, [-140, -20], [1, 0]);
+  // Color-fill overlay: red on the left, green on the right
+  const fillOp = useTransform(x, [-180, -20, 0, 20, 180], [0.78, 0, 0, 0, 0.78]);
+  const fillBg = useTransform(x, (v) =>
+    v < 0 ? "var(--danger)" : "var(--grass-500)"
+  );
+
+  // One-time "swipeable" wiggle on the very first card
+  useEffect(() => {
+    if (!hint) return;
+    const controls = animate(x, [0, -26, 22, -14, 12, 0], {
+      duration: 1.4,
+      delay: 0.55,
+      ease: [0.45, 0, 0.55, 1],
+    });
+    return () => controls.stop();
+  }, [hint, x]);
 
   const onDragEnd = (_, info) => {
     if (info.offset.x > 120) onAnswer(true);
@@ -176,11 +205,25 @@ function SwipeCard({ question, onAnswer, disabled }) {
       drag="x"
       dragConstraints={{ left: 0, right: 0 }}
       onDragEnd={onDragEnd}
-      initial={{ scale: 0.95, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      exit={{ x: 400, opacity: 0 }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      initial={{ scale: 0.94, opacity: 0, y: 8 }}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      custom={exitDir}
+      exit={(dir) => ({
+        x: dir === "left" ? -480 : 480,
+        rotate: dir === "left" ? -22 : 22,
+        opacity: 0,
+        transition: { duration: 0.32, ease: [0.4, 0, 0.2, 1] },
+      })}
+      transition={{ type: "spring", stiffness: 320, damping: 32 }}
+      whileTap={{ cursor: "grabbing" }}
     >
+      {/* Colored fill that intensifies as the card is dragged */}
+      <motion.div
+        className="swipe-card__fill"
+        style={{ opacity: fillOp, background: fillBg }}
+        aria-hidden="true"
+      />
+
       <motion.div className="stamp yes" style={{ opacity: yesOp }}>
         Yes
       </motion.div>
@@ -188,33 +231,124 @@ function SwipeCard({ question, onAnswer, disabled }) {
         No
       </motion.div>
 
-      <div className="q-title">{question.title}</div>
-      <div className="q-sub">{question.sub}</div>
+      <div className="swipe-card__body">
+        <div className="q-title">{question.title}</div>
+        <div className="q-sub">{question.sub}</div>
+      </div>
 
       <div className="hint-row">
-        <span className="no">← Swipe no</span>
-        <span className="yes">Swipe yes →</span>
-      </div>
-
-      <div className="swipe-actions">
-        <button
-          className="circle no"
-          disabled={disabled}
-          onClick={() => onAnswer(false)}
-          aria-label="No"
-        >
-          ✕
-        </button>
-        <button
-          className="circle yes"
-          disabled={disabled}
-          onClick={() => onAnswer(true)}
-          aria-label="Yes"
-        >
-          ✓
-        </button>
+        <span className="no">
+          <SwipeLeftIcon />
+          Swipe no
+        </span>
+        <span className="yes">
+          Swipe yes
+          <SwipeRightIcon />
+        </span>
       </div>
     </motion.div>
+  );
+}
+
+function SwipeActions({ disabled, onNo, onYes }) {
+  return (
+    <div className="swipe-actions">
+      <button
+        type="button"
+        className="action-btn no"
+        disabled={disabled}
+        onClick={onNo}
+        aria-label="No"
+      >
+        <CloseIcon />
+      </button>
+      <button
+        type="button"
+        className="action-btn yes"
+        disabled={disabled}
+        onClick={onYes}
+        aria-label="Yes"
+      >
+        <CheckIcon />
+      </button>
+    </div>
+  );
+}
+
+/* --- Inline SVG icons (no extra deps) --- */
+
+function CloseIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="28"
+      height="28"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M6 6l12 12M18 6l-12 12" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="28"
+      height="28"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M5 12.5l4.5 4.5L19 7.5" />
+    </svg>
+  );
+}
+
+// Double chevrons evoke a swipe motion better than a single arrow
+function SwipeLeftIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M17 6l-6 6 6 6" />
+      <path d="M11 6l-6 6 6 6" />
+    </svg>
+  );
+}
+
+function SwipeRightIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M7 6l6 6-6 6" />
+      <path d="M13 6l6 6-6 6" />
+    </svg>
   );
 }
 

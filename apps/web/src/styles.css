@@ -343,7 +343,15 @@ label {
   flex: 1;
   overflow-y: auto;
   padding: 24px 20px;
-  padding-bottom: 110px;
+}
+
+/* Landing wants to fit a single viewport (no scroll). The deck flexes
+   into whatever space remains between brand and hint+CTA. */
+.content--landing {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 /* ----------  Tabbar (kept compatible)  ---------- */
@@ -445,12 +453,13 @@ label {
 */
 .deck-shell {
   position: relative;
-  margin: 32px auto 0;
+  margin: 24px auto 0;
   width: 100%;
   max-width: 340px;
-  /* Card height + room for peek cards below */
-  height: 360px;
-  /* The dot/arrow hint row lives below this in normal flow */
+  /* Flexes to fit available vertical space, capped at 360 */
+  flex: 1 1 0;
+  min-height: 260px;
+  max-height: 380px;
 }
 .deck-card {
   position: absolute;

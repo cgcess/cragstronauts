@@ -1,8 +1,15 @@
 import React, { useEffect, useState } from "react";
+import { motion, LayoutGroup } from "framer-motion";
 import { api } from "../api.js";
 import InfoTab from "./InfoTab.jsx";
 import CarsTab from "./CarsTab.jsx";
 import GearTab from "./GearTab.jsx";
+
+const TABS = [
+  { id: "info", label: "Info", icon: "📍" },
+  { id: "cars", label: "Cars", icon: "🚗" },
+  { id: "gear", label: "Gear", icon: "🎒" },
+];
 
 export default function MainTabs({
   trip,
@@ -46,14 +53,14 @@ export default function MainTabs({
       <div className="content">
         {error && <div className="error-banner">{error}</div>}
         <div className="row between">
-          <button className="ghost" onClick={onExitTrip}>
+          <button className="nav-pill" onClick={onExitTrip}>
             ← Trips
           </button>
           <div className="muted" style={{ fontSize: 13 }}>
             <strong style={{ color: "var(--fg)" }}>{me?.name}</strong>
             {me?.is_organizer && " 👑"}
           </div>
-          <button className="ghost" onClick={onSwitchUser}>
+          <button className="nav-pill" onClick={onSwitchUser}>
             Switch
           </button>
         </div>
@@ -89,29 +96,27 @@ export default function MainTabs({
         )}
       </div>
 
-      <div className="tabbar">
-        <button
-          className={tab === "info" ? "active" : ""}
-          onClick={() => setTab("info")}
-        >
-          <span className="icon">📍</span>
-          Info
-        </button>
-        <button
-          className={tab === "cars" ? "active" : ""}
-          onClick={() => setTab("cars")}
-        >
-          <span className="icon">🚗</span>
-          Cars
-        </button>
-        <button
-          className={tab === "gear" ? "active" : ""}
-          onClick={() => setTab("gear")}
-        >
-          <span className="icon">🎒</span>
-          Gear
-        </button>
-      </div>
+      <LayoutGroup>
+        <div className="tabbar">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              className={tab === t.id ? "active" : ""}
+              onClick={() => setTab(t.id)}
+            >
+              {tab === t.id && (
+                <motion.span
+                  layoutId="tab-pill"
+                  className="tab-pill"
+                  transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.8 }}
+                />
+              )}
+              <span className="icon">{t.icon}</span>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </LayoutGroup>
     </div>
   );
 }

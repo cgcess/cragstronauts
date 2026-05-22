@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   AnimatePresence,
   motion,
@@ -8,7 +8,17 @@ import {
 } from "framer-motion";
 
 const EASE_OUT = [0.23, 1, 0.32, 1];
-const SWIPE_THRESHOLD = 90; // px past which the swipe "commits"
+const SWIPE_THRESHOLD = 90; // px past which a swipe commits
+const ROTATIONS = [0, 1.6, -2.0]; // slot 0 (top) is flat, peeks wobble
+
+// Each slot in the visible stack has a resting transform. Opacity is
+// always 1 so a peek card never bleeds the card above through it; depth
+// reads from y-offset, scale, and box-shadow.
+const SLOTS = [
+  { y: 0, scale: 1, opacity: 1, rotate: ROTATIONS[0] },     // top
+  { y: 12, scale: 0.96, opacity: 1, rotate: ROTATIONS[1] }, // peek 1
+  { y: 24, scale: 0.92, opacity: 1, rotate: ROTATIONS[2] }, // peek 2
+];
 
 function todayISO() {
   const d = new Date();
@@ -69,13 +79,6 @@ function chipLabelFor(trip, todayStr) {
   return { label: `In ${Math.round(days / 7)} wk`, tone: "soon" };
 }
 
-// Hand-tuned wobble per peek-card position so the stack feels human.
-const ROTATIONS = [-2.0, 1.6, -1.0, 2.4];
-
-/**
- * TripCard — visual presentation of a single trip card.
- * Pure layout — drag/animation lives in the parent.
- */
 function TripCardFace({ trip, todayStr }) {
   const past = isPast(trip, todayStr);
   const chip = chipLabelFor(trip, todayStr);
@@ -83,9 +86,7 @@ function TripCardFace({ trip, todayStr }) {
     <div className={`deck-card__face ${past ? "deck-card__face--past" : ""}`}>
       <div className="deck-card__topline">
         <span className="deck-card__date">{dateRangeShort(trip)}</span>
-        <span
-          className={`deck-card__chip deck-card__chip--${chip.tone}`}
-        >
+        <span className={`deck-card__chip deck-card__chip--${chip.tone}`}>
           {chip.label}
         </span>
       </div>
@@ -110,43 +111,144 @@ function TripCardFace({ trip, todayStr }) {
 }
 
 /**
- * TripDeck — Apple-Wallet-ish stack of cards you can swipe through
- * left/right. Top card is draggable; release past SWIPE_THRESHOLD
- * commits the swipe.
+ * One card layer. Rendered for each visible trip; its slot is whatever
+ * its offset from the active index resolves to. When `active` changes,
+ * cards that remain visible animate between slots (smooth rise/fall);
+ * new cards enter via AnimatePresence; the swiped-off card exits to
+ * the side it was thrown.
  */
+const DeckLayer = React.forwardRef(function DeckLayer(
+  {
+    trip,
+    slot,
+    isTop,
+    todayStr,
+    onSelect,
+    dragX,
+    dragRotate,
+    onDragEnd,
+    reduceMotion,
+    staggerDelay,
+    dir,
+  },
+  ref
+) {
+  const target = SLOTS[slot];
+
+  // Two distinct entrances:
+  //   • First mount  — cards swoop up from below the screen (the
+  //     "stack assembles" feel from the original design).
+  //   • Mid-shuffle  — new card fades in BEHIND the stack at its
+  //     target Y but smaller, so it doesn't traverse through the
+  //     other cards and bleed text on the way up.
+  const enterFromBelow = {
+    y: target.y + 90,
+    scale: target.scale * 0.94,
+    opacity: 0,
+    rotate: target.rotate,
+  };
+  const enterFromBehind = {
+    y: target.y,
+    scale: target.scale * 0.82,
+    opacity: 0,
+    rotate: target.rotate,
+  };
+  const initialState = staggerDelay > 0 ? enterFromBelow : enterFromBehind;
+
+  return (
+    <motion.button
+      ref={ref}
+      type="button"
+      className={`deck-card ${isTop ? "deck-card--top" : "deck-card--peek"}`}
+      style={{
+        zIndex: 10 - slot,
+        // Top card alone gets drag-controlled x + a rotation derived
+        // from the drag distance. Peek cards stay still.
+        ...(isTop && !reduceMotion ? { x: dragX, rotate: dragRotate } : {}),
+      }}
+      custom={dir}
+      initial={reduceMotion ? false : initialState}
+      animate={{
+        // Top card's rotate is owned by style (dragRotate). Animating
+        // rotate here would fight the motion value, so only set it for
+        // peek cards.
+        y: target.y,
+        scale: target.scale,
+        opacity: target.opacity,
+        ...(isTop ? {} : { rotate: target.rotate }),
+      }}
+      exit={
+        reduceMotion
+          ? { opacity: 0 }
+          : (custom) => ({
+              x: custom > 0 ? -460 : 460,
+              rotate: custom > 0 ? -22 : 22,
+              opacity: 0,
+              transition: { duration: 0.28, ease: EASE_OUT },
+            })
+      }
+      transition={{
+        type: "spring",
+        stiffness: 240,
+        damping: 26,
+        // Stagger only on first mount, otherwise instant transition
+        delay: staggerDelay,
+      }}
+      drag={isTop && !reduceMotion ? "x" : false}
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.65}
+      onDragEnd={isTop ? onDragEnd : undefined}
+      onClick={
+        isTop
+          ? () => {
+              // Suppress click if a real drag just happened
+              if (dragX && Math.abs(dragX.get()) > 4) return;
+              onSelect(trip.id);
+            }
+          : undefined
+      }
+    >
+      <TripCardFace trip={trip} todayStr={todayStr} />
+    </motion.button>
+  );
+});
+
 function TripDeck({ trips, todayStr, onSelect }) {
   const reduceMotion = useReducedMotion();
 
-  // Sort chronologically (oldest first). Start at the first upcoming
-  // trip so the deck opens with "what's next" facing you.
   const ordered = useMemo(() => {
-    const sorted = [...trips].sort((a, b) => {
+    return [...trips].sort((a, b) => {
       const ad = a.start_date || a.end_date || "9999-12-31";
       const bd = b.start_date || b.end_date || "9999-12-31";
       return ad.localeCompare(bd);
     });
-    return sorted;
   }, [trips]);
 
   const initialActive = useMemo(() => {
-    const firstUpcoming = ordered.findIndex((t) => !isPast(t, todayStr));
-    return firstUpcoming >= 0 ? firstUpcoming : Math.max(ordered.length - 1, 0);
+    const i = ordered.findIndex((t) => !isPast(t, todayStr));
+    return i >= 0 ? i : Math.max(ordered.length - 1, 0);
   }, [ordered, todayStr]);
 
   const [active, setActive] = useState(initialActive);
-  // Track direction of the last swipe so the entering card knows which
-  // side to fly in from. +1 = swiped left (next), -1 = swiped right (prev).
   const [dir, setDir] = useState(0);
 
-  // Drag motion values bound to the topmost card only.
-  const x = useMotionValue(0);
-  const rotate = useTransform(x, [-220, 0, 220], [-14, 0, 14]);
-  const dragFade = useTransform(x, [-220, -120, 0, 120, 220], [0, 1, 1, 1, 0]);
+  // Track whether this is the first paint so we only stagger on entry.
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    // Defer the flip past the first commit so cards see the staggered initial.
+    const id = requestAnimationFrame(() => {
+      isFirstRender.current = false;
+    });
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  const dragX = useMotionValue(0);
+  const dragRotate = useTransform(dragX, [-220, 0, 220], [-14, 0, 14]);
 
   const canGoPrev = active > 0;
   const canGoNext = active < ordered.length - 1;
 
-  const commitSwipe = (direction) => {
+  const commit = (direction) => {
     if (direction > 0 && canGoNext) {
       setDir(1);
       setActive((i) => i + 1);
@@ -154,169 +256,75 @@ function TripDeck({ trips, todayStr, onSelect }) {
       setDir(-1);
       setActive((i) => i - 1);
     }
-    x.set(0);
+    dragX.set(0);
   };
 
-  const topTrip = ordered[active];
-  const peek1 = ordered[active + 1] ?? ordered[active - 1] ?? null;
-  const peek2 =
-    ordered[active + 2] ?? ordered[active + 1] ?? ordered[active - 2] ?? null;
+  const onDragEnd = (_e, info) => {
+    if (info.offset.x < -SWIPE_THRESHOLD && canGoNext) commit(1);
+    else if (info.offset.x > SWIPE_THRESHOLD && canGoPrev) commit(-1);
+    else dragX.set(0);
+  };
 
-  if (!topTrip) return null;
+  // Visible window: top + up to 2 peek cards.
+  const visible = ordered.slice(active, active + 3);
 
-  // We render top + up to two peek cards. Top card uses AnimatePresence
-  // so the entering one slides in from the swipe direction.
   return (
     <>
-    <div className="deck-shell">
-      {/* Peek cards (purely decorative — they don't react to clicks while
-          a card sits on top of them, but they peek out so the deck reads
-          as a physical stack). */}
-      {peek2 && (
-        <motion.div
-          key={`peek2-${peek2.id}`}
-          className="deck-card deck-card--peek"
-          aria-hidden="true"
-          initial={false}
-          animate={
-            reduceMotion
-              ? { opacity: 0.5 }
-              : { y: 22, rotate: ROTATIONS[2], scale: 0.92, opacity: 0.55 }
-          }
-          transition={{
-            type: "spring",
-            stiffness: 220,
-            damping: 26,
-          }}
-          style={{ zIndex: 1 }}
-        >
-          <TripCardFace trip={peek2} todayStr={todayStr} />
-        </motion.div>
-      )}
-      {peek1 && peek1 !== peek2 && (
-        <motion.div
-          key={`peek1-${peek1.id}`}
-          className="deck-card deck-card--peek"
-          aria-hidden="true"
-          initial={false}
-          animate={
-            reduceMotion
-              ? { opacity: 0.75 }
-              : { y: 12, rotate: ROTATIONS[1], scale: 0.96, opacity: 0.85 }
-          }
-          transition={{
-            type: "spring",
-            stiffness: 240,
-            damping: 26,
-          }}
-          style={{ zIndex: 2 }}
-        >
-          <TripCardFace trip={peek1} todayStr={todayStr} />
-        </motion.div>
-      )}
-
-      {/* Top card — draggable */}
-      <AnimatePresence mode="popLayout" custom={dir} initial={false}>
-        <motion.button
-          key={topTrip.id}
-          type="button"
-          className="deck-card deck-card--top"
-          onClick={() => {
-            // Suppress click if a real drag just happened
-            if (Math.abs(x.get()) > 4) return;
-            onSelect(topTrip.id);
-          }}
-          drag={reduceMotion ? false : "x"}
-          dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.7}
-          style={{
-            zIndex: 3,
-            x: reduceMotion ? 0 : x,
-            rotate: reduceMotion ? 0 : rotate,
-            opacity: reduceMotion ? 1 : dragFade,
-            transformOrigin: "50% 100%",
-            "--card-rot": "0deg",
-          }}
-          custom={dir}
-          variants={
-            reduceMotion
-              ? undefined
-              : {
-                  enter: (d) => ({
-                    x: d >= 0 ? 420 : -420,
-                    rotate: d >= 0 ? 14 : -14,
-                    opacity: 0,
-                  }),
-                  center: {
-                    x: 0,
-                    rotate: ROTATIONS[0],
-                    opacity: 1,
-                    transition: {
-                      type: "spring",
-                      stiffness: 260,
-                      damping: 28,
-                    },
-                  },
-                  exit: (d) => ({
-                    x: d >= 0 ? -460 : 460,
-                    rotate: d >= 0 ? -22 : 22,
-                    opacity: 0,
-                    transition: { duration: 0.28, ease: EASE_OUT },
-                  }),
-                }
-          }
-          initial="enter"
-          animate="center"
-          exit="exit"
-          onDragEnd={(_e, info) => {
-            if (info.offset.x < -SWIPE_THRESHOLD && canGoNext) {
-              commitSwipe(1);
-            } else if (info.offset.x > SWIPE_THRESHOLD && canGoPrev) {
-              commitSwipe(-1);
-            } else {
-              // Snap back
-              x.set(0);
-            }
-          }}
-        >
-          <TripCardFace trip={topTrip} todayStr={todayStr} />
-        </motion.button>
-      </AnimatePresence>
-    </div>
-
-    {/* Bottom hint row: position + swipe affordances. Sits BELOW the
-        deck-shell in normal flow so it doesn't get sandwiched between
-        absolutely-positioned cards. */}
-    <div className="deck-hint">
-      <button
-        type="button"
-        className="deck-hint__nudge"
-        onClick={() => commitSwipe(-1)}
-        disabled={!canGoPrev}
-        aria-label="Previous trip"
-      >
-        ←
-      </button>
-      <div className="deck-hint__dots" aria-hidden="true">
-        {ordered.map((t, i) => (
-          <span
-            key={t.id}
-            className={`deck-hint__dot ${
-              i === active ? "deck-hint__dot--on" : ""
-            } ${isPast(t, todayStr) ? "deck-hint__dot--past" : ""}`}
-          />
-        ))}
+      <div className="deck-shell">
+        <AnimatePresence custom={dir} initial={true} mode="popLayout">
+          {visible.map((trip, slot) => (
+            <DeckLayer
+              key={trip.id}
+              trip={trip}
+              slot={slot}
+              isTop={slot === 0}
+              todayStr={todayStr}
+              onSelect={onSelect}
+              dragX={dragX}
+              dragRotate={dragRotate}
+              onDragEnd={onDragEnd}
+              reduceMotion={reduceMotion}
+              dir={dir}
+              staggerDelay={
+                isFirstRender.current && !reduceMotion
+                  ? (2 - slot) * 0.09 + 0.15
+                  : 0
+              }
+            />
+          ))}
+        </AnimatePresence>
       </div>
-      <button
-        type="button"
-        className="deck-hint__nudge"
-        onClick={() => commitSwipe(1)}
-        disabled={!canGoNext}
-        aria-label="Next trip"
-      >
-        →
-      </button>
-    </div>
+
+      <div className="deck-hint">
+        <button
+          type="button"
+          className="deck-hint__nudge"
+          onClick={() => commit(-1)}
+          disabled={!canGoPrev}
+          aria-label="Previous trip"
+        >
+          ←
+        </button>
+        <div className="deck-hint__dots" aria-hidden="true">
+          {ordered.map((t, i) => (
+            <span
+              key={t.id}
+              className={`deck-hint__dot ${
+                i === active ? "deck-hint__dot--on" : ""
+              } ${isPast(t, todayStr) ? "deck-hint__dot--past" : ""}`}
+            />
+          ))}
+        </div>
+        <button
+          type="button"
+          className="deck-hint__nudge"
+          onClick={() => commit(1)}
+          disabled={!canGoNext}
+          aria-label="Next trip"
+        >
+          →
+        </button>
+      </div>
     </>
   );
 }
@@ -336,8 +344,8 @@ export default function TripListing({ trips, onCreate, onSelect }) {
   const hasAnyTrip = trips.length > 0;
 
   return (
-    <div className="app-shell">
-      <div className="content">
+    <div className="app-shell app-shell--landing">
+      <div className="content content--landing">
         <motion.div {...fade}>
           <div className="brand-mark">
             <span className="mark-glyph" aria-hidden="true">🧗</span>

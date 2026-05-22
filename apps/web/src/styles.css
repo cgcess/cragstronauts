@@ -19,13 +19,15 @@
   --brown-700: #5a2f23;
   --brown-900: #2d160f;
 
-  /* Blue / sky (cobalt, matches the reference button) */
-  --blue-300: #7a93ff;
-  --blue-400: #4a6bff;
-  --blue-500: #2746e8;
-  --blue-600: #1c33b8;
-  --blue-700: #142687;
-  --blue-900: #0a1660;
+  /* Blue / sky (atmospheric, dusty alpine — built around #acc9df) */
+  --blue-100: #e7eff5;  /* pale wash — focus rings, hover bg */
+  --blue-200: #d0dfeb;  /* soft tint — chip bg */
+  --blue-300: #acc9df;  /* THE accent — Nick's spec */
+  --blue-400: #8eb0cb;  /* gradient mid */
+  --blue-500: #6e93b3;  /* gradient base, dot active */
+  --blue-600: #4d7595;  /* darker accent, CTA links */
+  --blue-700: #345876;  /* depth shadow upper, body text-on-light */
+  --blue-900: #1f3a52;  /* depth shadow base, navy text on button */
 
   /* Grass (alpine accents, sparingly) */
   --grass-500: #5a8f3d;
@@ -108,7 +110,7 @@ button {
   font: inherit;
   font-family: var(--font-body);
   color: inherit;
-  background: var(--blue-500);
+  background: var(--blue-700);
   color: white;
   border: none;
   border-radius: var(--radius);
@@ -156,18 +158,19 @@ button.btn-3d {
   letter-spacing: -0.01em;
   padding: 18px 28px;
   border-radius: 999px;
-  color: white;
-  background: linear-gradient(180deg, var(--blue-400) 0%, var(--blue-600) 100%);
+  /* Dark navy text — only legible choice on the pastel face */
+  color: var(--blue-900);
+  background: linear-gradient(180deg, var(--blue-300) 0%, var(--blue-500) 100%);
   box-shadow:
     /* top highlight */
-    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
     /* bottom inner shadow */
-    inset 0 -2px 4px rgba(10, 22, 96, 0.35),
+    inset 0 -2px 4px rgba(31, 58, 82, 0.28),
     /* depth (the "thickness" of the button) */
-    0 5px 0 0 var(--blue-700),
-    0 6px 0 0 var(--blue-900),
+    0 5px 0 0 var(--blue-600),
+    0 6px 0 0 var(--blue-700),
     /* ambient drop */
-    0 14px 28px -10px rgba(20, 38, 135, 0.55);
+    0 14px 28px -10px rgba(52, 88, 118, 0.45);
   transition:
     transform 140ms var(--ease-out),
     box-shadow 140ms var(--ease-out);
@@ -176,19 +179,19 @@ button.btn-3d {
 button.btn-3d:hover {
   transform: translateY(-1px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    inset 0 -2px 4px rgba(10, 22, 96, 0.35),
-    0 6px 0 0 var(--blue-700),
-    0 7px 0 0 var(--blue-900),
-    0 18px 32px -10px rgba(20, 38, 135, 0.65);
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -2px 4px rgba(31, 58, 82, 0.28),
+    0 6px 0 0 var(--blue-600),
+    0 7px 0 0 var(--blue-700),
+    0 18px 32px -10px rgba(52, 88, 118, 0.55);
 }
 button.btn-3d:active {
   transform: translateY(5px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    inset 0 -1px 2px rgba(10, 22, 96, 0.25),
-    0 1px 0 0 var(--blue-900),
-    0 2px 10px -2px rgba(20, 38, 135, 0.45);
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 2px rgba(31, 58, 82, 0.2),
+    0 1px 0 0 var(--blue-700),
+    0 2px 10px -2px rgba(52, 88, 118, 0.4);
 }
 
 /* Brown variant for secondary "tactile" affordances */
@@ -264,7 +267,7 @@ input, select, textarea {
 }
 input:focus, select:focus, textarea:focus {
   border-color: var(--blue-500);
-  box-shadow: 0 0 0 3px rgba(39, 70, 232, 0.12);
+  box-shadow: 0 0 0 3px rgba(110, 147, 179, 0.18);
 }
 label {
   font-size: 13px;
@@ -379,7 +382,7 @@ label {
   align-items: center;
   gap: 2px;
 }
-.tabbar button.active { color: var(--blue-500); }
+.tabbar button.active { color: var(--blue-700); }
 .tabbar .icon { font-size: 22px; line-height: 1; }
 
 /* ----------  Generic surfaces  ---------- */
@@ -406,8 +409,8 @@ label {
   color: var(--brown-600);
 }
 .pill.accent {
-  background: rgba(39, 70, 232, 0.12);
-  color: var(--blue-600);
+  background: var(--blue-100);
+  color: var(--blue-700);
   border-color: transparent;
 }
 
@@ -545,8 +548,8 @@ label {
   border-color: transparent;
 }
 .deck-card__chip--soon {
-  background: rgba(39, 70, 232, 0.12);
-  color: var(--blue-600);
+  background: var(--blue-100);
+  color: var(--blue-700);
   border-color: transparent;
 }
 
@@ -580,7 +583,7 @@ label {
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 14px;
-  color: var(--blue-500);
+  color: var(--blue-700);
 }
 .deck-card__face--past .deck-card__cta {
   color: var(--brown-600);
@@ -635,7 +638,7 @@ label {
   background: var(--brown-300);
 }
 .deck-hint__dot--on {
-  background: var(--blue-500);
+  background: var(--blue-700);
   transform: scale(1.6);
 }
 .deck-hint__dot--past.deck-hint__dot--on {
@@ -853,7 +856,7 @@ label {
   font-size: 13px;
 }
 .seat.empty { color: var(--brown-400); border-style: dashed; cursor: pointer; }
-.seat.empty:hover { color: var(--blue-500); border-color: var(--blue-500); }
+.seat.empty:hover { color: var(--blue-700); border-color: var(--blue-500); }
 .seat.driver {
   background: rgba(138, 82, 63, 0.14);
   border-color: var(--brown-500);
@@ -887,13 +890,14 @@ button.cta-primary {
   font-weight: 700;
   padding: 18px 28px;
   border-radius: 999px;
-  background: linear-gradient(180deg, var(--blue-400) 0%, var(--blue-600) 100%);
+  color: var(--blue-900);
+  background: linear-gradient(180deg, var(--blue-300) 0%, var(--blue-500) 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.55),
-    inset 0 -2px 4px rgba(10, 22, 96, 0.35),
-    0 5px 0 0 var(--blue-700),
-    0 6px 0 0 var(--blue-900),
-    0 14px 28px -10px rgba(20, 38, 135, 0.55);
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -2px 4px rgba(31, 58, 82, 0.28),
+    0 5px 0 0 var(--blue-600),
+    0 6px 0 0 var(--blue-700),
+    0 14px 28px -10px rgba(52, 88, 118, 0.45);
   transition:
     transform 140ms var(--ease-out),
     box-shadow 140ms var(--ease-out);
@@ -901,19 +905,19 @@ button.cta-primary {
 button.cta-primary:hover {
   transform: translateY(-1px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    inset 0 -2px 4px rgba(10, 22, 96, 0.35),
-    0 6px 0 0 var(--blue-700),
-    0 7px 0 0 var(--blue-900),
-    0 18px 32px -10px rgba(20, 38, 135, 0.65);
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -2px 4px rgba(31, 58, 82, 0.28),
+    0 6px 0 0 var(--blue-600),
+    0 7px 0 0 var(--blue-700),
+    0 18px 32px -10px rgba(52, 88, 118, 0.55);
 }
 button.cta-primary:active {
   transform: translateY(5px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    inset 0 -1px 2px rgba(10, 22, 96, 0.25),
-    0 1px 0 0 var(--blue-900),
-    0 2px 10px -2px rgba(20, 38, 135, 0.45);
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 2px rgba(31, 58, 82, 0.2),
+    0 1px 0 0 var(--blue-700),
+    0 2px 10px -2px rgba(52, 88, 118, 0.4);
 }
 
 /* Respect user preference */

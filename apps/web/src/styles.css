@@ -274,8 +274,10 @@ label {
   margin-bottom: 6px;
 }
 
-/* Side-by-side date pickers — min-width: 0 stops native date input
-   intrinsic width from blowing past its flex share. */
+/* Side-by-side date pickers. iOS Safari gives <input type="date"> an
+   intrinsic min-width that ignores the flex parent unless we set
+   min-width: 0 on BOTH the flex cell and the input itself. On very
+   narrow viewports we just stack them — safer than fighting WebKit. */
 .date-row {
   display: flex;
   gap: 10px;
@@ -286,6 +288,17 @@ label {
 }
 .date-row__field input {
   width: 100%;
+  min-width: 0;
+  /* Let CSS, not the browser, decide the size */
+  -webkit-appearance: none;
+  appearance: none;
+}
+/* Stack vertically below typical iPhone width so the pickers always fit */
+@media (max-width: 400px) {
+  .date-row {
+    flex-direction: column;
+    gap: 14px;
+  }
 }
 
 /* Inline form warning (less alarming than .error-banner) */
@@ -425,43 +438,69 @@ label {
   margin-top: 2px;
 }
 
-.deck-stack {
+/* ----------  Swipeable deck  ----------
+   Layout: a positioned .deck-shell that stacks .deck-card layers
+   absolutely on top of each other. The top card is interactive and
+   draggable; peek cards sit slightly lower/rotated for depth.
+*/
+.deck-shell {
   position: relative;
-  margin: 36px auto 0;
+  margin: 32px auto 0;
   width: 100%;
   max-width: 340px;
-  min-height: 360px;
+  /* Card height + room for peek cards below */
+  height: 360px;
+  /* The dot/arrow hint row lives below this in normal flow */
 }
 .deck-card {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: white;
   border-radius: var(--radius-card);
   border: 1px solid var(--stone-200);
-  padding: 22px 22px 20px;
+  padding: 0;
   text-align: left;
-  cursor: pointer;
+  cursor: grab;
   font-family: var(--font-body);
   color: inherit;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
   box-shadow:
     0 1px 0 rgba(45, 22, 15, 0.04),
     0 12px 28px -10px rgba(45, 22, 15, 0.22);
-  transition:
-    transform 220ms var(--ease-out),
-    box-shadow 220ms var(--ease-out);
   will-change: transform;
-}
-.deck-card:hover {
-  transform: translateY(-4px) rotate(var(--card-rot, 0deg));
-  box-shadow:
-    0 1px 0 rgba(45, 22, 15, 0.04),
-    0 22px 38px -10px rgba(45, 22, 15, 0.32);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y; /* let vertical scroll pass through */
 }
 .deck-card:active {
-  transform: translateY(-1px) rotate(var(--card-rot, 0deg)) scale(0.985);
+  cursor: grabbing;
+}
+.deck-card--peek {
+  pointer-events: none;
+}
+.deck-card--top {
+  /* Subtle ambient extra-shadow on the topmost card */
+  box-shadow:
+    0 1px 0 rgba(45, 22, 15, 0.04),
+    0 18px 36px -12px rgba(45, 22, 15, 0.28);
+}
+
+/* The .deck-card itself stays rectangular; .deck-card__face is the
+   inner padded layout that owns title/date/chip/CTA. */
+.deck-card__face {
+  position: absolute;
+  inset: 0;
+  padding: 22px 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-radius: inherit;
+}
+.deck-card__face--past {
+  /* Past trips are quieter — less saturation, hint of sepia */
+  background: linear-gradient(180deg, #fbf6ec 0%, #f1e7d4 100%);
 }
 
 .deck-card__topline {
@@ -489,10 +528,12 @@ label {
   background: var(--stone-100);
   color: var(--brown-700);
   border: 1px solid var(--stone-200);
+  white-space: nowrap;
 }
 .deck-card__chip--past {
-  background: var(--stone-100);
-  color: var(--brown-400);
+  background: rgba(138, 82, 63, 0.12);
+  color: var(--brown-600);
+  border-color: transparent;
 }
 .deck-card__chip--soon {
   background: rgba(39, 70, 232, 0.12);
@@ -509,6 +550,9 @@ label {
   color: var(--brown-900);
   margin: 6px 0 4px;
   word-break: break-word;
+}
+.deck-card__face--past .deck-card__title {
+  color: var(--brown-700);
 }
 .deck-card__meta {
   font-size: 13px;
@@ -528,6 +572,65 @@ label {
   font-weight: 700;
   font-size: 14px;
   color: var(--blue-500);
+}
+.deck-card__face--past .deck-card__cta {
+  color: var(--brown-600);
+}
+
+/* Bottom hint row: arrows + position dots */
+.deck-hint {
+  margin: 22px auto 0;
+  max-width: 340px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 0 4px;
+}
+.deck-hint__nudge {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--brown-600);
+  border: 1px solid var(--stone-200);
+  font-size: 16px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.deck-hint__nudge:disabled {
+  opacity: 0.35;
+}
+.deck-hint__dots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  flex-wrap: wrap;
+  max-width: 220px;
+}
+.deck-hint__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--stone-300);
+  transition: transform 200ms var(--ease-out), background 200ms var(--ease-out);
+}
+.deck-hint__dot--past {
+  background: var(--brown-300);
+}
+.deck-hint__dot--on {
+  background: var(--blue-500);
+  transform: scale(1.6);
+}
+.deck-hint__dot--past.deck-hint__dot--on {
+  background: var(--brown-500);
 }
 
 /* Empty card */

@@ -5,18 +5,16 @@ import { getTripDO } from "../do";
 export const userRoutes = new Hono<{ Bindings: Env }>();
 
 userRoutes.get("/api/trips/:trip_id/users", async (c) => {
-  const stub = getTripDO(c.env);
-  const tripId = Number(c.req.param("trip_id"));
-  const users = await stub.listUsers(tripId);
+  const stub = getTripDO(c.env, c.req.param("trip_id"));
+  const users = await stub.listUsers();
   return c.json(users);
 });
 
 userRoutes.post("/api/trips/:trip_id/users", async (c) => {
-  const stub = getTripDO(c.env);
-  const tripId = Number(c.req.param("trip_id"));
+  const stub = getTripDO(c.env, c.req.param("trip_id"));
   const body = await c.req.json();
   try {
-    const user = await stub.createUser(tripId, body);
+    const user = await stub.createUser(body);
     return c.json(user);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -27,8 +25,8 @@ userRoutes.post("/api/trips/:trip_id/users", async (c) => {
   }
 });
 
-userRoutes.delete("/api/users/:user_id", async (c) => {
-  const stub = getTripDO(c.env);
+userRoutes.delete("/api/trips/:trip_id/users/:user_id", async (c) => {
+  const stub = getTripDO(c.env, c.req.param("trip_id"));
   const userId = Number(c.req.param("user_id"));
   try {
     const result = await stub.deleteUser(userId);
@@ -39,8 +37,8 @@ userRoutes.delete("/api/users/:user_id", async (c) => {
   }
 });
 
-userRoutes.post("/api/users/:user_id/complete-signup", async (c) => {
-  const stub = getTripDO(c.env);
+userRoutes.post("/api/trips/:trip_id/users/:user_id/complete-signup", async (c) => {
+  const stub = getTripDO(c.env, c.req.param("trip_id"));
   const userId = Number(c.req.param("user_id"));
   try {
     const user = await stub.completeSignup(userId);
@@ -54,8 +52,8 @@ userRoutes.post("/api/users/:user_id/complete-signup", async (c) => {
   }
 });
 
-userRoutes.patch("/api/users/:user_id", async (c) => {
-  const stub = getTripDO(c.env);
+userRoutes.patch("/api/trips/:trip_id/users/:user_id", async (c) => {
+  const stub = getTripDO(c.env, c.req.param("trip_id"));
   const userId = Number(c.req.param("user_id"));
   const body = await c.req.json();
   try {

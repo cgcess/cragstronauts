@@ -20,6 +20,10 @@
       {
         "name": "TRIP_DO",
         "class_name": "TripDO"
+      },
+      {
+        "name": "TRIP_INDEX",
+        "class_name": "TripIndexDO"
       }
     ]
   },
@@ -27,6 +31,10 @@
     {
       "tag": "v1",
       "new_sqlite_classes": ["TripDO"]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["TripIndexDO"]
     }
   ]
 }

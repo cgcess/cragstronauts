@@ -96,7 +96,6 @@ export default function OrganizerWizard({ onComplete, onCancel }) {
       onComplete({
         trip_id: res.trip_id,
         organizer_user_id: res.organizer_user_id,
-        location: location.trim(),
       });
     } catch (e) {
       setError(e.message);

@@ -5,14 +5,13 @@ import { getTripDO } from "../do";
 export const carRoutes = new Hono<{ Bindings: Env }>();
 
 carRoutes.get("/api/trips/:trip_id/cars", async (c) => {
-  const stub = getTripDO(c.env);
-  const tripId = Number(c.req.param("trip_id"));
-  const cars = await stub.listCars(tripId);
+  const stub = getTripDO(c.env, c.req.param("trip_id"));
+  const cars = await stub.listCars();
   return c.json(cars);
 });
 
 carRoutes.post("/api/trips/:trip_id/cars", async (c) => {
-  const stub = getTripDO(c.env);
+  const stub = getTripDO(c.env, c.req.param("trip_id"));
   const body = await c.req.json();
   try {
     const car = await stub.createCar(body);
@@ -23,15 +22,15 @@ carRoutes.post("/api/trips/:trip_id/cars", async (c) => {
   }
 });
 
-carRoutes.delete("/api/cars/:car_id", async (c) => {
-  const stub = getTripDO(c.env);
+carRoutes.delete("/api/trips/:trip_id/cars/:car_id", async (c) => {
+  const stub = getTripDO(c.env, c.req.param("trip_id"));
   const carId = Number(c.req.param("car_id"));
   const result = await stub.deleteCar(carId);
   return c.json(result);
 });
 
-carRoutes.post("/api/cars/:car_id/signup", async (c) => {
-  const stub = getTripDO(c.env);
+carRoutes.post("/api/trips/:trip_id/cars/:car_id/signup", async (c) => {
+  const stub = getTripDO(c.env, c.req.param("trip_id"));
   const carId = Number(c.req.param("car_id"));
   const body = await c.req.json();
   try {
@@ -46,8 +45,8 @@ carRoutes.post("/api/cars/:car_id/signup", async (c) => {
   }
 });
 
-carRoutes.delete("/api/cars/:car_id/signup/:user_id", async (c) => {
-  const stub = getTripDO(c.env);
+carRoutes.delete("/api/trips/:trip_id/cars/:car_id/signup/:user_id", async (c) => {
+  const stub = getTripDO(c.env, c.req.param("trip_id"));
   const carId = Number(c.req.param("car_id"));
   const userId = Number(c.req.param("user_id"));
   try {

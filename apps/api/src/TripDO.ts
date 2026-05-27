@@ -24,18 +24,14 @@ export class TripDO extends DurableObject<Env> {
     });
   }
 
-  // ---- Trips ----
+  // ---- Trip ----
 
-  async listTrips(): Promise<Record<string, unknown>[]> {
-    return this.db.all(trip).map(formatTrip);
-  }
-
-  async getTrip(tripId: number): Promise<Record<string, unknown> | null> {
-    const row = this.db.get(trip, { where: eq("id", tripId) });
+  async getTrip(): Promise<Record<string, unknown> | null> {
+    const row = this.db.get(trip, { where: eq("id", 1) });
     return row ? formatTrip(row) : null;
   }
 
-  async createTrip(data: {
+  async initialize(data: {
     location: string;
     start_date: string | null;
     end_date: string | null;
@@ -47,20 +43,16 @@ export class TripDO extends DurableObject<Env> {
       fields: { key: string; label: string; type: string }[];
     }[];
     organizer_name: string;
-  }): Promise<{ trip_id: number; organizer_user_id: number }> {
-    const tripRow = this.db.insertReturning(
-      trip,
-      {
-        location: data.location,
-        start_date: data.start_date,
-        end_date: data.end_date,
-        accommodation_type: data.accommodation_type,
-        accommodation_details: data.accommodation_details,
-        notes: data.notes,
-      },
-      ["id"]
-    );
-    const tripId = tripRow.id;
+  }): Promise<{ organizer_user_id: number }> {
+    this.db.insert(trip, {
+      id: 1,
+      location: data.location,
+      start_date: data.start_date,
+      end_date: data.end_date,
+      accommodation_type: data.accommodation_type,
+      accommodation_details: data.accommodation_details,
+      notes: data.notes,
+    });
 
     for (const cat of data.gear_categories) {
       if (!cat.name?.trim()) continue;
@@ -68,7 +60,6 @@ export class TripDO extends DurableObject<Env> {
         (f) => f.key?.trim() && f.label?.trim()
       );
       this.db.insert(gearCategory, {
-        trip_id: tripId,
         name: cat.name.trim(),
         fields: JSON.stringify(fields),
       });
@@ -77,7 +68,6 @@ export class TripDO extends DurableObject<Env> {
     const userRow = this.db.insertReturning(
       user,
       {
-        trip_id: tripId,
         name: data.organizer_name,
         joining: 1,
         is_organizer: 1,
@@ -86,35 +76,38 @@ export class TripDO extends DurableObject<Env> {
       ["id"]
     );
 
-    return { trip_id: tripId, organizer_user_id: userRow.id };
+    return { organizer_user_id: userRow.id };
   }
 
-  async deleteTrip(tripId: number): Promise<{ ok: boolean }> {
-    const existing = this.db.get(trip, { where: eq("id", tripId) });
-    if (!existing) throw new Error("Trip not found");
-    this.db.delete(trip, { where: eq("id", tripId) });
+  async destroy(): Promise<{ ok: boolean }> {
+    // Wipe all tables — order matters for foreign keys
+    this.db.raw("DELETE FROM gear_contribution", []);
+    this.db.raw("DELETE FROM car_signup", []);
+    this.db.raw("DELETE FROM car", []);
+    this.db.raw("DELETE FROM gear_category", []);
+    this.db.raw("DELETE FROM user", []);
+    this.db.raw("DELETE FROM trip", []);
     return { ok: true };
   }
 
   // ---- Users ----
 
-  async listUsers(tripId: number): Promise<Record<string, unknown>[]> {
-    return this.db.all(user, { where: eq("trip_id", tripId) }).map(formatUser);
+  async listUsers(): Promise<Record<string, unknown>[]> {
+    return this.db.all(user).map(formatUser);
   }
 
   async createUser(
-    tripId: number,
     data: { name: string; joining: boolean }
   ): Promise<Record<string, unknown>> {
     const name = data.name.trim();
     if (!name) throw new Error("Name required");
 
-    const t = this.db.get(trip, { where: eq("id", tripId) });
+    const t = this.db.get(trip, { where: eq("id", 1) });
     if (!t) throw new Error("Trip not found");
 
     const row = this.db.insertReturning(
       user,
-      { trip_id: tripId, name, joining: data.joining ? 1 : 0 },
+      { name, joining: data.joining ? 1 : 0 },
       ["id", "name", "joining", "is_organizer", "signup_completed"]
     );
     return formatUser(row);
@@ -158,14 +151,11 @@ export class TripDO extends DurableObject<Env> {
 
   // ---- Gear Categories ----
 
-  async listCategories(tripId: number): Promise<Record<string, unknown>[]> {
-    return this.db
-      .all(gearCategory, { where: eq("trip_id", tripId) })
-      .map(formatCategory);
+  async listCategories(): Promise<Record<string, unknown>[]> {
+    return this.db.all(gearCategory).map(formatCategory);
   }
 
   async addCategory(
-    tripId: number,
     data: {
       name: string;
       fields: { key: string; label: string; type: string }[];
@@ -173,7 +163,7 @@ export class TripDO extends DurableObject<Env> {
   ): Promise<Record<string, unknown>> {
     const row = this.db.insertReturning(
       gearCategory,
-      { trip_id: tripId, name: data.name, fields: JSON.stringify(data.fields) },
+      { name: data.name, fields: JSON.stringify(data.fields) },
       ["id", "name", "fields"]
     );
     return formatCategory(row);
@@ -186,8 +176,8 @@ export class TripDO extends DurableObject<Env> {
 
   // ---- Cars ----
 
-  async listCars(tripId: number): Promise<Record<string, unknown>[]> {
-    const rows = this.db.all(car, { where: eq("trip_id", tripId) });
+  async listCars(): Promise<Record<string, unknown>[]> {
+    const rows = this.db.all(car);
     return rows.map((r) => this.formatCar(r));
   }
 
@@ -217,7 +207,6 @@ export class TripDO extends DurableObject<Env> {
       const row = this.db.insertReturning(
         car,
         {
-          trip_id: driver.trip_id,
           driver_user_id: data.driver_user_id,
           total_seats: data.total_seats,
           notes: data.notes,
@@ -276,10 +265,8 @@ export class TripDO extends DurableObject<Env> {
 
   // ---- Gear Contributions ----
 
-  async listGear(tripId: number): Promise<Record<string, unknown>[]> {
-    const rows = this.db.all(gearContribution, {
-      where: eq("trip_id", tripId),
-    });
+  async listGear(): Promise<Record<string, unknown>[]> {
+    const rows = this.db.all(gearContribution);
     return rows.map((r) => this.formatContribution(r));
   }
 
@@ -294,7 +281,6 @@ export class TripDO extends DurableObject<Env> {
     const row = this.db.insertReturning(
       gearContribution,
       {
-        trip_id: u.trip_id,
         user_id: data.user_id,
         category_id: data.category_id,
         details: JSON.stringify(data.details),
@@ -370,7 +356,6 @@ function formatTrip(r: {
   notes: string | null;
 }): Record<string, unknown> {
   return {
-    id: r.id,
     location: r.location,
     start_date: r.start_date,
     end_date: r.end_date,

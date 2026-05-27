@@ -12,6 +12,7 @@ const TABS = [
 ];
 
 export default function MainTabs({
+  tripId,
   trip,
   users,
   categories,
@@ -20,7 +21,7 @@ export default function MainTabs({
   onSwitchUser,
   onExitTrip,
   onDeleteTrip,
-}) {
+})  {
   const [tab, setTab] = useState("info");
   const [cars, setCars] = useState([]);
   const [gear, setGear] = useState([]);
@@ -30,8 +31,8 @@ export default function MainTabs({
     setError(null);
     try {
       const [c, g] = await Promise.all([
-        api.listCars(trip.id),
-        api.listGear(trip.id),
+        api.listCars(tripId),
+        api.listGear(tripId),
       ]);
       setCars(c);
       setGear(g);
@@ -44,7 +45,7 @@ export default function MainTabs({
   useEffect(() => {
     reload();
     // eslint-disable-next-line
-  }, [trip.id]);
+  }, [tripId]);
 
   const me = users.find((u) => u.id === currentUserId);
 
@@ -67,6 +68,7 @@ export default function MainTabs({
 
         {tab === "info" && (
           <InfoTab
+            tripId={tripId}
             trip={trip}
             users={users}
             categories={categories}
@@ -78,6 +80,7 @@ export default function MainTabs({
         )}
         {tab === "cars" && (
           <CarsTab
+            tripId={tripId}
             trip={trip}
             cars={cars}
             users={users}
@@ -87,6 +90,7 @@ export default function MainTabs({
         )}
         {tab === "gear" && (
           <GearTab
+            tripId={tripId}
             trip={trip}
             categories={categories}
             gear={gear}

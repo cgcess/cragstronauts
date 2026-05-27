@@ -8,3 +8,4 @@ export default {
 };
 
 export { TripDO } from "./TripDO";
+export { TripIndexDO } from "./TripIndexDO";

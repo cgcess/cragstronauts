@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { api } from "../api.js";
 
-export default function InfoTab({ trip, users, categories, isOrganizer, onChanged, onDeleteTrip }) {
+export default function InfoTab({ tripId, trip, users, categories, isOrganizer, onChanged, onDeleteTrip }) {
   const joining = users.filter((u) => u.joining);
   const notJoining = users.filter((u) => !u.joining);
   const [addingCat, setAddingCat] = useState(false);
@@ -105,7 +105,7 @@ export default function InfoTab({ trip, users, categories, isOrganizer, onChange
                   style={{ flex: 1 }}
                   disabled={!newCatName.trim()}
                   onClick={async () => {
-                    await api.addCategory(trip.id, { name: newCatName.trim(), fields: [] });
+                    await api.addCategory(tripId, { name: newCatName.trim(), fields: [] });
                     setNewCatName("");
                     setAddingCat(false);
                     onChanged();

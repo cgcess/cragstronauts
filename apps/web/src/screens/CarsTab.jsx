@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { api } from "../api.js";
 
-export default function CarsTab({ trip, cars, users, currentUserId, onChanged }) {
+export default function CarsTab({ tripId, trip, cars, users, currentUserId, onChanged }) {
   const [adding, setAdding] = useState(false);
   const [seats, setSeats] = useState(4);
   const [notes, setNotes] = useState("");
@@ -12,7 +12,7 @@ export default function CarsTab({ trip, cars, users, currentUserId, onChanged })
   const submitCar = async () => {
     setError(null);
     try {
-      await api.createCar(trip.id, {
+      await api.createCar(tripId, {
         driver_user_id: currentUserId,
         total_seats: Number(seats),
         notes: notes.trim() || null,
@@ -55,7 +55,7 @@ export default function CarsTab({ trip, cars, users, currentUserId, onChanged })
                   className="ghost"
                   onClick={async () => {
                     if (confirm("Remove your car from the trip?")) {
-                      await api.deleteCar(c.id);
+                      await api.deleteCar(tripId, c.id);
                       onChanged();
                     }
                   }}
@@ -75,7 +75,7 @@ export default function CarsTab({ trip, cars, users, currentUserId, onChanged })
                       className="ghost"
                       style={{ padding: "0 4px", color: "var(--danger)" }}
                       onClick={async () => {
-                        await api.carSignoff(c.id, currentUserId);
+                        await api.carSignoff(tripId, c.id, currentUserId);
                         onChanged();
                       }}
                     >
@@ -92,7 +92,7 @@ export default function CarsTab({ trip, cars, users, currentUserId, onChanged })
                   onClick={async () => {
                     setError(null);
                     try {
-                      await api.carSignup(c.id, currentUserId);
+                      await api.carSignup(tripId, c.id, currentUserId);
                       onChanged();
                     } catch (e) {
                       setError(e.message);

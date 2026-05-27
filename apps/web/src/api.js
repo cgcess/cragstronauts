@@ -30,27 +30,34 @@ export const api = {
   listUsers: (tripId) => req("GET", `/api/trips/${tripId}/users`),
   createUser: (tripId, name) =>
     req("POST", `/api/trips/${tripId}/users`, { name, joining: true }),
-  updateUser: (id, data) => req("PATCH", `/api/users/${id}`, data),
-  deleteUser: (id) => req("DELETE", `/api/users/${id}`),
-  completeSignup: (id) => req("POST", `/api/users/${id}/complete-signup`),
+  updateUser: (tripId, id, data) =>
+    req("PATCH", `/api/trips/${tripId}/users/${id}`, data),
+  deleteUser: (tripId, id) =>
+    req("DELETE", `/api/trips/${tripId}/users/${id}`),
+  completeSignup: (tripId, id) =>
+    req("POST", `/api/trips/${tripId}/users/${id}/complete-signup`),
 
   // Gear categories
   listCategories: (tripId) =>
     req("GET", `/api/trips/${tripId}/gear-categories`),
   addCategory: (tripId, data) =>
     req("POST", `/api/trips/${tripId}/gear-categories`, data),
+  deleteCategory: (tripId, id) =>
+    req("DELETE", `/api/trips/${tripId}/gear-categories/${id}`),
 
   // Cars
   listCars: (tripId) => req("GET", `/api/trips/${tripId}/cars`),
   createCar: (tripId, data) => req("POST", `/api/trips/${tripId}/cars`, data),
-  deleteCar: (id) => req("DELETE", `/api/cars/${id}`),
-  carSignup: (carId, userId) =>
-    req("POST", `/api/cars/${carId}/signup`, { user_id: userId }),
-  carSignoff: (carId, userId) =>
-    req("DELETE", `/api/cars/${carId}/signup/${userId}`),
+  deleteCar: (tripId, id) =>
+    req("DELETE", `/api/trips/${tripId}/cars/${id}`),
+  carSignup: (tripId, carId, userId) =>
+    req("POST", `/api/trips/${tripId}/cars/${carId}/signup`, { user_id: userId }),
+  carSignoff: (tripId, carId, userId) =>
+    req("DELETE", `/api/trips/${tripId}/cars/${carId}/signup/${userId}`),
 
   // Gear contributions
   listGear: (tripId) => req("GET", `/api/trips/${tripId}/gear`),
   addGear: (tripId, data) => req("POST", `/api/trips/${tripId}/gear`, data),
-  deleteGear: (id) => req("DELETE", `/api/gear/${id}`),
+  deleteGear: (tripId, id) =>
+    req("DELETE", `/api/trips/${tripId}/gear/${id}`),
 };

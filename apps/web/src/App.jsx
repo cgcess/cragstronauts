@@ -17,23 +17,9 @@ function readNum(key) {
   return v ? Number(v) : null;
 }
 
-function slugify(s) {
-  if (s == null) return "";
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "") // strip combining diacritics
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-function tripSlug(trip) {
-  return slugify(trip.location) || `trip-${trip.id}`;
-}
-
-function parseTripSlugFromPath() {
-  const m = window.location.pathname.match(/^\/trips\/([^/]+)/);
-  return m ? decodeURIComponent(m[1]) : null;
+function parseTripIdFromPath() {
+  const m = window.location.pathname.match(/^\/trips\/([a-f0-9]+)/);
+  return m ? m[1] : null;
 }
 
 function pushPath(path) {
@@ -59,7 +45,7 @@ function computeStage({
   if (!tripLoaded) return "loading";
   if (creatingTrip) return "organizer";
   if (currentTripId == null) return "trip-list";
-  if (!trip || trip.id !== currentTripId) return "loading";
+  if (!trip) return "loading";
   if (!currentUserId) return "landing";
   const me = users.find((u) => u.id === currentUserId);
   if (!me) return "landing-stale";
@@ -72,63 +58,32 @@ export default function App() {
   const [tripLoaded, setTripLoaded] = useState(false);
   const [users, setUsers] = useState([]);
   const [categories, setCategories] = useState([]);
-  // URL is the source of truth for which trip is open; the slug comes
-  // straight from the path. id is resolved by matching against the
-  // loaded trips list, since slugs aren't unique on their own.
-  const [currentTripSlug, setCurrentTripSlugState] = useState(
-    parseTripSlugFromPath
-  );
-  const [currentTripId, setCurrentTripIdState] = useState(null);
-  const [currentUserId, setCurrentUserIdState] = useState(null);
+  const [currentTripId, setCurrentTripId] = useState(parseTripIdFromPath);
+  const [currentUserId, setCurrentUserId] = useState(() => {
+    const tid = parseTripIdFromPath();
+    return tid ? readNum(userKey(tid)) : null;
+  });
   const [creatingTrip, setCreatingTrip] = useState(false);
 
   // Sync state with back/forward navigation.
   useEffect(() => {
     const onPop = () => {
-      setCurrentTripSlugState(parseTripSlugFromPath());
+      const tid = parseTripIdFromPath();
+      setCurrentTripId(tid);
+      setCurrentUserId(tid ? readNum(userKey(tid)) : null);
       setCreatingTrip(false);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  // Resolve slug → id whenever the URL slug or the trips list changes.
-  // If the slug doesn't match any trip after the initial load, bounce
-  // back to "/" so a bad link doesn't leave the user stuck.
-  useEffect(() => {
-    if (currentTripSlug == null) {
-      setCurrentTripIdState(null);
-      return;
-    }
-    const t = trips.find((x) => tripSlug(x) === currentTripSlug);
-    if (t) {
-      setCurrentTripIdState(t.id);
-    } else if (tripLoaded) {
-      replacePath("/");
-      setCurrentTripSlugState(null);
-      setCurrentTripIdState(null);
-    }
-  }, [currentTripSlug, trips, tripLoaded]);
-
-  // When the resolved trip id transitions, pick up that trip's stored
-  // user identity from localStorage (or clear it). User-initiated
-  // changes go through setUser / switchUser and update state directly,
-  // so this effect doesn't clobber them (it only fires on id changes).
-  useEffect(() => {
-    if (currentTripId == null) {
-      setCurrentUserIdState(null);
-    } else {
-      setCurrentUserIdState(readNum(userKey(currentTripId)));
-    }
-  }, [currentTripId]);
-
   // Stable; takes the trip id explicitly to avoid stale-closure races.
   const refreshAll = useCallback(async (tripId) => {
     const tripList = await api.listTrips();
     setTrips(tripList);
     if (tripId != null) {
-      const t = tripList.find((x) => x.id === tripId);
-      if (t) {
+      try {
+        const t = await api.getTrip(tripId);
         setTrip(t);
         const [u, c] = await Promise.all([
           api.listUsers(tripId),
@@ -136,14 +91,11 @@ export default function App() {
         ]);
         setUsers(u);
         setCategories(c);
-      } else {
-        // Trip was deleted out from under us — bounce back to the
-        // listing. The slug→id effect will also fire once trips state
-        // updates, but doing it here too keeps the transition tight.
+      } catch {
+        // Trip was deleted or doesn't exist — bounce to listing
         replacePath("/");
-        setCurrentTripSlugState(null);
-        setCurrentTripIdState(null);
-        setCurrentUserIdState(null);
+        setCurrentTripId(null);
+        setCurrentUserId(null);
         setTrip(null);
         setUsers([]);
         setCategories([]);
@@ -178,7 +130,7 @@ export default function App() {
   useEffect(() => {
     if (stage === "landing-stale" && currentTripId != null) {
       localStorage.removeItem(userKey(currentTripId));
-      setCurrentUserIdState(null);
+      setCurrentUserId(null);
     }
   }, [stage, currentTripId]);
 
@@ -189,27 +141,25 @@ export default function App() {
     } else {
       localStorage.setItem(userKey(currentTripId), String(userId));
     }
-    setCurrentUserIdState(userId);
+    setCurrentUserId(userId);
   };
 
   const selectTrip = (tripId) => {
-    const t = trips.find((x) => x.id === tripId);
-    if (!t) return;
-    const slug = tripSlug(t);
-    pushPath(`/trips/${slug}`);
-    setCurrentTripSlugState(slug);
+    pushPath(`/trips/${tripId}`);
+    setCurrentTripId(tripId);
+    setCurrentUserId(readNum(userKey(tripId)));
   };
 
   const exitTrip = () => {
     pushPath("/");
-    setCurrentTripSlugState(null);
+    setCurrentTripId(null);
   };
 
   const switchUser = () => {
     if (currentTripId != null) {
       localStorage.removeItem(userKey(currentTripId));
     }
-    setCurrentUserIdState(null);
+    setCurrentUserId(null);
   };
 
   const deleteCurrentTrip = async () => {
@@ -218,7 +168,7 @@ export default function App() {
     await api.deleteTrip(id);
     localStorage.removeItem(userKey(id));
     pushPath("/");
-    setCurrentTripSlugState(null);
+    setCurrentTripId(null);
   };
 
   let screen;
@@ -242,16 +192,12 @@ export default function App() {
     screen = (
       <OrganizerWizard
         onCancel={() => setCreatingTrip(false)}
-        onComplete={async ({ trip_id, organizer_user_id, location }) => {
-          const slug = slugify(location) || `trip-${trip_id}`;
+        onComplete={async ({ trip_id, organizer_user_id }) => {
           localStorage.setItem(userKey(trip_id), String(organizer_user_id));
-          // Refresh first so the trips list contains the new trip before
-          // the slug→id effect runs (otherwise it would bounce to /).
           await refreshAll(trip_id);
-          pushPath(`/trips/${slug}`);
-          setCurrentTripSlugState(slug);
-          setCurrentTripIdState(trip_id);
-          setCurrentUserIdState(organizer_user_id);
+          pushPath(`/trips/${trip_id}`);
+          setCurrentTripId(trip_id);
+          setCurrentUserId(organizer_user_id);
           setCreatingTrip(false);
         }}
       />
@@ -273,13 +219,14 @@ export default function App() {
   } else if (stage === "signup") {
     screen = (
       <SignupSwipe
+        tripId={currentTripId}
         trip={trip}
         categories={categories}
         userId={currentUserId}
         onComplete={async () => {
           if (currentUserId) {
             try {
-              await api.completeSignup(currentUserId);
+              await api.completeSignup(currentTripId, currentUserId);
             } catch (e) {
               console.error(e);
             }
@@ -296,6 +243,7 @@ export default function App() {
     // stage === "main"
     screen = (
       <MainTabs
+        tripId={currentTripId}
         trip={trip}
         users={users}
         categories={categories}

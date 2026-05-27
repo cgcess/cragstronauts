@@ -1,21 +1,31 @@
 import { Hono } from "hono";
 import type { Env } from "../types";
-import { getTripDO } from "../do";
+import { getTripDO, getTripIndexDO } from "../do";
 
 export const tripRoutes = new Hono<{ Bindings: Env }>();
 
 tripRoutes.get("/api/trips", async (c) => {
-  const stub = getTripDO(c.env);
-  const trips = await stub.listTrips();
+  const index = getTripIndexDO(c.env);
+  const trips = await index.listTrips();
   return c.json(trips);
 });
 
 tripRoutes.post("/api/trips", async (c) => {
-  const stub = getTripDO(c.env);
   const body = await c.req.json();
   try {
-    const result = await stub.createTrip(body);
-    return c.json(result);
+    const id = c.env.TRIP_DO.newUniqueId();
+    const tripId = id.toString();
+    const stub = c.env.TRIP_DO.get(id) as DurableObjectStub<import("../TripDO").TripDO>;
+    const result = await stub.initialize(body);
+
+    const index = getTripIndexDO(c.env);
+    await index.registerTrip(tripId, {
+      location: body.location,
+      start_date: body.start_date ?? null,
+      end_date: body.end_date ?? null,
+    });
+
+    return c.json({ trip_id: tripId, organizer_user_id: result.organizer_user_id });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return c.json({ detail: msg }, 400);
@@ -23,24 +33,23 @@ tripRoutes.post("/api/trips", async (c) => {
 });
 
 tripRoutes.get("/api/trips/:trip_id", async (c) => {
-  const stub = getTripDO(c.env);
-  const tripId = Number(c.req.param("trip_id"));
-  const trip = await stub.getTrip(tripId);
+  const tripId = c.req.param("trip_id");
+  const stub = getTripDO(c.env, tripId);
+  const trip = await stub.getTrip();
   if (!trip) return c.json({ detail: "Trip not found" }, 404);
   return c.json(trip);
 });
 
 tripRoutes.delete("/api/trips/:trip_id", async (c) => {
-  const stub = getTripDO(c.env);
-  const tripId = Number(c.req.param("trip_id"));
+  const tripId = c.req.param("trip_id");
   try {
-    const result = await stub.deleteTrip(tripId);
-    return c.json(result);
+    const stub = getTripDO(c.env, tripId);
+    await stub.destroy();
+    const index = getTripIndexDO(c.env);
+    await index.unregisterTrip(tripId);
+    return c.json({ ok: true });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    if (msg === "Trip not found") {
-      return c.json({ detail: msg }, 404);
-    }
     return c.json({ detail: msg }, 400);
   }
 });

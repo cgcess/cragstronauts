@@ -31,7 +31,7 @@ function buildQuestions(categories) {
   return qs;
 }
 
-export default function SignupSwipe({ trip, categories, userId, onComplete, onNotJoining }) {
+export default function SignupSwipe({ tripId, trip, categories, userId, onComplete, onNotJoining }) {
   const questions = useMemo(() => buildQuestions(categories), [categories]);
   const [idx, setIdx] = useState(0);
   const [details, setDetails] = useState(null); // for showing detail form
@@ -51,14 +51,14 @@ export default function SignupSwipe({ trip, categories, userId, onComplete, onNo
       // "joining" question: user is created with joining=true; nothing to persist on yes,
       // and the no-path is handled above by short-circuiting to onComplete.
       if (qq.kind === "gear" && yes) {
-        await api.addGear(trip.id, {
+        await api.addGear(tripId, {
           user_id: userId,
           category_id: qq.category.id,
           details: extra || {},
         });
       }
       if (qq.kind === "driving" && yes) {
-        await api.createCar(trip.id, {
+        await api.createCar(tripId, {
           driver_user_id: userId,
           total_seats: Number(extra?.seats || 1),
           notes: extra?.notes || null,
@@ -92,7 +92,7 @@ export default function SignupSwipe({ trip, categories, userId, onComplete, onNo
     }
     if (q.id === "joining" && !yes) {
       try {
-        await api.deleteUser(userId);
+        await api.deleteUser(tripId, userId);
       } catch (e) {
         setError(e.message);
         return;

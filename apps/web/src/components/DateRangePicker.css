@@ -1,0 +1,275 @@
+/* ============================================================
+   DateRangePicker — Airbnb-style range calendar
+   Themed to the Alpine Field Kit palette (--brown / --green / --stone)
+   ============================================================ */
+
+/* ----- The "When" input (replaces the From/To pair) ----- */
+.date-range-input {
+  /* Override the base button (green pill) styles */
+  width: 100%;
+  background: white;
+  color: var(--fg);
+  border: 1px solid var(--stone-200);
+  border-radius: 10px;
+  padding: 10px 14px;
+  min-height: 56px;
+  text-align: left;
+  font: inherit;
+  font-family: var(--font-body);
+  font-weight: 400;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  transition:
+    border-color 140ms var(--ease-out),
+    box-shadow 140ms var(--ease-out);
+}
+.date-range-input:hover { border-color: var(--stone-300); }
+.date-range-input:focus-visible {
+  outline: none;
+  border-color: var(--green-500);
+  box-shadow: 0 0 0 3px rgba(66, 107, 69, 0.22);
+}
+.date-range-input:active { transform: none; }
+
+.date-range-input__label {
+  font-size: 16px;
+  color: var(--brown-500);
+  font-weight: 500;
+  transition: font-size 140ms var(--ease-out), color 140ms var(--ease-out);
+}
+.date-range-input.is-filled .date-range-input__label {
+  font-size: 12px;
+  color: var(--brown-600);
+}
+.date-range-input__value {
+  font-size: 16px;
+  color: var(--fg);
+  font-weight: 600;
+}
+
+/* ----- Sheet overlay ----- */
+.date-range-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(45, 22, 15, 0.42);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 1000;
+  padding: 0;
+}
+.date-range-sheet {
+  background: var(--bg-card);
+  width: 100%;
+  max-width: 420px;
+  border-radius: 24px 24px 0 0;
+  padding: 14px 12px 18px;
+  box-shadow: 0 -10px 30px -10px rgba(45, 22, 15, 0.3);
+}
+@media (min-width: 640px) {
+  .date-range-backdrop {
+    align-items: center;
+    padding: 24px;
+  }
+  .date-range-sheet {
+    border-radius: 20px;
+    padding: 18px;
+  }
+}
+
+.date-range-sheet__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+  padding: 0 8px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--brown-700);
+  font-size: 16px;
+}
+.date-range-close {
+  /* Override default green button */
+  background: transparent;
+  color: var(--brown-600);
+  border: none;
+  padding: 6px 10px;
+  font-size: 18px;
+  line-height: 1;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.date-range-close:hover { color: var(--brown-900); background: var(--stone-100); }
+
+.date-range-sheet__foot {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 0 6px;
+}
+.date-range-sheet__foot > button { flex: 1; }
+
+/* ============================================================
+   react-day-picker v10 theme — class names from getDefaultClassNames()
+   (rdp-root, rdp-day, rdp-day_button, rdp-range_start/middle/end, …)
+   ============================================================ */
+
+.rdp-root {
+  font-family: var(--font-body);
+  color: var(--fg);
+  padding: 4px 0 0;
+}
+.rdp-months { display: flex; justify-content: center; }
+.rdp-month { position: relative; }
+
+/* Header with month/year + prev/next chevrons */
+.rdp-month_caption {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--brown-700);
+  text-align: center;
+  padding: 6px 0 14px;
+}
+.rdp-nav {
+  position: absolute;
+  top: 2px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+.rdp-button_previous,
+.rdp-button_next {
+  pointer-events: auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--brown-700);
+  border: none;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 140ms var(--ease-out);
+}
+.rdp-button_previous:hover,
+.rdp-button_next:hover { background: var(--stone-100); }
+.rdp-button_previous:disabled,
+.rdp-button_next:disabled { opacity: 0.35; cursor: not-allowed; }
+.rdp-button_previous:active,
+.rdp-button_next:active { transform: none; }
+.rdp-chevron { fill: var(--brown-700); width: 16px; height: 16px; }
+
+/* Calendar grid */
+.rdp-month_grid {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+.rdp-weekday {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--brown-500);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 4px 0 10px;
+  text-align: center;
+}
+
+/* Day cell — full-bleed so the range wash is continuous across cells */
+.rdp-day {
+  padding: 2px 0;
+  position: relative;
+  text-align: center;
+  height: 44px;
+}
+
+/* The clickable circle inside each cell */
+.rdp-day_button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--fg);
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  transition:
+    background 120ms var(--ease-out),
+    color 120ms var(--ease-out),
+    border-color 120ms var(--ease-out);
+}
+.rdp-day_button:hover { background: var(--stone-100); }
+.rdp-day_button:active { transform: none; }
+
+.rdp-outside .rdp-day_button { color: var(--stone-300); }
+.rdp-disabled .rdp-day_button {
+  color: var(--stone-300);
+  cursor: not-allowed;
+}
+.rdp-disabled .rdp-day_button:hover { background: transparent; }
+
+/* Today: thin ring (overridden when in range) */
+.rdp-today:not(.rdp-selected) .rdp-day_button {
+  box-shadow: inset 0 0 0 1px var(--stone-300);
+}
+
+/* ----- Range wash (the soft connecting pill) ----- */
+/* The ::before fills the cell horizontally; the circle sits on top via z-index. */
+.rdp-range_middle::before,
+.rdp-range_start::before,
+.rdp-range_end::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  background: var(--green-100);
+  z-index: 0;
+}
+.rdp-range_middle::before { left: 0; right: 0; }
+.rdp-range_start::before  { left: 50%; right: 0; }
+.rdp-range_end::before    { left: 0;   right: 50%; }
+/* If start === end (single-day range), suppress the wash */
+.rdp-range_start.rdp-range_end::before { display: none; }
+
+.rdp-range_middle .rdp-day_button {
+  color: var(--brown-900);
+  background: transparent;
+}
+.rdp-range_middle .rdp-day_button:hover {
+  background: rgba(46, 74, 54, 0.18);
+}
+
+/* Range start — filled dark circle (the Airbnb-y anchor) */
+.rdp-range_start .rdp-day_button,
+.rdp-selected:not(.rdp-range_end):not(.rdp-range_middle) .rdp-day_button {
+  background: var(--brown-900);
+  color: white;
+  font-weight: 600;
+}
+.rdp-range_start .rdp-day_button:hover { background: var(--brown-900); }
+
+/* Range end — outlined ring */
+.rdp-range_end .rdp-day_button {
+  background: var(--bg-card);
+  color: var(--brown-900);
+  box-shadow: inset 0 0 0 2px var(--brown-900);
+  font-weight: 600;
+}
+.rdp-range_end .rdp-day_button:hover { background: var(--bg-card); }

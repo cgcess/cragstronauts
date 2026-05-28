@@ -469,6 +469,10 @@ label {
   pointer-events: none;
 }
 .topbar > * { pointer-events: auto; }
+/* Functional buttons in the topbar row must never be shrunk by flex
+   pressure — hit targets stay full size. The .nav-cap identity chip
+   is the only element allowed to absorb width, and it truncates. */
+.topbar .row > button { flex-shrink: 0; }
 
 /* Static glass capsule — the .nav-pill chassis without the button
    affordance (no hover lift, no active scale, no pointer cursor).
@@ -476,8 +480,11 @@ label {
    legible when content is scrolling behind the topbar. */
 .nav-cap {
   position: relative;
-  display: inline-flex;
-  align-items: center;
+  /* block (not inline-flex) so text-overflow: ellipsis kicks in when
+     the cap is shrunk by the flex parent. text-align centers the
+     name + crown horizontally; symmetric padding handles vertical. */
+  display: block;
+  text-align: center;
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 13px;
@@ -501,6 +508,14 @@ label {
     inset 0 0 18px rgba(255, 255, 255, 0.18),
     0 6px 14px -6px rgba(45, 22, 15, 0.32),
     0 2px 4px -2px rgba(45, 22, 15, 0.18);
+  /* When the topbar is crammed, the identity chip is the ONLY thing
+     allowed to shrink — functional buttons keep their hit-target size. */
+  flex: 0 1 auto;       /* may shrink, never grow past content */
+  min-width: 0;          /* allow shrinking below intrinsic width */
+  max-width: 100%;       /* never push past the topbar's bounds */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 /* Match the .nav-pill top crescent — the highlight that sells "glass" */
 .nav-cap::before {

@@ -23,7 +23,7 @@ export default function Landing({ trip, users, onPickExisting, onJoinNew, onBack
       <div className="content">
         {onBack && (
           <button
-            className="ghost"
+            className="glass-surface nav-pill"
             onClick={onBack}
             style={{ marginBottom: 8 }}
           >

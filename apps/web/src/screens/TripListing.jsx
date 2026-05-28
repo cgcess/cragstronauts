@@ -318,7 +318,7 @@ function TripDeck({ trips, todayStr, onSelect }) {
       <div className="deck-hint">
         <button
           type="button"
-          className="deck-hint__nudge"
+          className="glass-surface deck-hint__nudge"
           onClick={() => commit(-1)}
           disabled={!canGoPrev}
           aria-label="Previous trip"
@@ -337,7 +337,7 @@ function TripDeck({ trips, todayStr, onSelect }) {
         </div>
         <button
           type="button"
-          className="deck-hint__nudge"
+          className="glass-surface deck-hint__nudge"
           onClick={() => commit(1)}
           disabled={!canGoNext}
           aria-label="Next trip"

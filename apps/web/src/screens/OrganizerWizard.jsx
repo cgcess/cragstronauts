@@ -134,7 +134,7 @@ export default function OrganizerWizard({ onComplete, onCancel }) {
         >
           <div className="h1">{STEP_TITLES[step]}</div>
           {onCancel && (
-            <button className="ghost" onClick={onCancel}>
+            <button className="glass-surface nav-pill" onClick={onCancel}>
               Cancel
             </button>
           )}

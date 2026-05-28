@@ -126,7 +126,7 @@ export default function SignupSwipe({ tripId, trip, categories, userId, onComple
           <div className="pill">
             {idx + 1} / {questions.length}
           </div>
-          <button className="ghost" onClick={onComplete}>
+          <button className="glass-surface nav-pill" onClick={onComplete}>
             Skip
           </button>
         </div>

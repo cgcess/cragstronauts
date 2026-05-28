@@ -83,6 +83,11 @@ html, body, #root {
   margin: 0;
   color: var(--fg);
   overscroll-behavior: none;
+  /* Lock the page itself — only the inner .content scroll container moves.
+     Without this, any time the visible viewport ≠ 100vh (mobile address-bar,
+     desktop window chrome quirks), the whole app-shell scrolls behind the
+     tabbar, on top of the inner content scroll = double scroll. */
+  overflow: hidden;
   /* Transparent so AlpsBackground (position: fixed) shows through.
      The cream wash lives in the AlpsBackground overlay. */
   background: transparent;
@@ -427,7 +432,11 @@ label {
 .app-shell {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  /* 100vh is the *largest* viewport on mobile (URL bar hidden) — using it
+     made the shell taller than the visible window, which the body then
+     scrolled. 100dvh tracks the actual visible viewport. */
+  height: 100vh; /* fallback for browsers without dvh */
+  height: 100dvh;
   max-width: 480px;
   margin: 0 auto;
   position: relative;
@@ -440,6 +449,97 @@ label {
   overflow-y: auto;
   padding: 24px 20px;
 }
+
+/* MainTabs scroll container. With the topbar and tabbar lifted into
+   position: absolute, .content is the only flex child and fills the
+   whole shell. Padding reserves clearance so the first/last items
+   never collide with the floating bars — content slides *under* the
+   glass instead of being pushed by it. */
+.content--tabs {
+  /* top: clear .topbar (~68px) + breathing
+     bottom: clear .tabbar (~75px) + its 12px bottom inset + safe-area */
+  padding: 84px 20px calc(108px + env(safe-area-inset-bottom));
+}
+
+/* Floating top navigation row. Sits above .content so cards visibly
+   scroll *behind* it — the .nav-pill / .nav-cap chassis takes care of
+   the liquid-glass refraction. The .topbar wrapper itself is just a
+   transparent layout slot; we don't tint it because we don't want a
+   hard edge across the page. */
+.topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 20px 8px;
+  z-index: 10;
+  /* Don't intercept scroll/click on the gaps between pills. */
+  pointer-events: none;
+}
+.topbar > * { pointer-events: auto; }
+/* Functional buttons in the topbar row must never be shrunk by flex
+   pressure — hit targets stay full size. The .nav-cap identity chip
+   is the only element allowed to absorb width, and it truncates. */
+.topbar .row > button { flex-shrink: 0; }
+
+/* Static glass capsule — the .nav-pill chassis without the button
+   affordance (no hover lift, no active scale, no pointer cursor).
+   Used to keep static identity chips like the current user's name
+   legible when content is scrolling behind the topbar. */
+.nav-cap {
+  position: relative;
+  /* block (not inline-flex) so text-overflow: ellipsis kicks in when
+     the cap is shrunk by the flex parent. text-align centers the
+     name + crown horizontally; symmetric padding handles vertical. */
+  display: block;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: -0.005em;
+  color: var(--brown-700);
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.55) 0%,
+      rgba(255, 255, 255, 0.22) 55%,
+      rgba(255, 255, 255, 0.42) 100%
+    );
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 rgba(45, 22, 15, 0.08),
+    inset 0 0 18px rgba(255, 255, 255, 0.18),
+    0 6px 14px -6px rgba(45, 22, 15, 0.32),
+    0 2px 4px -2px rgba(45, 22, 15, 0.18);
+  /* When the topbar is crammed, the identity chip is the ONLY thing
+     allowed to shrink — functional buttons keep their hit-target size. */
+  flex: 0 1 auto;       /* may shrink, never grow past content */
+  min-width: 0;          /* allow shrinking below intrinsic width */
+  max-width: 100%;       /* never push past the topbar's bounds */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* Match the .nav-pill top crescent — the highlight that sells "glass" */
+.nav-cap::before {
+  content: "";
+  position: absolute;
+  inset: 1px 1px auto 1px;
+  height: 45%;
+  border-radius: 999px 999px 60% 60% / 999px 999px 100% 100%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  pointer-events: none;
+}
+.nav-cap strong { color: var(--fg); }
 
 /* Landing: brand at top, the trip-deck (shell + hint) vertically centered
    in the remaining space. Only scrolls when the viewport truly can't fit
@@ -475,12 +575,20 @@ label {
 */
 
 .tabbar {
-  position: sticky;
-  bottom: 0;
+  /* Float above the scrolling .content so cards slide *under* the
+     tabbar (visible & blurred through the glass). position: sticky
+     wasn't actually sticking — the shell never scrolled — so the
+     bar relied purely on flex layout. position: absolute pins it
+     to the shell explicitly. */
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  z-index: 10;
   display: flex;
   gap: 4px;
   padding: 6px;
-  margin: 8px 16px calc(12px + env(safe-area-inset-bottom));
+  margin: 0;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.55);
   background:
@@ -543,7 +651,11 @@ label {
    slots. Styling mirrors the green .btn-3d depth shadow. */
 .tab-pill {
   position: absolute;
-  inset: 0;
+  /* The depth shadow ( `0 3px 0` + `0 4px 0` = 4px of stacked green below )
+     extends visually below the pill's box. We lift the bottom inset by that
+     same amount so the pill body + depth combined sits centered inside the
+     button rather than poking out the bottom of the tabbar container. */
+  inset: 0 0 4px 0;
   border-radius: 999px;
   background: linear-gradient(180deg, var(--green-500) 0%, var(--green-700) 100%);
   box-shadow:

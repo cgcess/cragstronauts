@@ -63,12 +63,12 @@
           <feDisplacementMap
             in="SourceGraphic"
             in2="noise"
-            scale="14"
+            scale="22"
             xChannelSelector="R"
             yChannelSelector="G"
             result="displaced"
           />
-          <feGaussianBlur in="displaced" stdDeviation="6" result="blurred" />
+          <feGaussianBlur in="displaced" stdDeviation="2" result="blurred" />
           <feColorMatrix in="blurred" type="saturate" values="1.8" />
         </filter>
       </defs>

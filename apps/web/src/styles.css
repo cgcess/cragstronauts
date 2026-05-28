@@ -379,6 +379,13 @@ label {
   /* Let CSS, not the browser, decide the size */
   -webkit-appearance: none;
   appearance: none;
+  /* iOS Safari collapses date inputs with no value to nearly zero
+     height once the native chrome is stripped (no placeholder is rendered
+     for empty date fields). Pin a tap-target min-height and a real
+     line-height so the field reads as the same chunky box as the other
+     inputs in the form. */
+  min-height: 44px;
+  line-height: 1.2;
 }
 /* Stack vertically below typical iPhone width so the pickers always fit */
 @media (max-width: 400px) {

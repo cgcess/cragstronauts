@@ -14,6 +14,66 @@
     />
   </head>
   <body>
+    <!--
+      SVG filter defs for the liquid-glass nav surfaces. Referenced from
+      styles.css via `backdrop-filter: url(#glass-refraction)`. The <svg>
+      itself has zero painted area — only the <defs> are used.
+
+      Anatomy:
+        <feTurbulence>      generates a fractal noise field
+        <feDisplacementMap> uses that noise to warp the backdrop, giving
+                            the lens-like refraction the "Liquid Glass"
+                            spec calls property #2 (edge lensing). CSS
+                            blur + saturate are layered on top of this
+                            in @supports (see styles.css).
+
+      Tuning knobs (try them live in DevTools, then bake in):
+        baseFrequency  ↑ tighter ripples (frosted) · ↓ broader waves (water)
+        numOctaves     ↑ more complex noise        · ↓ smoother
+        scale          ↑ stronger refraction       · ↓ subtler
+        stdDeviation   ↑ more frost                · ↓ sharper
+
+      IMPORTANT: blur + saturate live INSIDE this filter chain, not in
+      the CSS `backdrop-filter`. Chromium silently attenuates SVG
+      filters when chained with CSS filter functions on `backdrop-
+      filter` (a bare `url(#x) blur(0)` already kills 80% of the
+      displacement). So the CSS rule applies *only* `url(#...)` and
+      this filter does the full blur + saturate + refraction.
+
+      Browser support: Chromium + Firefox: solid. Safari: landed in
+      ~iOS 18 / Safari 18. Anything older falls through the @supports
+      check in styles.css and keeps the pure-CSS frosted treatment.
+    -->
+    <svg
+      width="0"
+      height="0"
+      style="position: absolute; overflow: hidden;"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <defs>
+        <filter id="glass-refraction" x="0%" y="0%" width="100%" height="100%">
+          <feTurbulence
+            type="fractalNoise"
+            baseFrequency="0.015 0.018"
+            numOctaves="2"
+            seed="7"
+            result="noise"
+          />
+          <feDisplacementMap
+            in="SourceGraphic"
+            in2="noise"
+            scale="14"
+            xChannelSelector="R"
+            yChannelSelector="G"
+            result="displaced"
+          />
+          <feGaussianBlur in="displaced" stdDeviation="6" result="blurred" />
+          <feColorMatrix in="blurred" type="saturate" values="1.8" />
+        </filter>
+      </defs>
+    </svg>
+
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

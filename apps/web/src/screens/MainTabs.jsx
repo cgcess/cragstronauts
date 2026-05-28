@@ -51,7 +51,9 @@ export default function MainTabs({
 
   return (
     <div className="app-shell">
-      <div className="content">
+      {/* Topbar lives OUTSIDE .content so it stays pinned while the tab
+          content scrolls beneath it. Mirrors the tabbar's role at the bottom. */}
+      <div className="topbar">
         {error && <div className="error-banner">{error}</div>}
         <div className="row between">
           <button className="nav-pill" onClick={onExitTrip}>
@@ -65,7 +67,9 @@ export default function MainTabs({
             Switch
           </button>
         </div>
+      </div>
 
+      <div className="content content--tabs">
         {tab === "info" && (
           <InfoTab
             tripId={tripId}

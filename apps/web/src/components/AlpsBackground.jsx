@@ -87,6 +87,47 @@ const IMAGES = [
     src: "https://images.unsplash.com/photo-1718652201710-4a51b62031ca?auto=format&fit=crop&w=1600&q=70",
     credit: "Brandon Stoll · Unsplash",
   },
+  // Second crag batch — more rock + birds + climbing details.
+  {
+    src: "https://images.unsplash.com/photo-1730235172196-f0542b084c21?auto=format&fit=crop&w=1600&q=70",
+    credit: "Csaba Gyulavári · Unsplash",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1578388238189-03d2317200f2?auto=format&fit=crop&w=1600&q=70",
+    credit: "Sincerely Media · Unsplash",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1710302053239-7ed1a5714aad?auto=format&fit=crop&w=1600&q=70",
+    credit: "Blaire Harmon · Unsplash",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1584382388740-c25cf63c2ef6?auto=format&fit=crop&w=1600&q=70",
+    credit: "Nathan Dumlao · Unsplash",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1733107931656-d3fa581bb77a?auto=format&fit=crop&w=1600&q=70",
+    credit: "Brandon Stoll · Unsplash",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1732024876466-9ed3191d9b99?auto=format&fit=crop&w=1600&q=70",
+    credit: "Andrei Castanha · Unsplash",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1715792967352-82d26ce1f15e?auto=format&fit=crop&w=1600&q=70",
+    credit: "Brandon Stoll · Unsplash",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1715792547287-600326625f0b?auto=format&fit=crop&w=1600&q=70",
+    credit: "Brandon Stoll · Unsplash",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1696381476730-648c302120c8?auto=format&fit=crop&w=1600&q=70",
+    credit: "Adam Skrinnikoff · Unsplash",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1730650403169-57ae2e9938cb?auto=format&fit=crop&w=1600&q=70",
+    credit: "Brandon Stoll · Unsplash",
+  },
 ];
 
 const CYCLE_MS = 4 * 60 * 60 * 1000; // 4 hours

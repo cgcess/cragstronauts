@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { api } from "../api.js";
+import Linkify from "../components/Linkify.jsx";
 
 export default function InfoTab({ tripId, trip, users, categories, isOrganizer, onChanged, onDeleteTrip }) {
   const joining = users.filter((u) => u.joining);
@@ -22,14 +23,16 @@ export default function InfoTab({ tripId, trip, users, categories, isOrganizer, 
           <span className="pill accent">{trip.accommodation_type || "—"}</span>
         </div>
         {trip.accommodation_details && (
-          <p style={{ marginTop: 8 }}>{trip.accommodation_details}</p>
+          <p style={{ marginTop: 8 }}>
+            <Linkify>{trip.accommodation_details}</Linkify>
+          </p>
         )}
       </div>
 
       {trip.notes && (
         <div className="card">
           <div className="h2" style={{ marginTop: 0 }}>Notes</div>
-          <p>{trip.notes}</p>
+          <p><Linkify>{trip.notes}</Linkify></p>
         </div>
       )}
 

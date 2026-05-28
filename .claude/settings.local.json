@@ -28,7 +28,16 @@
       "Bash(curl -s http://localhost:8787/api/trips/2/gear-categories)",
       "Bash(curl -s http://localhost:8787/api/trips/1/users)",
       "Bash(curl -s http://localhost:8787/api/trips/2/cars)",
-      "Bash(curl -s -X DELETE http://localhost:8787/api/trips/2)"
+      "Bash(curl -s -X DELETE http://localhost:8787/api/trips/2)",
+      "Bash(git pull *)",
+      "Bash(curl -s -o /dev/null -w \"vite=%{http_code} \" http://localhost:3000/)",
+      "Bash(curl -s -o /dev/null -w \"vite-trip5=%{http_code} \" http://localhost:3000/trips/5)",
+      "Bash(curl -s -o /dev/null -w \"worker=%{http_code}\\\\n\" http://localhost:8787/api/trips)",
+      "Bash(curl -s -o /dev/null -w \"/trips/yosemite-valley → %{http_code}\\\\n\" http://localhost:3000/trips/yosemite-valley)",
+      "Bash(curl -s -o /dev/null -w \"/trips/Bishop%%20CA → %{http_code}\\\\n\" \"http://localhost:3000/trips/Bishop%20CA\")",
+      "Bash(curl -s -o /dev/null -w \"/ → %{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(awk '{print $2, $NF}')",
+      "Bash(grep -n \"^p {\\\\|^body\\\\|^\\\\* {\\\\|^h1\\\\|^button\\\\b\\\\|^\\\\.muted\\\\|^p,\\\\|^\\\\.card\\\\b\" /workspace/apps/web/src/styles.css)"
     ]
   }
 }

@@ -116,6 +116,14 @@ html {
   font-size: 14px;
 }
 
+a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+a:hover { opacity: 0.8; }
+
 /* ----------  Buttons  ---------- */
 
 button {

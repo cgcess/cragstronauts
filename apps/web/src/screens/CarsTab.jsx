@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { api } from "../api.js";
+import Linkify from "../components/Linkify.jsx";
 
 export default function CarsTab({ tripId, trip, cars, users, currentUserId, onChanged }) {
   const [adding, setAdding] = useState(false);
@@ -64,7 +65,11 @@ export default function CarsTab({ tripId, trip, cars, users, currentUserId, onCh
                 </button>
               )}
             </div>
-            {c.notes && <p style={{ marginTop: 8 }}>{c.notes}</p>}
+            {c.notes && (
+              <p style={{ marginTop: 8 }}>
+                <Linkify>{c.notes}</Linkify>
+              </p>
+            )}
             <div className="seat-row">
               <span className="seat driver">🚗 {c.driver_name}</span>
               {c.passengers.map((p) => (

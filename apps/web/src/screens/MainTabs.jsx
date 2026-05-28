@@ -51,22 +51,17 @@ export default function MainTabs({
 
   return (
     <div className="app-shell">
-      {/* Topbar floats above the scrolling content via position: absolute on
-          .topbar. The two nav-pills already carry the liquid-glass chassis
-          (backdrop blur, glossy crescent, glass tint); the center identity
-          chip uses .nav-cap — same chassis without the button affordance —
-          so the name stays legible when cards scroll behind it. */}
       <div className="topbar">
         {error && <div className="error-banner">{error}</div>}
         <div className="row between">
-          <button className="nav-pill" onClick={onExitTrip}>
+          <button className="glass-surface nav-pill" onClick={onExitTrip}>
             ← Trips
           </button>
-          <div className="nav-cap">
+          <div className="glass-surface nav-cap">
             <strong>{me?.name}</strong>
             {me?.is_organizer && " 👑"}
           </div>
-          <button className="nav-pill" onClick={onSwitchUser}>
+          <button className="glass-surface nav-pill" onClick={onSwitchUser}>
             Switch
           </button>
         </div>
@@ -108,7 +103,7 @@ export default function MainTabs({
       </div>
 
       <LayoutGroup>
-        <div className="tabbar">
+        <div className="glass-surface tabbar">
           {TABS.map((t) => (
             <button
               key={t.id}

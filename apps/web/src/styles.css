@@ -29,17 +29,6 @@
   --green-700: #1f352b;  /* depth shadow upper, CTA-on-light text */
   --green-900: #0f1f18;  /* depth shadow base, deepest text */
 
-  /* Legacy --blue-* aliases mapped to the green ramp so any code that
-     still references blue tokens stays consistent without an
-     immediate rename pass. */
-  --blue-100: var(--green-100);
-  --blue-200: var(--green-200);
-  --blue-300: var(--green-300);
-  --blue-400: var(--green-400);
-  --blue-500: var(--green-500);
-  --blue-600: var(--green-600);
-  --blue-700: var(--green-700);
-  --blue-900: var(--green-900);
 
   /* Grass (alpine accents, sparingly) */
   --grass-500: #5a8f3d;
@@ -54,7 +43,7 @@
   --bg-card:   #fff;
   --fg:        var(--stone-900);
   --muted:     var(--brown-500);
-  --accent:    var(--blue-500);
+  --accent:    var(--green-500);
   --accent-2:  var(--brown-500);
   --border:    var(--stone-200);
 
@@ -135,7 +124,7 @@ button {
   font: inherit;
   font-family: var(--font-body);
   color: inherit;
-  background: var(--blue-700);
+  background: var(--green-700);
   color: white;
   border: none;
   border-radius: var(--radius);
@@ -170,21 +159,12 @@ button.ghost {
 }
 button.ghost:hover { color: var(--brown-900); }
 
-/* ----------  Liquid-glass nav pill  ----------
-   Used on top-row nav (Switch / ← Trips) and as the chassis for the
-   bottom tabbar. Picks up the alps photo behind via backdrop-filter,
-   with a glossy top highlight and a soft floating shadow.
-   Works on iOS Safari + modern Android Chrome (backdrop-filter
-   supported on both; -webkit- prefix kept for older WebKit).
-*/
-button.nav-pill {
+/* ----------  Shared liquid-glass surface  ----------
+   Reusable frosted-glass chassis: gradient tint, backdrop blur,
+   glossy inner highlights, soft floating shadow. Applied to
+   .nav-pill, .nav-cap, and .tabbar. */
+.glass-surface {
   position: relative;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: -0.005em;
-  color: var(--brown-700);
-  padding: 10px 18px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.55);
   background:
@@ -197,22 +177,14 @@ button.nav-pill {
   backdrop-filter: blur(18px) saturate(180%);
   -webkit-backdrop-filter: blur(18px) saturate(180%);
   box-shadow:
-    /* glossy top highlight */
     inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    /* bottom rim */
     inset 0 -1px 0 rgba(45, 22, 15, 0.08),
-    /* inner ambient sheen */
     inset 0 0 18px rgba(255, 255, 255, 0.18),
-    /* soft floating drop */
     0 6px 14px -6px rgba(45, 22, 15, 0.32),
     0 2px 4px -2px rgba(45, 22, 15, 0.18);
-  transition:
-    transform 160ms var(--ease-out),
-    box-shadow 160ms var(--ease-out),
-    color 160ms var(--ease-out);
 }
-/* The crescent of light along the top edge that sells "glass" */
-button.nav-pill::before {
+/* Glossy top crescent highlight */
+.glass-surface::before {
   content: "";
   position: absolute;
   inset: 1px 1px auto 1px;
@@ -224,6 +196,20 @@ button.nav-pill::before {
     rgba(255, 255, 255, 0) 100%
   );
   pointer-events: none;
+}
+
+/* ----------  Liquid-glass nav pill  ---------- */
+button.nav-pill {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: -0.005em;
+  color: var(--brown-700);
+  padding: 10px 18px;
+  transition:
+    transform 160ms var(--ease-out),
+    box-shadow 160ms var(--ease-out),
+    color 160ms var(--ease-out);
 }
 button.nav-pill:hover {
   color: var(--brown-900);
@@ -313,7 +299,7 @@ button.btn-3d.btn-3d--round {
   align-items: center;
   justify-content: center;
   background: linear-gradient(180deg, #ffffff 0%, #ede2c8 100%);
-  color: var(--blue-500);
+  color: var(--green-500);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.9),
     inset 0 -3px 6px rgba(110, 86, 50, 0.18),
@@ -364,7 +350,7 @@ input, select, textarea {
   transition: border-color 140ms var(--ease-out), box-shadow 140ms var(--ease-out);
 }
 input:focus, select:focus, textarea:focus {
-  border-color: var(--blue-500);
+  border-color: var(--green-500);
   box-shadow: 0 0 0 3px rgba(66, 107, 69, 0.22);
 }
 label {
@@ -443,11 +429,24 @@ label {
   /* Transparent so AlpsBackground shows through */
   background: transparent;
 }
+@media (min-width: 640px) {
+  .app-shell { max-width: 600px; }
+  .deck-shell, .deck-empty, .deck-hint { max-width: 420px; }
+}
+@media (min-width: 1024px) {
+  .app-shell { max-width: 720px; }
+  .deck-shell, .deck-empty, .deck-hint { max-width: 480px; }
+}
+
 
 .content {
   flex: 1;
   overflow-y: auto;
   padding: 24px 20px;
+  scrollbar-width: none;
+}
+.content::-webkit-scrollbar {
+  display: none;
 }
 
 /* MainTabs scroll container. With the topbar and tabbar lifted into
@@ -482,15 +481,9 @@ label {
    is the only element allowed to absorb width, and it truncates. */
 .topbar .row > button { flex-shrink: 0; }
 
-/* Static glass capsule — the .nav-pill chassis without the button
-   affordance (no hover lift, no active scale, no pointer cursor).
-   Used to keep static identity chips like the current user's name
-   legible when content is scrolling behind the topbar. */
+/* Static glass capsule — .nav-pill chassis without the button affordance.
+   Truncates when the topbar is crammed. */
 .nav-cap {
-  position: relative;
-  /* block (not inline-flex) so text-overflow: ellipsis kicks in when
-     the cap is shrunk by the flex parent. text-align centers the
-     name + crown horizontally; symmetric padding handles vertical. */
   display: block;
   text-align: center;
   font-family: var(--font-display);
@@ -499,45 +492,12 @@ label {
   letter-spacing: -0.005em;
   color: var(--brown-700);
   padding: 8px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.55) 0%,
-      rgba(255, 255, 255, 0.22) 55%,
-      rgba(255, 255, 255, 0.42) 100%
-    );
-  backdrop-filter: blur(18px) saturate(180%);
-  -webkit-backdrop-filter: blur(18px) saturate(180%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    inset 0 -1px 0 rgba(45, 22, 15, 0.08),
-    inset 0 0 18px rgba(255, 255, 255, 0.18),
-    0 6px 14px -6px rgba(45, 22, 15, 0.32),
-    0 2px 4px -2px rgba(45, 22, 15, 0.18);
-  /* When the topbar is crammed, the identity chip is the ONLY thing
-     allowed to shrink — functional buttons keep their hit-target size. */
-  flex: 0 1 auto;       /* may shrink, never grow past content */
-  min-width: 0;          /* allow shrinking below intrinsic width */
-  max-width: 100%;       /* never push past the topbar's bounds */
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-/* Match the .nav-pill top crescent — the highlight that sells "glass" */
-.nav-cap::before {
-  content: "";
-  position: absolute;
-  inset: 1px 1px auto 1px;
-  height: 45%;
-  border-radius: 999px 999px 60% 60% / 999px 999px 100% 100%;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.55) 0%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  pointer-events: none;
 }
 .nav-cap strong { color: var(--fg); }
 
@@ -566,20 +526,8 @@ label {
   padding: 16px 20px calc(8px + env(safe-area-inset-bottom));
 }
 
-/* ----------  Tabbar — floating liquid-glass capsule  ----------
-   A pill-shaped bar that floats above the alps background. The
-   backdrop-filter blurs whatever sits behind (mountains, scrolled
-   content), giving the "distortion underneath" feel. The active tab
-   is a green CTA-style pill that slides between slots via
-   framer-motion layoutId (see MainTabs.jsx).
-*/
-
+/* ----------  Tabbar — floating liquid-glass capsule  ---------- */
 .tabbar {
-  /* Float above the scrolling .content so cards slide *under* the
-     tabbar (visible & blurred through the glass). position: sticky
-     wasn't actually sticking — the shell never scrolled — so the
-     bar relied purely on flex layout. position: absolute pins it
-     to the shell explicitly. */
   position: absolute;
   left: 16px;
   right: 16px;
@@ -589,15 +537,7 @@ label {
   gap: 4px;
   padding: 6px;
   margin: 0;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.55) 0%,
-      rgba(255, 255, 255, 0.22) 55%,
-      rgba(255, 255, 255, 0.42) 100%
-    );
+  /* Override glass-surface blur for slightly stronger frost */
   backdrop-filter: blur(22px) saturate(180%);
   -webkit-backdrop-filter: blur(22px) saturate(180%);
   box-shadow:
@@ -608,19 +548,7 @@ label {
     0 4px 10px -4px rgba(45, 22, 15, 0.22);
   isolation: isolate;
 }
-/* Glossy top crescent — same trick as the nav pill */
 .tabbar::before {
-  content: "";
-  position: absolute;
-  inset: 1px 1px auto 1px;
-  height: 50%;
-  border-radius: 999px 999px 60% 60% / 999px 999px 100% 100%;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.55) 0%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  pointer-events: none;
   z-index: 1;
 }
 
@@ -691,8 +619,8 @@ label {
   color: var(--brown-600);
 }
 .pill.accent {
-  background: var(--blue-100);
-  color: var(--blue-700);
+  background: var(--green-100);
+  color: var(--green-700);
   border-color: transparent;
 }
 
@@ -830,8 +758,8 @@ label {
   border-color: transparent;
 }
 .deck-card__chip--soon {
-  background: var(--blue-100);
-  color: var(--blue-700);
+  background: var(--green-100);
+  color: var(--green-700);
   border-color: transparent;
 }
 
@@ -865,7 +793,7 @@ label {
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 14px;
-  color: var(--blue-700);
+  color: var(--green-700);
 }
 .deck-card__face--past .deck-card__cta {
   color: var(--brown-600);
@@ -920,7 +848,7 @@ label {
   background: var(--brown-300);
 }
 .deck-hint__dot--on {
-  background: var(--blue-700);
+  background: var(--green-700);
   transform: scale(1.6);
 }
 .deck-hint__dot--past.deck-hint__dot--on {
@@ -948,9 +876,9 @@ label {
 }
 .deck-empty:hover {
   transform: rotate(-2deg) translateY(-2px);
-  border-color: var(--blue-500);
+  border-color: var(--green-500);
   background: rgba(255, 255, 255, 0.4);
-  color: var(--blue-600);
+  color: var(--green-600);
 }
 .deck-empty__plus {
   display: inline-flex;
@@ -968,8 +896,8 @@ label {
   transition: color 200ms var(--ease-out), border-color 200ms var(--ease-out);
 }
 .deck-empty:hover .deck-empty__plus {
-  color: var(--blue-500);
-  border-color: var(--blue-500);
+  color: var(--green-500);
+  border-color: var(--green-500);
 }
 .deck-empty__title {
   font-family: var(--font-display);
@@ -1240,7 +1168,7 @@ label {
   font-size: 13px;
 }
 .seat.empty { color: var(--brown-400); border-style: dashed; cursor: pointer; }
-.seat.empty:hover { color: var(--blue-700); border-color: var(--blue-500); }
+.seat.empty:hover { color: var(--green-700); border-color: var(--green-500); }
 .seat.driver {
   background: rgba(138, 82, 63, 0.14);
   border-color: var(--brown-500);
@@ -1266,44 +1194,6 @@ label {
   font-size: 14px;
 }
 
-/* ----------  Compatibility shim: old .cta-primary maps to .btn-3d  ---------- */
-
-button.cta-primary {
-  font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 700;
-  padding: 18px 28px;
-  border-radius: 999px;
-  color: white;
-  background: linear-gradient(180deg, var(--green-500) 0%, var(--green-700) 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    inset 0 -2px 4px rgba(15, 31, 24, 0.4),
-    0 5px 0 0 var(--green-700),
-    0 6px 0 0 var(--green-900),
-    0 14px 28px -10px rgba(15, 31, 24, 0.45);
-  transition:
-    transform 140ms var(--ease-out),
-    box-shadow 140ms var(--ease-out);
-}
-button.cta-primary:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    inset 0 -2px 4px rgba(15, 31, 24, 0.4),
-    0 6px 0 0 var(--green-700),
-    0 7px 0 0 var(--green-900),
-    0 18px 32px -10px rgba(15, 31, 24, 0.55);
-}
-button.cta-primary:active {
-  transform: translateY(5px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    inset 0 -1px 2px rgba(15, 31, 24, 0.3),
-    0 1px 0 0 var(--green-900),
-    0 2px 10px -2px rgba(15, 31, 24, 0.4);
-}
-
 /* Respect user preference */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -1314,40 +1204,13 @@ button.cta-primary:active {
 
 /* ============================================================
    Liquid-glass refraction — progressive enhancement
-   ============================================================
-   The base .nav-pill / .nav-cap / .tabbar rules above use
-   `backdrop-filter: blur(N) saturate(180%)` for a frosted look
-   (Liquid Glass spec properties #1, #3, #5, #6).
-
-   Where the browser supports url() inside backdrop-filter, we
-   swap that whole rule out for a single SVG filter that does
-   feDisplacementMap → feGaussianBlur → feColorMatrix (saturate)
-   in one chain. That adds real edge lensing / refraction
-   (property #2 — the differentiator from flat glassmorphism).
-
-   IMPORTANT — *don't* chain CSS filter functions with url() here.
-   Chromium silently attenuates SVG backdrop filters when chained
-   with built-in functions on `backdrop-filter` (even `blur(0)`
-   wipes out ~80% of the displacement, verified empirically). So
-   blur + saturate are inside the SVG (see index.html), and the
-   CSS value is bare `url(#...)`.
-
-   The .has-svg-glass gate is set in main.jsx — Safari (macOS + iOS)
-   reports @supports for url() in backdrop-filter as TRUE but then
-   silently no-ops it at paint time, so the override was leaving
-   iPhones with nothing instead of the frosted fallback. The class
-   gate is a UA-based opt-in for browsers we trust to actually paint
-   the SVG filter (Chromium + Firefox + their derivatives).
-
-   Browsers without url()-in-backdrop-filter (or any browser that the
-   probe didn't class-tag) skip this block and keep the frosted look.
-   Easy to revert: remove this block + the <svg> in index.html + the
-   class-setter in main.jsx.
+   The base .glass-surface rule uses `backdrop-filter: blur(N) saturate(180%)`
+   for a frosted look. Where url() is supported in backdrop-filter, we swap
+   to the SVG filter for real edge lensing / refraction. The .has-svg-glass
+   gate (set in main.jsx) excludes Safari which reports support but no-ops it.
 */
 @supports (backdrop-filter: url(#a)) or (-webkit-backdrop-filter: url(#a)) {
-  html.has-svg-glass button.nav-pill,
-  html.has-svg-glass .nav-cap,
-  html.has-svg-glass .tabbar {
+  html.has-svg-glass .glass-surface {
     backdrop-filter: url(#glass-refraction);
     -webkit-backdrop-filter: url(#glass-refraction);
   }

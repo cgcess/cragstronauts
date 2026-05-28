@@ -7,6 +7,7 @@ import Landing from "./screens/Landing.jsx";
 import SignupSwipe from "./screens/SignupSwipe.jsx";
 import MainTabs from "./screens/MainTabs.jsx";
 import AlpsBackground from "./components/AlpsBackground.jsx";
+import GlassFilter from "./components/GlassFilter.jsx";
 
 const EASE_OUT = [0.23, 1, 0.32, 1];
 
@@ -258,6 +259,7 @@ export default function App() {
 
   return (
     <>
+      <GlassFilter />
       <AlpsBackground />
       {screen}
     </>

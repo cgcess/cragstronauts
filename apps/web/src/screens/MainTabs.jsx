@@ -51,16 +51,19 @@ export default function MainTabs({
 
   return (
     <div className="app-shell">
-      {/* Topbar lives OUTSIDE .content so it stays pinned while the tab
-          content scrolls beneath it. Mirrors the tabbar's role at the bottom. */}
+      {/* Topbar floats above the scrolling content via position: absolute on
+          .topbar. The two nav-pills already carry the liquid-glass chassis
+          (backdrop blur, glossy crescent, glass tint); the center identity
+          chip uses .nav-cap — same chassis without the button affordance —
+          so the name stays legible when cards scroll behind it. */}
       <div className="topbar">
         {error && <div className="error-banner">{error}</div>}
         <div className="row between">
           <button className="nav-pill" onClick={onExitTrip}>
             ← Trips
           </button>
-          <div className="muted" style={{ fontSize: 13 }}>
-            <strong style={{ color: "var(--fg)" }}>{me?.name}</strong>
+          <div className="nav-cap">
+            <strong>{me?.name}</strong>
             {me?.is_organizer && " 👑"}
           </div>
           <button className="nav-pill" onClick={onSwitchUser}>

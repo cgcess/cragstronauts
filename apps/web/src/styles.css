@@ -442,19 +442,81 @@ label {
   padding: 24px 20px;
 }
 
-/* MainTabs: the topbar (← Trips · name · Switch) is now a sibling of
-   .content, so .content carries less top padding — the topbar already
-   gives the visual gap from the viewport edge. */
+/* MainTabs scroll container. With the topbar and tabbar lifted into
+   position: absolute, .content is the only flex child and fills the
+   whole shell. Padding reserves clearance so the first/last items
+   never collide with the floating bars — content slides *under* the
+   glass instead of being pushed by it. */
 .content--tabs {
-  padding-top: 8px;
+  /* top: clear .topbar (~68px) + breathing
+     bottom: clear .tabbar (~75px) + its 12px bottom inset + safe-area */
+  padding: 84px 20px calc(108px + env(safe-area-inset-bottom));
 }
 
-/* Pinned top navigation row for the MainTabs screen. Sits above the
-   scrolling .content; AlpsBackground shows through behind it. */
+/* Floating top navigation row. Sits above .content so cards visibly
+   scroll *behind* it — the .nav-pill / .nav-cap chassis takes care of
+   the liquid-glass refraction. The .topbar wrapper itself is just a
+   transparent layout slot; we don't tint it because we don't want a
+   hard edge across the page. */
 .topbar {
-  flex-shrink: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   padding: 20px 20px 8px;
+  z-index: 10;
+  /* Don't intercept scroll/click on the gaps between pills. */
+  pointer-events: none;
 }
+.topbar > * { pointer-events: auto; }
+
+/* Static glass capsule — the .nav-pill chassis without the button
+   affordance (no hover lift, no active scale, no pointer cursor).
+   Used to keep static identity chips like the current user's name
+   legible when content is scrolling behind the topbar. */
+.nav-cap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: -0.005em;
+  color: var(--brown-700);
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.55) 0%,
+      rgba(255, 255, 255, 0.22) 55%,
+      rgba(255, 255, 255, 0.42) 100%
+    );
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 rgba(45, 22, 15, 0.08),
+    inset 0 0 18px rgba(255, 255, 255, 0.18),
+    0 6px 14px -6px rgba(45, 22, 15, 0.32),
+    0 2px 4px -2px rgba(45, 22, 15, 0.18);
+}
+/* Match the .nav-pill top crescent — the highlight that sells "glass" */
+.nav-cap::before {
+  content: "";
+  position: absolute;
+  inset: 1px 1px auto 1px;
+  height: 45%;
+  border-radius: 999px 999px 60% 60% / 999px 999px 100% 100%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  pointer-events: none;
+}
+.nav-cap strong { color: var(--fg); }
 
 /* Landing: brand at top, the trip-deck (shell + hint) vertically centered
    in the remaining space. Only scrolls when the viewport truly can't fit
@@ -490,12 +552,20 @@ label {
 */
 
 .tabbar {
-  position: sticky;
-  bottom: 0;
+  /* Float above the scrolling .content so cards slide *under* the
+     tabbar (visible & blurred through the glass). position: sticky
+     wasn't actually sticking — the shell never scrolled — so the
+     bar relied purely on flex layout. position: absolute pins it
+     to the shell explicitly. */
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  z-index: 10;
   display: flex;
   gap: 4px;
   padding: 6px;
-  margin: 8px 16px calc(12px + env(safe-area-inset-bottom));
+  margin: 0;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.55);
   background:

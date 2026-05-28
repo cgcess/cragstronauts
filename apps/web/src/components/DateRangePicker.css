@@ -122,7 +122,14 @@
   color: var(--fg);
   padding: 4px 0 0;
 }
-.rdp-months { display: flex; justify-content: center; }
+/* Nav renders as a sibling of the month inside `.rdp-months`, so we
+   anchor it here. Place it on the month-caption line, full width, with
+   the buttons pushed to the edges. */
+.rdp-months {
+  display: flex;
+  justify-content: center;
+  position: relative;
+}
 .rdp-month { position: relative; }
 
 /* Header with month/year + prev/next chevrons */
@@ -136,18 +143,22 @@
 }
 .rdp-nav {
   position: absolute;
-  top: 2px;
+  top: 0;
   left: 0;
   right: 0;
+  height: 36px;
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  padding: 0 4px;
   pointer-events: none;
+  z-index: 2;
 }
 .rdp-button_previous,
 .rdp-button_next {
   pointer-events: auto;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: transparent;
   color: var(--brown-700);
@@ -161,11 +172,16 @@
 }
 .rdp-button_previous:hover,
 .rdp-button_next:hover { background: var(--stone-100); }
-.rdp-button_previous:disabled,
-.rdp-button_next:disabled { opacity: 0.35; cursor: not-allowed; }
+.rdp-button_previous[aria-disabled="true"],
+.rdp-button_next[aria-disabled="true"] {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.rdp-button_previous[aria-disabled="true"]:hover,
+.rdp-button_next[aria-disabled="true"]:hover { background: transparent; }
 .rdp-button_previous:active,
 .rdp-button_next:active { transform: none; }
-.rdp-chevron { fill: var(--brown-700); width: 16px; height: 16px; }
+.rdp-chevron { fill: var(--brown-700); width: 18px; height: 18px; }
 
 /* Calendar grid */
 .rdp-month_grid {

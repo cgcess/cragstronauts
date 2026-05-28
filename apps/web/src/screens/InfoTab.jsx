@@ -8,6 +8,148 @@ export default function InfoTab({ tripId, trip, users, categories, isOrganizer, 
   const [addingCat, setAddingCat] = useState(false);
   const [newCatName, setNewCatName] = useState("");
 
+  // Share link
+  const [copied, setCopied] = useState(false);
+  const shareLink = async () => {
+    const url = window.location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // clipboard API needs a secure context; fall back to a manual prompt
+      window.prompt("Copy this trip link:", url);
+    }
+  };
+
+  // Edit trip details (organizer)
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState(null);
+  const [form, setForm] = useState(null);
+
+  const startEdit = () => {
+    setEditError(null);
+    setForm({
+      location: trip.location || "",
+      start_date: trip.start_date || "",
+      end_date: trip.end_date || "",
+      accommodation_type: trip.accommodation_type || "campsite",
+      accommodation_details: trip.accommodation_details || "",
+      notes: trip.notes || "",
+    });
+    setEditing(true);
+  };
+
+  const saveEdit = async () => {
+    setEditError(null);
+    setSaving(true);
+    try {
+      await api.updateTrip(tripId, {
+        location: form.location.trim(),
+        start_date: form.start_date || null,
+        end_date: form.end_date || null,
+        accommodation_type: form.accommodation_type,
+        accommodation_details: form.accommodation_details.trim() || null,
+        notes: form.notes.trim() || null,
+      });
+      setEditing(false);
+      await onChanged();
+    } catch (e) {
+      setEditError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <div>
+        <div className="h1">Edit trip</div>
+        {editError && <div className="error-banner">{editError}</div>}
+        <div className="card">
+          <div className="col">
+            <div>
+              <label>Climbing location *</label>
+              <input
+                value={form.location}
+                onChange={(e) => setForm({ ...form, location: e.target.value })}
+                placeholder="e.g. Yosemite Valley"
+              />
+            </div>
+            <div className="row">
+              <div style={{ flex: 1 }}>
+                <label>Start</label>
+                <input
+                  type="date"
+                  value={form.start_date}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setForm((f) => ({
+                      ...f,
+                      start_date: v,
+                      end_date: f.end_date && f.end_date < v ? v : f.end_date,
+                    }));
+                  }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label>End</label>
+                <input
+                  type="date"
+                  min={form.start_date || undefined}
+                  value={form.end_date}
+                  onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                />
+              </div>
+            </div>
+            <div>
+              <label>Accommodation</label>
+              <select
+                value={form.accommodation_type}
+                onChange={(e) => setForm({ ...form, accommodation_type: e.target.value })}
+              >
+                <option value="campsite">Campsite</option>
+                <option value="airbnb">Airbnb</option>
+                <option value="hotel">Hotel</option>
+                <option value="hut">Hut / Refuge</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label>Accommodation details</label>
+              <input
+                value={form.accommodation_details}
+                onChange={(e) => setForm({ ...form, accommodation_details: e.target.value })}
+                placeholder="Name, address, link…"
+              />
+            </div>
+            <div>
+              <label>Notes</label>
+              <textarea
+                rows={3}
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              />
+            </div>
+            <div className="row" style={{ marginTop: 4 }}>
+              <button className="secondary" onClick={() => setEditing(false)} disabled={saving}>
+                Cancel
+              </button>
+              <button
+                style={{ flex: 1 }}
+                disabled={!form.location.trim() || saving}
+                onClick={saveEdit}
+              >
+                {saving ? "Saving…" : "Save changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="h1">📍 {trip.location}</div>
@@ -16,6 +158,17 @@ export default function InfoTab({ tripId, trip, users, categories, isOrganizer, 
           {trip.start_date} → {trip.end_date || "?"}
         </p>
       )}
+
+      <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+        <button className="secondary" onClick={shareLink}>
+          {copied ? "Link copied ✓" : "Share trip link"}
+        </button>
+        {isOrganizer && (
+          <button className="secondary" onClick={startEdit}>
+            Edit trip details
+          </button>
+        )}
+      </div>
 
       <div className="card">
         <div className="h2" style={{ marginTop: 0 }}>Accommodation</div>

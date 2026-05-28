@@ -40,6 +40,27 @@ tripRoutes.get("/api/trips/:trip_id", async (c) => {
   return c.json(trip);
 });
 
+tripRoutes.patch("/api/trips/:trip_id", async (c) => {
+  const tripId = c.req.param("trip_id");
+  const body = await c.req.json();
+  try {
+    const stub = getTripDO(c.env, tripId);
+    const trip = await stub.updateTrip(body);
+    // Keep the listing index in sync — location/dates power the trip list.
+    const index = getTripIndexDO(c.env);
+    await index.updateTrip(tripId, {
+      location: trip.location as string,
+      start_date: (trip.start_date as string | null) ?? null,
+      end_date: (trip.end_date as string | null) ?? null,
+    });
+    return c.json(trip);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg === "Trip not found") return c.json({ detail: msg }, 404);
+    return c.json({ detail: msg }, 400);
+  }
+});
+
 tripRoutes.delete("/api/trips/:trip_id", async (c) => {
   const tripId = c.req.param("trip_id");
   try {

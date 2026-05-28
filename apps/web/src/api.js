@@ -24,6 +24,7 @@ export const api = {
   listTrips: () => req("GET", "/api/trips"),
   createTrip: (data) => req("POST", "/api/trips", data),
   getTrip: (tripId) => req("GET", `/api/trips/${tripId}`),
+  updateTrip: (tripId, data) => req("PATCH", `/api/trips/${tripId}`, data),
   deleteTrip: (tripId) => req("DELETE", `/api/trips/${tripId}`),
 
   // Users (within a trip)

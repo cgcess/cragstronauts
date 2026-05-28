@@ -79,6 +79,45 @@ export class TripDO extends DurableObject<Env> {
     return { organizer_user_id: userRow.id };
   }
 
+  async updateTrip(data: {
+    location?: string;
+    start_date?: string | null;
+    end_date?: string | null;
+    accommodation_type?: string | null;
+    accommodation_details?: string | null;
+    notes?: string | null;
+  }): Promise<Record<string, unknown>> {
+    const row = this.db.get(trip, { where: eq("id", 1) });
+    if (!row) throw new Error("Trip not found");
+
+    const location =
+      data.location !== undefined ? data.location.trim() : row.location;
+    if (!location) throw new Error("Location required");
+
+    this.db.update(
+      trip,
+      {
+        location,
+        start_date:
+          data.start_date !== undefined ? data.start_date : row.start_date,
+        end_date: data.end_date !== undefined ? data.end_date : row.end_date,
+        accommodation_type:
+          data.accommodation_type !== undefined
+            ? data.accommodation_type
+            : row.accommodation_type,
+        accommodation_details:
+          data.accommodation_details !== undefined
+            ? data.accommodation_details
+            : row.accommodation_details,
+        notes: data.notes !== undefined ? data.notes : row.notes,
+      },
+      { where: eq("id", 1) }
+    );
+
+    const updated = this.db.get(trip, { where: eq("id", 1) })!;
+    return formatTrip(updated);
+  }
+
   async destroy(): Promise<{ ok: boolean }> {
     // Wipe all tables — order matters for foreign keys
     this.db.raw("DELETE FROM gear_contribution", []);

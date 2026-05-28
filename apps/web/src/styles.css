@@ -1319,10 +1319,18 @@ button.cta-primary:active {
    `backdrop-filter: blur(N) saturate(180%)` for a frosted look
    (Liquid Glass spec properties #1, #3, #5, #6).
 
-   Where the browser also supports url() inside backdrop-filter,
-   we layer an SVG <feDisplacementMap> on top to add real edge
-   lensing / refraction (property #2 — the actual differentiator
-   from flat glassmorphism). Filter defs live in index.html.
+   Where the browser supports url() inside backdrop-filter, we
+   swap that whole rule out for a single SVG filter that does
+   feDisplacementMap → feGaussianBlur → feColorMatrix (saturate)
+   in one chain. That adds real edge lensing / refraction
+   (property #2 — the differentiator from flat glassmorphism).
+
+   IMPORTANT — *don't* chain CSS filter functions with url() here.
+   Chromium silently attenuates SVG backdrop filters when chained
+   with built-in functions on `backdrop-filter` (even `blur(0)`
+   wipes out ~80% of the displacement, verified empirically). So
+   blur + saturate are inside the SVG (see index.html), and the
+   CSS value is bare `url(#...)`.
 
    Browsers without url()-in-backdrop-filter (older Safari, some
    Android WebViews) skip this block and keep the frosted look.
@@ -1332,9 +1340,7 @@ button.cta-primary:active {
   button.nav-pill,
   .nav-cap,
   .tabbar {
-    /* Less CSS blur than the base rule — the displacement adds
-       its own visual weight, so 18px stacked on top reads as mud. */
-    backdrop-filter: url(#glass-refraction) blur(12px) saturate(180%);
-    -webkit-backdrop-filter: url(#glass-refraction) blur(12px) saturate(180%);
+    backdrop-filter: url(#glass-refraction);
+    -webkit-backdrop-filter: url(#glass-refraction);
   }
 }

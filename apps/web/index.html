@@ -31,6 +31,14 @@
         baseFrequency  ↑ tighter ripples (frosted) · ↓ broader waves (water)
         numOctaves     ↑ more complex noise        · ↓ smoother
         scale          ↑ stronger refraction       · ↓ subtler
+        stdDeviation   ↑ more frost                · ↓ sharper
+
+      IMPORTANT: blur + saturate live INSIDE this filter chain, not in
+      the CSS `backdrop-filter`. Chromium silently attenuates SVG
+      filters when chained with CSS filter functions on `backdrop-
+      filter` (a bare `url(#x) blur(0)` already kills 80% of the
+      displacement). So the CSS rule applies *only* `url(#...)` and
+      this filter does the full blur + saturate + refraction.
 
       Browser support: Chromium + Firefox: solid. Safari: landed in
       ~iOS 18 / Safari 18. Anything older falls through the @supports
@@ -58,7 +66,10 @@
             scale="14"
             xChannelSelector="R"
             yChannelSelector="G"
+            result="displaced"
           />
+          <feGaussianBlur in="displaced" stdDeviation="6" result="blurred" />
+          <feColorMatrix in="blurred" type="saturate" values="1.8" />
         </filter>
       </defs>
     </svg>

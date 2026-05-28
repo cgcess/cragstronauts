@@ -1332,14 +1332,22 @@ button.cta-primary:active {
    blur + saturate are inside the SVG (see index.html), and the
    CSS value is bare `url(#...)`.
 
-   Browsers without url()-in-backdrop-filter (older Safari, some
-   Android WebViews) skip this block and keep the frosted look.
-   Easy to revert: remove this block + the <svg> in index.html.
+   The .has-svg-glass gate is set in main.jsx — Safari (macOS + iOS)
+   reports @supports for url() in backdrop-filter as TRUE but then
+   silently no-ops it at paint time, so the override was leaving
+   iPhones with nothing instead of the frosted fallback. The class
+   gate is a UA-based opt-in for browsers we trust to actually paint
+   the SVG filter (Chromium + Firefox + their derivatives).
+
+   Browsers without url()-in-backdrop-filter (or any browser that the
+   probe didn't class-tag) skip this block and keep the frosted look.
+   Easy to revert: remove this block + the <svg> in index.html + the
+   class-setter in main.jsx.
 */
 @supports (backdrop-filter: url(#a)) or (-webkit-backdrop-filter: url(#a)) {
-  button.nav-pill,
-  .nav-cap,
-  .tabbar {
+  html.has-svg-glass button.nav-pill,
+  html.has-svg-glass .nav-cap,
+  html.has-svg-glass .tabbar {
     backdrop-filter: url(#glass-refraction);
     -webkit-backdrop-filter: url(#glass-refraction);
   }

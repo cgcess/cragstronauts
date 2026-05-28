@@ -194,8 +194,15 @@ function SwipeCard({ question, onAnswer, exitDir, hint }) {
   }, [hint, x]);
 
   const onDragEnd = (_, info) => {
-    if (info.offset.x > 120) onAnswer(true);
-    else if (info.offset.x < -120) onAnswer(false);
+    // Commit the visual direction immediately so it can't be undone by
+    // the drag-release spring back to 0 during the async handleAnswer.
+    if (info.offset.x > 120) {
+      animate(x, 520, { duration: 0.3, ease: [0.4, 0, 0.2, 1] });
+      onAnswer(true);
+    } else if (info.offset.x < -120) {
+      animate(x, -520, { duration: 0.3, ease: [0.4, 0, 0.2, 1] });
+      onAnswer(false);
+    }
   };
 
   return (
@@ -208,12 +215,19 @@ function SwipeCard({ question, onAnswer, exitDir, hint }) {
       initial={{ scale: 0.94, opacity: 0, y: 8 }}
       animate={{ scale: 1, opacity: 1, y: 0 }}
       custom={exitDir}
-      exit={(dir) => ({
-        x: dir === "left" ? -480 : 480,
-        rotate: dir === "left" ? -22 : 22,
-        opacity: 0,
-        transition: { duration: 0.32, ease: [0.4, 0, 0.2, 1] },
-      })}
+      exit={(dir) => {
+        // Prefer the current drag/imperative position over `dir` so the
+        // exit can't reverse a swipe that's already committed visually.
+        const current = x.get();
+        const goingLeft =
+          Math.abs(current) > 40 ? current < 0 : dir === "left";
+        return {
+          x: goingLeft ? -480 : 480,
+          rotate: goingLeft ? -22 : 22,
+          opacity: 0,
+          transition: { duration: 0.32, ease: [0.4, 0, 0.2, 1] },
+        };
+      }}
       transition={{ type: "spring", stiffness: 320, damping: 32 }}
       whileTap={{ cursor: "grabbing" }}
     >

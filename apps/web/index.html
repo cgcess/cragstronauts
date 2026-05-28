@@ -27,32 +27,46 @@
                             blur + saturate are layered on top of this
                             in @supports (see styles.css).
 
-      Edge-only refraction (Apple-style "lens" glass):
-        The displacement map is masked by a radial gradient so the
-        center stays a flat #808080 (= zero displacement under fe-
-        DisplacementMap's "channel - 0.5" math) and only the rim
-        carries the noise. Net effect: clear lens in the middle,
-        refraction concentrated at the edges — like a snow globe
-        or Apple Liquid Glass widget.
+      Full Liquid Glass filter chain. Four conceptual passes:
 
-      Tuning knobs (try them live in DevTools, then bake in):
-        baseFrequency  ↑ tighter ripples (frosted) · ↓ broader waves (water)
-        numOctaves     ↑ more complex noise        · ↓ smoother
-        scale          ↑ stronger refraction       · ↓ subtler
-        stdDeviation   ↑ more frost                · ↓ sharper
-        edge-fade-grad ↑ stop offsets control how wide the clear
-                         center zone is. Currently clear out to ~55%
-                         of the radius, then fades to full noise at
-                         100%. Move the middle stop closer to 100%
-                         for a *thinner* refractive rim, closer to 0%
-                         for a *thicker* one.
+        1. EDGE-ONLY REFRACTION
+           Turbulence noise masked by a radial gradient so the center
+           is a flat #808080 (= zero displacement under feDisplacement-
+           Map's "channel - 0.5" math) and only the rim carries the
+           noise. Net effect: clear lens in the middle, refraction at
+           the edges. The middle stop in the edge-fade gradient (0.55)
+           controls how wide the clear center zone is.
+
+        2. CHROMATIC ABERRATION  ←  new
+           R, G, B channels are extracted from SourceGraphic and
+           displaced independently by slightly different scales
+           (20/18/16). Result: the rim refraction shows rainbow
+           fringing — light "splits" through curved glass. The center
+           channels all get the same zero-displacement map, so they
+           stay aligned and there's no fringing in the clear zone.
+
+        3. SPECULAR HIGHLIGHT  ←  new
+           The edge mask is alpha-inverted to make a dome height
+           field (high alpha center → low alpha rim). feSpecular-
+           Lighting with a distant light from above-left produces a
+           soft sheen on the curved rim, like a polished glass
+           surface catching the room light.
+
+        4. POST  →  feGaussianBlur (frost) + feColorMatrix (saturate).
+
+      Tuning knobs (decoded inline below near each primitive):
+        baseFrequency  ↑ tighter noise grain   · ↓ broader waves
+        scale (×3)     per-channel refraction  · spread = aberration
+        stdDeviation   frost amount
+        specular knobs constant / exponent / surfaceScale / azimuth
+        gradient stop  width of the clear-center zone
 
       IMPORTANT: blur + saturate live INSIDE this filter chain, not in
       the CSS `backdrop-filter`. Chromium silently attenuates SVG
       filters when chained with CSS filter functions on `backdrop-
       filter` (a bare `url(#x) blur(0)` already kills 80% of the
       displacement). So the CSS rule applies *only* `url(#...)` and
-      this filter does the full blur + saturate + refraction.
+      this filter does the full blur + saturate + refraction + spec.
 
       Browser support: Chromium + Firefox: solid. Safari: landed in
       ~iOS 18 / Safari 18. Anything older falls through the @supports
@@ -116,30 +130,91 @@
             result="edgeMask"
           />
 
-          <!-- 3. Mask the noise: noise survives only where edgeMask alpha
-                  is non-zero (i.e. near the rim). Center becomes
-                  transparent. -->
+          <!-- 3. Mask the noise: keep noise where edgeMask alpha is non-zero
+                  (rim), drop it (transparent) at the center. -->
           <feComposite in="noise" in2="edgeMask" operator="in" result="edgeNoise" />
 
-          <!-- 4. Composite the edge-noise OVER a uniform gray fill. Gray
-                  (#808080) maps to "zero displacement" inside
-                  feDisplacementMap, so the center of the resulting map
-                  is perfectly clear and the rim carries the noise. -->
+          <!-- 4. Composite the edge-noise OVER a uniform gray fill (#808080
+                  = "zero displacement" in feDisplacementMap math). Center
+                  of the resulting map is perfectly clear, rim carries the
+                  noise. This is the displacement source for the chromatic
+                  passes below. -->
           <feFlood flood-color="#808080" result="grayBase" />
           <feComposite in="edgeNoise" in2="grayBase" operator="over" result="displaceMap" />
 
-          <!-- 5. Apply displacement using the edge-weighted map. -->
-          <feDisplacementMap
-            in="SourceGraphic"
-            in2="displaceMap"
-            scale="18"
-            xChannelSelector="R"
-            yChannelSelector="G"
-            result="displaced"
-          />
+          <!-- ============= Pass 2: Chromatic aberration =============
+               Extract each of R / G / B from SourceGraphic into its own
+               single-channel image, displace each at a slightly different
+               scale, then screen-blend the three back together. Because
+               the displacement map is gray (= 0) in the center, all three
+               channels see "no displacement" there and stay aligned — so
+               aberration is automatically edge-only.
 
-          <!-- 6. Light blur + saturation pop. -->
-          <feGaussianBlur in="displaced" stdDeviation="2" result="blurred" />
+               Tune `spread` by changing the gap between the three scales:
+                 R 20, G 18, B 16   →  subtle fringing (current)
+                 R 22, G 18, B 14   →  punchier rainbow rim
+                 R 19, G 18, B 17   →  barely-there
+          -->
+          <feColorMatrix in="SourceGraphic"
+                         values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0"
+                         result="srcR" />
+          <feDisplacementMap in="srcR" in2="displaceMap" scale="20"
+                             xChannelSelector="R" yChannelSelector="G"
+                             result="dispR" />
+          <feColorMatrix in="SourceGraphic"
+                         values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0"
+                         result="srcG" />
+          <feDisplacementMap in="srcG" in2="displaceMap" scale="18"
+                             xChannelSelector="R" yChannelSelector="G"
+                             result="dispG" />
+          <feColorMatrix in="SourceGraphic"
+                         values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0"
+                         result="srcB" />
+          <feDisplacementMap in="srcB" in2="displaceMap" scale="16"
+                             xChannelSelector="R" yChannelSelector="G"
+                             result="dispB" />
+          <!-- Screen blend: out = 1 - (1-A)(1-B). For our zero'd channels
+               (R-only image has G=B=0 etc.) this acts like max-per-channel,
+               so the three single-channel layers recombine cleanly. -->
+          <feBlend in="dispR" in2="dispG" mode="screen" result="dispRG" />
+          <feBlend in="dispRG" in2="dispB" mode="screen" result="displaced" />
+
+          <!-- ============= Pass 3: Specular highlight =============
+               Invert the edge mask's alpha to build a height map (dome —
+               high alpha center, low at rim). feSpecularLighting derives
+               surface normals from alpha and reflects a distant light off
+               that surface, producing a sheen where the slope's reflection
+               vector points back at the viewer.
+
+               Knobs:
+                 surfaceScale       — "thickness" of the simulated glass
+                 specularConstant   — overall highlight brightness
+                 specularExponent   — tightness of the highlight peak (↑ tighter)
+                 azimuth / elevation — direction of the light source
+                                       (azimuth 135° = upper-left,
+                                        elevation 60° = high above)
+          -->
+          <feColorMatrix in="edgeMask"
+                         values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 -1 1"
+                         result="heightMap" />
+          <feSpecularLighting in="heightMap"
+                              surfaceScale="1.5"
+                              specularConstant="0.35"
+                              specularExponent="80"
+                              lighting-color="white"
+                              result="specRaw">
+            <feDistantLight azimuth="135" elevation="60" />
+          </feSpecularLighting>
+          <!-- Clip the lit area to where the pill is actually opaque, so the
+               highlight doesn't bleed past the rounded corners. -->
+          <feComposite in="specRaw" in2="SourceGraphic" operator="in" result="spec" />
+          <!-- Add the highlight on top of the displaced backdrop (arithmetic
+               k2=1 k3=1 → straight add). -->
+          <feComposite in="displaced" in2="spec" operator="arithmetic"
+                       k1="0" k2="1" k3="1" k4="0" result="lit" />
+
+          <!-- ============= Pass 4: Post — frost + saturation ============= -->
+          <feGaussianBlur in="lit" stdDeviation="2" result="blurred" />
           <feColorMatrix in="blurred" type="saturate" values="1.8" />
         </filter>
       </defs>

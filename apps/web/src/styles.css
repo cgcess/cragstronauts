@@ -361,50 +361,6 @@ label {
   margin-bottom: 6px;
 }
 
-/* Side-by-side date pickers. iOS Safari gives <input type="date"> an
-   intrinsic min-width that ignores the flex parent unless we set
-   min-width: 0 on BOTH the flex cell and the input itself. On very
-   narrow viewports we just stack them — safer than fighting WebKit. */
-.date-row {
-  display: flex;
-  gap: 10px;
-}
-.date-row__field {
-  flex: 1 1 0;
-  min-width: 0;
-}
-.date-row__field input {
-  width: 100%;
-  min-width: 0;
-  /* Let CSS, not the browser, decide the size */
-  -webkit-appearance: none;
-  appearance: none;
-  /* iOS Safari collapses date inputs with no value to nearly zero
-     height once the native chrome is stripped (no placeholder is rendered
-     for empty date fields). Pin a tap-target min-height and a real
-     line-height so the field reads as the same chunky box as the other
-     inputs in the form. */
-  min-height: 44px;
-  line-height: 1.2;
-}
-/* Stack vertically below typical iPhone width so the pickers always fit */
-@media (max-width: 400px) {
-  .date-row {
-    flex-direction: column;
-    gap: 14px;
-  }
-}
-
-/* Inline form warning (less alarming than .error-banner) */
-.inline-warn {
-  font-size: 13px;
-  color: var(--brown-700);
-  background: rgba(200, 152, 135, 0.18);
-  border-left: 3px solid var(--brown-500);
-  padding: 8px 12px;
-  border-radius: 8px;
-}
-
 /* Step indicator under the wizard headline */
 .step-tag {
   display: inline-block;

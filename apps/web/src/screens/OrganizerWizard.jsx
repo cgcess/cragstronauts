@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { api } from "../api.js";
+import DateRangePicker from "../components/DateRangePicker.jsx";
 
 const defaultCategories = [
   {
@@ -27,12 +28,23 @@ const STEP_TAGS = [
   "Rope captain · 3 of 3",
 ];
 
-function todayISO() {
-  const d = new Date();
+function toLocalISO(d) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+function isoToDate(iso) {
+  if (!iso) return undefined;
+  // Parse as local midnight (not UTC) so calendar shows the picked day.
+  return new Date(`${iso}T00:00:00`);
+}
+
+function todayLocal() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
 }
 
 // Strong custom easing per emil-design-eng skill — punchier than the
@@ -53,26 +65,16 @@ export default function OrganizerWizard({ onComplete, onCancel }) {
   const [submitting, setSubmitting] = useState(false);
 
   const reduceMotion = useReducedMotion();
-  const today = useMemo(todayISO, []);
+  const today = useMemo(todayLocal, []);
 
-  // Keep end >= start as the user edits. If they pick a start that's
-  // after the current end, snap end forward. If they try to pick an
-  // end before start, snap it up.
-  const onStartChange = (value) => {
-    setStartDate(value);
-    if (value && endDate && endDate < value) setEndDate(value);
+  const range = useMemo(
+    () => ({ from: isoToDate(startDate), to: isoToDate(endDate) }),
+    [startDate, endDate],
+  );
+  const onRangeChange = (r) => {
+    setStartDate(r?.from ? toLocalISO(r.from) : "");
+    setEndDate(r?.to ? toLocalISO(r.to) : "");
   };
-  const onEndChange = (value) => {
-    if (value && startDate && value < startDate) {
-      // Hard guard — should be unreachable via picker thanks to `min`
-      setEndDate(startDate);
-      return;
-    }
-    setEndDate(value);
-  };
-
-  const datesValid =
-    !startDate || !endDate || endDate >= startDate;
 
   const submit = async () => {
     setError(null);
@@ -168,31 +170,14 @@ export default function OrganizerWizard({ onComplete, onCancel }) {
                 />
               </motion.div>
 
-              <motion.div variants={item} className="date-row">
-                <div className="date-row__field">
-                  <label>From</label>
-                  <input
-                    type="date"
-                    min={today}
-                    value={startDate}
-                    onChange={(e) => onStartChange(e.target.value)}
-                  />
-                </div>
-                <div className="date-row__field">
-                  <label>To</label>
-                  <input
-                    type="date"
-                    min={startDate || today}
-                    value={endDate}
-                    onChange={(e) => onEndChange(e.target.value)}
-                  />
-                </div>
+              <motion.div variants={item}>
+                <label>When</label>
+                <DateRangePicker
+                  value={range}
+                  onChange={onRangeChange}
+                  minDate={today}
+                />
               </motion.div>
-              {!datesValid && (
-                <div className="inline-warn">
-                  End date can't be before the start. We bumped it for you.
-                </div>
-              )}
 
               <motion.div variants={item}>
                 <label>Where do we sleep?</label>

@@ -72,10 +72,14 @@ export default function Landing({ trip, users, onPickExisting, onJoinNew, onBack
             />
             {error && <div className="error-banner">{error}</div>}
             <div className="row">
-              <button className="secondary" onClick={() => setMode("choose")}>
+              <button
+                className="btn-3d btn-3d--cream"
+                onClick={() => setMode("choose")}
+              >
                 Back
               </button>
               <button
+                className="btn-3d"
                 disabled={!name.trim() || busy}
                 onClick={joinNew}
                 style={{ flex: 1 }}

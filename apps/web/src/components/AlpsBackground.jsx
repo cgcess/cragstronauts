@@ -34,6 +34,59 @@ const IMAGES = [
     src: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1600&q=70",
     credit: "Joshua Earle · Unsplash",
   },
+  // Rock + crag mood — added for the climbing-trip vibe.
+  {
+    src: "https://images.unsplash.com/photo-1580687104139-9d51ce55e346?auto=format&fit=crop&w=1600&q=70",
+    credit: "Mitchell Luo · Unsplash",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1629246479433-80f8a41574b0?auto=format&fit=crop&w=1600&q=70",
+    credit: "Maxim Boldyrev · Unsplash",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1629246479981-457f396bb41d?auto=format&fit=crop&w=1600&q=70",
+    credit: "Maxim Boldyrev · Unsplash",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1598171182250-62e92d5a3172?auto=format&fit=crop&w=1600&q=70",
+    credit: "K8 · Unsplash",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1525857597365-5f6dbff2e36e?auto=format&fit=crop&w=1600&q=70",
+    credit: "Zoltan Tasi · Unsplash",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1544098281-073ae35c98b0?auto=format&fit=crop&w=1600&q=70",
+    credit: "Emile Guillemot · Unsplash",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1568051864106-6c9b883e24a6?auto=format&fit=crop&w=1600&q=70",
+    credit: "Adrien Olichon · Unsplash",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1500823075810-5ca0b9eebe85?auto=format&fit=crop&w=1600&q=70",
+    credit: "Mounzer · Unsplash",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1592829987165-afc0dfbaadc3?auto=format&fit=crop&w=1600&q=70",
+    credit: "Beniamin Şinca · Unsplash",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1645649261389-a284c48d751c?auto=format&fit=crop&w=1600&q=70",
+    credit: "Wolfgang Hasselmann · Unsplash",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1768591189220-5d6df21da38a?auto=format&fit=crop&w=1600&q=70",
+    credit: "Florian Schindler · Unsplash",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1709983128270-c7ec7e97ce4a?auto=format&fit=crop&w=1600&q=70",
+    credit: "Zoshua Colah · Unsplash",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1718652201710-4a51b62031ca?auto=format&fit=crop&w=1600&q=70",
+    credit: "Brandon Stoll · Unsplash",
+  },
 ];
 
 const CYCLE_MS = 4 * 60 * 60 * 1000; // 4 hours

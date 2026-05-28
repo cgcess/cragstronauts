@@ -32,7 +32,7 @@ export default function DateRangePicker({
   value,
   onChange,
   minDate,
-  placeholder = "When",
+  placeholder = "Add dates",
   heading = "When are you climbing?",
 }) {
   const [open, setOpen] = useState(false);
@@ -77,9 +77,10 @@ export default function DateRangePicker({
         className={`date-range-input ${display ? "is-filled" : ""}`}
         onClick={() => setOpen(true)}
       >
-        <span className="date-range-input__label">{placeholder}</span>
-        {display && (
+        {display ? (
           <span className="date-range-input__value">{display}</span>
+        ) : (
+          <span className="date-range-input__placeholder">{placeholder}</span>
         )}
       </button>
       <AnimatePresence>

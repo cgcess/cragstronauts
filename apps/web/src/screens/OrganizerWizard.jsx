@@ -171,6 +171,7 @@ export default function OrganizerWizard({ onComplete, onCancel }) {
               </motion.div>
 
               <motion.div variants={item}>
+                <label>When</label>
                 <DateRangePicker
                   value={range}
                   onChange={onRangeChange}

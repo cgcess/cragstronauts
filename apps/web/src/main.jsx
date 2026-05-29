@@ -13,6 +13,7 @@ import InfoTab from "./screens/InfoTab.jsx";
 import CarsTab from "./screens/CarsTab.jsx";
 import GearTab from "./screens/GearTab.jsx";
 import AdminPage from "./screens/AdminPage.jsx";
+import NotFound from "./screens/NotFound.jsx";
 
 import "./styles.css";
 
@@ -63,6 +64,7 @@ const router = createBrowserRouter([
           },
         ],
       },
+      { path: "*", element: <NotFound /> },
     ],
   },
 ]);

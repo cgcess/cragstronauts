@@ -97,11 +97,7 @@ export default function TabsLayout() {
             <NavLink
               key={t.id}
               to={t.id}
-              replace
               className={activeTab === t.id ? "active" : ""}
-              onClick={(e) => {
-                // NavLink handles navigation; we just need the class logic
-              }}
             >
               {activeTab === t.id && (
                 <motion.span

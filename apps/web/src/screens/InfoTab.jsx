@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, useOutletContext } from "react-router";
 import Linkify from "../components/Linkify.jsx";
 import { useTripContext } from "../context/TripContext.jsx";
+import { formatDateRange } from "../dateUtils.js";
 
 export default function InfoTab() {
   const { tripId, trip, users, categories, currentUserId } = useTripContext();
@@ -30,9 +31,9 @@ export default function InfoTab() {
   return (
     <div>
       <div className="h1">📍 {trip.location}</div>
-      {trip.start_date && (
+      {(trip.start_date || trip.end_date) && (
         <p className="muted">
-          {trip.start_date} → {trip.end_date || "?"}
+          {formatDateRange(trip.start_date, trip.end_date)}
         </p>
       )}
 

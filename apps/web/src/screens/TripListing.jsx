@@ -8,6 +8,7 @@ import {
 } from "framer-motion";
 import { useNavigate } from "react-router";
 import { api } from "../api.js";
+import { formatDateRange } from "../dateUtils.js";
 
 const EASE_OUT = [0.23, 1, 0.32, 1];
 const SWIPE_THRESHOLD = 90; // px past which a swipe commits
@@ -34,18 +35,8 @@ function isPast(trip, today) {
   return ref != null && ref < today;
 }
 
-function fmtMonth(dateStr) {
-  if (!dateStr) return "";
-  const d = new Date(dateStr + "T00:00:00");
-  return d.toLocaleString(undefined, { month: "short", day: "numeric" });
-}
-
 function dateRangeShort(trip) {
-  const s = trip.start_date;
-  const e = trip.end_date;
-  if (!s && !e) return "Dates TBD";
-  if (s && e && s !== e) return `${fmtMonth(s)} → ${fmtMonth(e)}`;
-  return fmtMonth(s || e);
+  return formatDateRange(trip.start_date, trip.end_date);
 }
 
 function daysUntil(trip, todayStr) {

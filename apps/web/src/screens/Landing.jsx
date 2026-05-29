@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router";
 import { api } from "../api.js";
 import { useTripContext } from "../context/TripContext.jsx";
+import { formatDateRange } from "../dateUtils.js";
 
 export default function Landing() {
   const { tripId, trip, users, setUser, refresh } = useTripContext();
@@ -47,9 +48,9 @@ export default function Landing() {
           ← Trips
         </button>
         <div className="h1">🧗 {trip.location}</div>
-        {trip.start_date && (
+        {(trip.start_date || trip.end_date) && (
           <p className="muted">
-            {trip.start_date} → {trip.end_date || "?"}
+            {formatDateRange(trip.start_date, trip.end_date)}
           </p>
         )}
 

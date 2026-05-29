@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { DayPicker, type DateRange } from "react-day-picker";
+import { DayPicker, type DateRange, type Modifiers } from "react-day-picker";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import "./DateRangePicker.css";
 
@@ -43,11 +43,13 @@ export default function DateRangePicker({
   heading = "When are you climbing?",
 }: DateRangePickerProps) {
   const [open, setOpen] = useState(false);
+  const [nextClick, setNextClick] = useState<"start" | "end">("start");
   const reduceMotion = useReducedMotion();
   const display = formatRange(value);
 
   useEffect(() => {
     if (!open) return;
+    setNextClick("start");
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
@@ -64,11 +66,25 @@ export default function DateRangePicker({
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const handleSelect = (range: DateRange | undefined) => {
-    onChange(range);
-    if (range?.from && range?.to && !sameDay(range.from, range.to)) {
-      setOpen(false);
+  const handleDayClick = (day: Date, modifiers: Modifiers) => {
+    if (modifiers.disabled) return;
+    if (nextClick === "start") {
+      onChange({ from: day, to: undefined });
+      setNextClick("end");
+      return;
     }
+    const from = value?.from;
+    if (from && day < from) {
+      onChange({ from: day, to: from });
+    } else {
+      onChange({ from, to: day });
+    }
+    setNextClick("start");
+  };
+
+  const handleClear = () => {
+    onChange(undefined);
+    setNextClick("start");
   };
 
   const defaultMonth = useMemo(
@@ -124,7 +140,8 @@ export default function DateRangePicker({
               <DayPicker
                 mode="range"
                 selected={value}
-                onSelect={handleSelect}
+                onSelect={() => {}}
+                onDayClick={handleDayClick}
                 disabled={minDate ? { before: minDate } : undefined}
                 defaultMonth={defaultMonth}
                 showOutsideDays
@@ -134,7 +151,7 @@ export default function DateRangePicker({
                 <button
                   type="button"
                   className="secondary"
-                  onClick={() => onChange(undefined)}
+                  onClick={handleClear}
                   disabled={!value?.from}
                 >
                   Clear

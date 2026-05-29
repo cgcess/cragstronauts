@@ -608,6 +608,8 @@ label {
 }
 .tabbar a:active { transform: none; }
 .tabbar a.active { color: white; text-decoration: none; }
+/* Active tab hosts .tab-pill — don't inherit global a:hover dimming (sticky on touch). */
+.tabbar a.active:hover { opacity: 1; }
 .tabbar .icon { font-size: 22px; line-height: 1; position: relative; }
 
 /* The sliding green pill that sits behind the active tab. Rendered

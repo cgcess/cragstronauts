@@ -42,7 +42,7 @@ export default function Landing() {
       <div className="fade-overlay fade-overlay--top" aria-hidden="true" />
       <div className="content">
         <button
-          className="glass-surface nav-pill"
+          className="glass-surface nav-pill nav-pill--sticky"
           onClick={() => navigate("/")}
           style={{ marginBottom: 8, position: "relative", zIndex: 6 }}
         >

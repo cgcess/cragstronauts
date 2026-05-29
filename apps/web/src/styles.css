@@ -233,6 +233,16 @@ button.nav-pill:active {
     0 3px 8px -3px rgba(45, 22, 15, 0.28);
 }
 
+/* Pins the nav pill to the top of its scroll container so it stays
+   reachable as the page scrolls. Hugs the leading edge so it doesn't
+   stretch to full width inside a flex container. */
+button.nav-pill--sticky {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  align-self: flex-start;
+}
+
 /* ----------  3D button system (the headline component)  ----------
    Anatomy: gradient face, top highlight, solid depth shadow underneath,
    ambient glow. Press translates Y by the depth amount.

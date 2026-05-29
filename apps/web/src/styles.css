@@ -1708,3 +1708,20 @@ label {
   font-size: 11px;
   color: var(--accent);
 }
+
+/* Danger zone inside Logistics card */
+.dash-danger {
+  margin-top: 4px;
+  padding: 12px;
+  border: 1px dashed var(--danger);
+  border-radius: 12px;
+  background: rgba(200, 52, 30, 0.04);
+}
+.dash-danger__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--danger);
+}

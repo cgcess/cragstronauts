@@ -1,12 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { motion } from "framer-motion";
+import type { DateRange } from "react-day-picker";
 import type { z } from "zod";
 import type { CarSchema, GearContributionSchema } from "@cragstronauts/contract";
 import { api } from "../api";
 import { useTripContext, type Category } from "../context/TripContext";
 import { formatDateRange } from "../dateUtils";
 import Linkify from "../components/Linkify";
+import DateRangePicker from "../components/DateRangePicker";
 
 type Car = z.infer<typeof CarSchema>;
 type Contribution = z.infer<typeof GearContributionSchema>;
@@ -195,6 +197,7 @@ export default function TripDashboard() {
     currentUserId,
     switchUser,
     refresh,
+    deleteTrip,
   } = useTripContext();
   const navigate = useNavigate();
   const me = users.find((u) => u.id === currentUserId);
@@ -284,8 +287,10 @@ export default function TripDashboard() {
     body: (
       <WeatherBody
         weather={weather}
+        trip={trip}
+        tripId={tripId}
         isOrganizer={me.is_organizer}
-        onSettings={() => navigate(`/trips/${tripId}/admin`)}
+        onChanged={reload}
       />
     ),
   });
@@ -334,6 +339,7 @@ export default function TripDashboard() {
         categories={categories}
         gear={gear}
         currentUserId={currentUserId}
+        isOrganizer={me.is_organizer}
         onChanged={reload}
       />
     ),
@@ -347,7 +353,15 @@ export default function TripDashboard() {
     title: "Roster",
     badge: `${joining.length}`,
     summary: `${joining.length} going`,
-    body: <RosterBody users={users} currentUserId={currentUserId} />,
+    body: (
+      <RosterBody
+        tripId={tripId}
+        users={users}
+        currentUserId={currentUserId}
+        isOrganizer={me.is_organizer}
+        onChanged={reload}
+      />
+    ),
   });
 
   // Logistics (trip basics)
@@ -364,7 +378,8 @@ export default function TripDashboard() {
         trip={trip}
         tripId={tripId}
         isOrganizer={me.is_organizer}
-        onSettings={() => navigate(`/trips/${tripId}/admin`)}
+        onChanged={reload}
+        deleteTrip={deleteTrip}
       />
     ),
   });
@@ -437,7 +452,7 @@ function weatherSummaryIcon(w: WeatherState): string {
 function weatherSummaryText(w: WeatherState, isOrganizer: boolean): string {
   switch (w.status) {
     case "no-pin":
-      return isOrganizer ? "Pin the location in Settings" : "Location not set";
+      return isOrganizer ? "Pin the location to see weather" : "Location not set";
     case "no-dates":
       return "Add trip dates to see the forecast";
     case "past":
@@ -468,63 +483,313 @@ function fmtDayLabel(dateStr: string): string {
 
 function WeatherBody({
   weather,
+  trip,
+  tripId,
   isOrganizer,
-  onSettings,
+  onChanged,
 }: {
   weather: WeatherState;
+  trip: ReturnType<typeof useTripContext>["trip"];
+  tripId: string;
   isOrganizer: boolean;
-  onSettings: () => void;
+  onChanged: () => Promise<void>;
 }) {
+  const [editingPin, setEditingPin] = useState(false);
+
+  // No pin: organizers see the inline form; everyone else gets a hint.
   if (weather.status === "no-pin") {
+    if (isOrganizer) return <PinLocationForm trip={trip} tripId={tripId} onSaved={onChanged} />;
     return (
-      <div>
-        <p className="muted">
-          No location pinned yet, so we can&apos;t show a forecast.
-        </p>
-        {isOrganizer && (
-          <button className="secondary" onClick={onSettings}>
-            ⚙ Pin location in Settings
-          </button>
-        )}
-      </div>
+      <p className="muted">
+        No location pinned yet, so we can&apos;t show a forecast.
+      </p>
     );
   }
-  if (weather.status === "no-dates")
-    return <p className="muted">Add trip dates to see the forecast.</p>;
-  if (weather.status === "past")
-    return <p className="muted">This trip has already happened.</p>;
-  if (weather.status === "too-far")
+
+  // Re-pin sub-view (organizers can toggle this from any state).
+  if (editingPin && isOrganizer) {
     return (
+      <PinLocationForm
+        trip={trip}
+        tripId={tripId}
+        onSaved={async () => {
+          setEditingPin(false);
+          await onChanged();
+        }}
+        onCancel={() => setEditingPin(false)}
+      />
+    );
+  }
+
+  let content: React.ReactNode;
+  if (weather.status === "no-dates")
+    content = <p className="muted">Add trip dates to see the forecast.</p>;
+  else if (weather.status === "past")
+    content = <p className="muted">This trip has already happened.</p>;
+  else if (weather.status === "too-far")
+    content = (
       <p className="muted">
         The trip is {weather.daysUntil} days away. Forecasts become available
         about {FORECAST_HORIZON} days out — check back closer.
       </p>
     );
-  if (weather.status === "loading")
-    return <p className="muted">Loading forecast…</p>;
-  if (weather.status === "error")
-    return <p className="muted">Couldn&apos;t load the forecast right now.</p>;
+  else if (weather.status === "loading")
+    content = <p className="muted">Loading forecast…</p>;
+  else if (weather.status === "error")
+    content = <p className="muted">Couldn&apos;t load the forecast right now.</p>;
+  else
+    content = (
+      <div className="wx-row">
+        {weather.days.map((d) => {
+          const w = wmo(d.code);
+          return (
+            <div className="wx-day" key={d.date}>
+              <div className="wx-day__date">{fmtDayLabel(d.date)}</div>
+              <div className="wx-day__icon" title={w.label}>
+                {w.icon}
+              </div>
+              <div className="wx-day__temp">
+                {fmtTemp(d.hi)}
+                <span className="muted"> / {fmtTemp(d.lo)}</span>
+              </div>
+              {d.precip != null && d.precip > 0 && (
+                <div className="wx-day__precip">💧{d.precip}%</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
 
   return (
-    <div className="wx-row">
-      {weather.days.map((d) => {
-        const w = wmo(d.code);
-        return (
-          <div className="wx-day" key={d.date}>
-            <div className="wx-day__date">{fmtDayLabel(d.date)}</div>
-            <div className="wx-day__icon" title={w.label}>
-              {w.icon}
+    <div className="col">
+      {content}
+      {trip.place_label && (
+        <div className="muted" style={{ fontSize: 12 }}>
+          📍 {trip.place_label}
+        </div>
+      )}
+      {isOrganizer && (
+        <button
+          className="ghost"
+          style={{ alignSelf: "flex-start", padding: "4px 0" }}
+          onClick={() => setEditingPin(true)}
+        >
+          ✎ Edit location
+        </button>
+      )}
+    </div>
+  );
+}
+
+interface GeoResult {
+  name: string;
+  admin1?: string;
+  country_code?: string;
+  latitude: number;
+  longitude: number;
+}
+
+function PinLocationForm({
+  trip,
+  tripId,
+  onSaved,
+  onCancel,
+}: {
+  trip: ReturnType<typeof useTripContext>["trip"];
+  tripId: string;
+  onSaved: () => Promise<void>;
+  onCancel?: () => void;
+}) {
+  const [query, setQuery] = useState(trip.place_label || trip.location || "");
+  const [results, setResults] = useState<GeoResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lat, setLat] = useState(
+    trip.latitude != null ? String(trip.latitude) : ""
+  );
+  const [lon, setLon] = useState(
+    trip.longitude != null ? String(trip.longitude) : ""
+  );
+  const [saving, setSaving] = useState(false);
+
+  const labelFor = (r: GeoResult) =>
+    [r.name, r.admin1, r.country_code].filter(Boolean).join(", ");
+
+  const search = async () => {
+    setError(null);
+    setSearching(true);
+    setSearched(false);
+    try {
+      const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
+        query.trim()
+      )}&count=6&language=en&format=json`;
+      const r = await fetch(url);
+      const d = (await r.json()) as { results?: GeoResult[] };
+      setResults(d.results || []);
+      setSearched(true);
+    } catch {
+      setError("Search failed. Try entering coordinates manually.");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const savePin = async (
+    latitude: number,
+    longitude: number,
+    place_label: string
+  ) => {
+    setError(null);
+    setSaving(true);
+    try {
+      await api.updateTrip(tripId, { latitude, longitude, place_label });
+      await onSaved();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveManual = () => {
+    const la = parseFloat(lat);
+    const lo = parseFloat(lon);
+    if (
+      Number.isNaN(la) ||
+      Number.isNaN(lo) ||
+      la < -90 ||
+      la > 90 ||
+      lo < -180 ||
+      lo > 180
+    ) {
+      setError("Enter a valid latitude (−90…90) and longitude (−180…180).");
+      return;
+    }
+    savePin(la, lo, query.trim() || trip.location);
+  };
+
+  const clearPin = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await api.updateTrip(tripId, {
+        latitude: null,
+        longitude: null,
+        place_label: null,
+      });
+      setLat("");
+      setLon("");
+      await onSaved();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const pinned = trip.latitude != null && trip.longitude != null;
+
+  return (
+    <div className="col">
+      <p className="muted" style={{ margin: 0 }}>
+        Search for the nearest town, or drop exact coordinates.
+      </p>
+      {error && <div className="error-banner">{error}</div>}
+
+      <div>
+        <label>Search a place</label>
+        <div className="row" style={{ gap: 6 }}>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="e.g. Bishop, California"
+            onKeyDown={(e) => e.key === "Enter" && search()}
+            style={{ flex: 1 }}
+          />
+          <button
+            className="secondary"
+            onClick={search}
+            disabled={searching || !query.trim()}
+          >
+            {searching ? "…" : "Search"}
+          </button>
+        </div>
+      </div>
+
+      {results.length > 0 && (
+        <div>
+          {results.map((r, i) => (
+            <div className="list-item" key={i}>
+              <span>{labelFor(r)}</span>
+              <button
+                className="ghost"
+                disabled={saving}
+                onClick={() => savePin(r.latitude, r.longitude, labelFor(r))}
+              >
+                Pin
+              </button>
             </div>
-            <div className="wx-day__temp">
-              {fmtTemp(d.hi)}
-              <span className="muted"> / {fmtTemp(d.lo)}</span>
-            </div>
-            {d.precip != null && d.precip > 0 && (
-              <div className="wx-day__precip">💧{d.precip}%</div>
-            )}
-          </div>
-        );
-      })}
+          ))}
+        </div>
+      )}
+      {searched && results.length === 0 && (
+        <p className="muted" style={{ fontSize: 13 }}>
+          No matches — many crags aren&apos;t in the place index. Enter
+          coordinates below instead.
+        </p>
+      )}
+
+      <div className="row" style={{ gap: 8 }}>
+        <div style={{ flex: 1 }}>
+          <label>Latitude</label>
+          <input
+            value={lat}
+            onChange={(e) => setLat(e.target.value)}
+            placeholder="37.7807"
+            inputMode="decimal"
+          />
+        </div>
+        <div style={{ flex: 1 }}>
+          <label>Longitude</label>
+          <input
+            value={lon}
+            onChange={(e) => setLon(e.target.value)}
+            placeholder="-83.6829"
+            inputMode="decimal"
+          />
+        </div>
+      </div>
+
+      <div className="row" style={{ gap: 8 }}>
+        {onCancel && (
+          <button
+            className="secondary"
+            onClick={onCancel}
+            disabled={saving}
+          >
+            Cancel
+          </button>
+        )}
+        {pinned && (
+          <button
+            className="secondary"
+            style={{ color: "var(--danger)" }}
+            onClick={clearPin}
+            disabled={saving}
+          >
+            Clear pin
+          </button>
+        )}
+        <button
+          onClick={saveManual}
+          disabled={saving || !lat || !lon}
+          style={{ flex: 1 }}
+        >
+          {saving ? "Saving…" : "Save coordinates"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -535,15 +800,20 @@ function WeatherBody({
 
 function LogisticsBody({
   trip,
+  tripId,
   isOrganizer,
-  onSettings,
+  onChanged,
+  deleteTrip,
 }: {
   trip: ReturnType<typeof useTripContext>["trip"];
   tripId: string;
   isOrganizer: boolean;
-  onSettings: () => void;
+  onChanged: () => Promise<void>;
+  deleteTrip: () => Promise<void>;
 }) {
   const [copied, setCopied] = useState(false);
+  const [editing, setEditing] = useState(false);
+
   const share = async () => {
     const url = window.location.href;
     try {
@@ -554,6 +824,21 @@ function LogisticsBody({
       window.prompt("Copy this trip link:", url);
     }
   };
+
+  if (editing && isOrganizer) {
+    return (
+      <TripEditForm
+        trip={trip}
+        tripId={tripId}
+        onCancel={() => setEditing(false)}
+        onSaved={async () => {
+          setEditing(false);
+          await onChanged();
+        }}
+      />
+    );
+  }
+
   return (
     <div className="col">
       <div>
@@ -574,46 +859,239 @@ function LogisticsBody({
           {copied ? "Link copied ✓" : "Share trip link"}
         </button>
         {isOrganizer && (
-          <button className="secondary" onClick={onSettings}>
-            ⚙ Settings
+          <button className="secondary" onClick={() => setEditing(true)}>
+            ✎ Edit trip
           </button>
         )}
+      </div>
+      {isOrganizer && (
+        <DangerZone
+          tripLocation={trip.location}
+          onDelete={deleteTrip}
+        />
+      )}
+    </div>
+  );
+}
+
+function isoToDate(s: string | null): Date | undefined {
+  if (!s) return undefined;
+  return new Date(s + "T00:00:00");
+}
+function dateToIso(d: Date | undefined): string | null {
+  if (!d) return null;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function TripEditForm({
+  trip,
+  tripId,
+  onCancel,
+  onSaved,
+}: {
+  trip: ReturnType<typeof useTripContext>["trip"];
+  tripId: string;
+  onCancel: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const [location, setLocation] = useState(trip.location);
+  const [range, setRange] = useState<DateRange | undefined>(
+    trip.start_date || trip.end_date
+      ? { from: isoToDate(trip.start_date), to: isoToDate(trip.end_date) }
+      : undefined
+  );
+  const [accomType, setAccomType] = useState(
+    trip.accommodation_type || "campsite"
+  );
+  const [accomDetails, setAccomDetails] = useState(
+    trip.accommodation_details || ""
+  );
+  const [notes, setNotes] = useState(trip.notes || "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const save = async () => {
+    setError(null);
+    setSaving(true);
+    try {
+      await api.updateTrip(tripId, {
+        location: location.trim(),
+        start_date: dateToIso(range?.from),
+        end_date: dateToIso(range?.to ?? range?.from),
+        accommodation_type: accomType,
+        accommodation_details: accomDetails.trim() || null,
+        notes: notes.trim() || null,
+      });
+      await onSaved();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="col">
+      {error && <div className="error-banner">{error}</div>}
+      <div>
+        <label>Location</label>
+        <input
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          placeholder="e.g. Yosemite Valley"
+        />
+      </div>
+      <div>
+        <label>Dates</label>
+        <DateRangePicker
+          value={range}
+          onChange={setRange}
+          placeholder="Add dates"
+        />
+      </div>
+      <div>
+        <label>Accommodation</label>
+        <select
+          value={accomType}
+          onChange={(e) => setAccomType(e.target.value)}
+        >
+          <option value="campsite">Campsite</option>
+          <option value="airbnb">Airbnb</option>
+          <option value="hotel">Hotel</option>
+          <option value="hut">Hut / Refuge</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div>
+        <label>Accommodation details</label>
+        <input
+          value={accomDetails}
+          onChange={(e) => setAccomDetails(e.target.value)}
+          placeholder="Name, address, link…"
+        />
+      </div>
+      <div>
+        <label>Notes</label>
+        <textarea
+          rows={3}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+        />
+      </div>
+      <div className="row" style={{ gap: 8 }}>
+        <button className="secondary" onClick={onCancel} disabled={saving}>
+          Cancel
+        </button>
+        <button
+          onClick={save}
+          disabled={!location.trim() || saving}
+          style={{ flex: 1 }}
+        >
+          {saving ? "Saving…" : "Save changes"}
+        </button>
       </div>
     </div>
   );
 }
 
+function DangerZone({
+  tripLocation,
+  onDelete,
+}: {
+  tripLocation: string;
+  onDelete: () => Promise<void>;
+}) {
+  return (
+    <div className="dash-danger">
+      <div className="dash-danger__title">Danger zone</div>
+      <p className="muted" style={{ fontSize: 13, margin: "4px 0 8px" }}>
+        Deleting the trip removes it for everyone, along with all cars and gear.
+      </p>
+      <button
+        className="secondary"
+        style={{ color: "var(--danger)", borderColor: "var(--danger)" }}
+        onClick={() => {
+          if (
+            confirm(`Delete the "${tripLocation}" trip? This can't be undone.`)
+          ) {
+            onDelete();
+          }
+        }}
+      >
+        Delete trip
+      </button>
+    </div>
+  );
+}
+
 function RosterBody({
+  tripId,
   users,
   currentUserId,
+  isOrganizer,
+  onChanged,
 }: {
+  tripId: string;
   users: ReturnType<typeof useTripContext>["users"];
   currentUserId: number;
+  isOrganizer: boolean;
+  onChanged: () => Promise<void>;
 }) {
   const joining = users.filter((u) => u.joining);
   const out = users.filter((u) => !u.joining);
+  const [error, setError] = useState<string | null>(null);
+
+  const remove = async (userId: number, name: string) => {
+    if (
+      !confirm(
+        `Remove ${name} from the trip? Their car and gear contributions will also be removed.`
+      )
+    )
+      return;
+    setError(null);
+    try {
+      await api.deleteUser(tripId, userId);
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const renderRow = (u: typeof users[number], pill: React.ReactNode) => (
+    <div className="list-item" key={u.id}>
+      <span>
+        {u.name} {u.is_organizer && "👑"}
+        {u.id === currentUserId && <span className="muted"> (you)</span>}
+      </span>
+      <div className="row" style={{ gap: 6, alignItems: "center" }}>
+        {pill}
+        {isOrganizer && !u.is_organizer && u.id !== currentUserId && (
+          <button
+            className="ghost"
+            style={{ color: "var(--danger)", padding: "4px 6px" }}
+            onClick={() => remove(u.id, u.name)}
+            aria-label={`Remove ${u.name}`}
+          >
+            ✕
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <>
-      {joining.map((u) => (
-        <div className="list-item" key={u.id}>
-          <span>
-            {u.name} {u.is_organizer && "👑"}
-            {u.id === currentUserId && <span className="muted"> (you)</span>}
-          </span>
-          <span className="pill accent">Going</span>
-        </div>
-      ))}
+      {error && <div className="error-banner">{error}</div>}
+      {joining.map((u) => renderRow(u, <span className="pill accent">Going</span>))}
       {out.length > 0 && (
         <>
           <div className="muted" style={{ marginTop: 8 }}>
             Not joining
           </div>
-          {out.map((u) => (
-            <div className="list-item" key={u.id}>
-              <span>{u.name}</span>
-              <span className="pill">Out</span>
-            </div>
-          ))}
+          {out.map((u) => renderRow(u, <span className="pill">Out</span>))}
         </>
       )}
     </>
@@ -780,17 +1258,47 @@ function GearBody({
   categories,
   gear,
   currentUserId,
+  isOrganizer,
   onChanged,
 }: {
   tripId: string;
   categories: Category[];
   gear: Contribution[];
   currentUserId: number;
+  isOrganizer: boolean;
   onChanged: () => Promise<void>;
 }) {
   const [addingFor, setAddingFor] = useState<number | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+
+  const addCategory = async () => {
+    setError(null);
+    try {
+      await api.addCategory(tripId, {
+        name: newCategoryName.trim(),
+        fields: [],
+      });
+      setNewCategoryName("");
+      setAddingCategory(false);
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const removeCategory = async (catId: number, name: string) => {
+    if (!confirm(`Remove the "${name}" category? Anyone bringing one will lose their entry.`)) return;
+    setError(null);
+    try {
+      await api.deleteCategory(tripId, catId);
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
 
   const byCat: Record<number, Contribution[]> = {};
   for (const c of categories) byCat[c.id] = [];
@@ -823,14 +1331,30 @@ function GearBody({
     <div>
       {error && <div className="error-banner">{error}</div>}
       {categories.length === 0 && (
-        <p className="muted">No gear categories yet. Organizer can add some in Settings.</p>
+        <p className="muted">
+          {isOrganizer
+            ? "No gear categories yet. Add one below to start collecting contributions."
+            : "No gear categories yet. The organizer can add some."}
+        </p>
       )}
 
       {categories.map((cat) => (
         <div className="card" key={cat.id}>
           <div className="row between">
             <div style={{ fontWeight: 600 }}>{cat.name}</div>
-            <span className="pill">{byCat[cat.id].length}</span>
+            <div className="row" style={{ gap: 6, alignItems: "center" }}>
+              <span className="pill">{byCat[cat.id].length}</span>
+              {isOrganizer && (
+                <button
+                  className="ghost"
+                  style={{ color: "var(--danger)", padding: "4px 6px" }}
+                  onClick={() => removeCategory(cat.id, cat.name)}
+                  aria-label={`Remove ${cat.name} category`}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
 
           {byCat[cat.id].length === 0 && (
@@ -907,6 +1431,46 @@ function GearBody({
           )}
         </div>
       ))}
+
+      {isOrganizer && (
+        addingCategory ? (
+          <div className="card">
+            <label>Category name</label>
+            <input
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              placeholder="e.g. Helmets"
+              autoFocus
+            />
+            <div className="row" style={{ marginTop: 10 }}>
+              <button
+                className="secondary"
+                onClick={() => {
+                  setAddingCategory(false);
+                  setNewCategoryName("");
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                style={{ flex: 1 }}
+                disabled={!newCategoryName.trim()}
+                onClick={addCategory}
+              >
+                Add category
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            className="secondary"
+            onClick={() => setAddingCategory(true)}
+            style={{ marginTop: 10 }}
+          >
+            + Add gear category
+          </button>
+        )
+      )}
     </div>
   );
 }

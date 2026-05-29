@@ -9,7 +9,6 @@ import TripLayout from "./screens/TripLayout";
 import Landing from "./screens/Landing";
 import SignupSwipe from "./screens/SignupSwipe";
 import TripDashboard from "./screens/TripDashboard";
-import AdminPage from "./screens/AdminPage";
 import NotFound from "./screens/NotFound";
 
 import "./styles.css";
@@ -50,7 +49,6 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <Landing /> },
           { path: "signup", element: <SignupSwipe /> },
-          { path: "admin", element: <AdminPage /> },
           { path: "board", element: <TripDashboard /> },
         ],
       },

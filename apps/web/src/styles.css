@@ -329,7 +329,12 @@ button.btn-3d.btn-3d--round:active {
    lockstep, so the effect tapers into the page instead of ending in a
    hard band. */
 .fade-overlay {
-  position: absolute;
+  /* Anchored to the viewport rather than the .app-shell so the fade
+     spans the full screen width on tablet/desktop where the shell is
+     capped at 480/600/720px — otherwise the gradient ends at the
+     shell's edge and the rocky background pops back to full intensity
+     on either side. */
+  position: fixed;
   left: 0;
   right: 0;
   pointer-events: none;

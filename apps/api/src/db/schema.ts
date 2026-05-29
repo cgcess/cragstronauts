@@ -8,6 +8,9 @@ export const trip = table("trip", {
   accommodation_type: column.text(),
   accommodation_details: column.text(),
   notes: column.text(),
+  latitude: column.text(),
+  longitude: column.text(),
+  place_label: column.text(),
 });
 
 export const user = table("user", {

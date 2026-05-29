@@ -16,7 +16,7 @@ export default function Landing() {
     setUser(userId);
     const me = users.find((u) => u.id === userId);
     if (me?.signup_completed) {
-      navigate(`/trips/${tripId}/info`);
+      navigate(`/trips/${tripId}/board`);
     } else {
       navigate(`/trips/${tripId}/signup`);
     }

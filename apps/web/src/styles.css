@@ -1542,3 +1542,169 @@ label {
   background: #f3f4f6;
   margin: 4px 0;
 }
+
+/* ============================================================
+   Trip dashboard — dynamic expandable cards.
+   Cards reorder by priority (framer-motion layout) and expand
+   in place. Urgent cards (an unmet action for you) stand out.
+   ============================================================ */
+
+.content--dash {
+  padding: 84px 16px calc(28px + env(safe-area-inset-bottom));
+}
+
+.dash-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.dash-card {
+  background: var(--bg-card);
+  border: 1px solid var(--stone-200);
+  border-radius: var(--radius-card);
+  box-shadow: 0 6px 18px -12px rgba(45, 22, 15, 0.4);
+  overflow: hidden;
+}
+.dash-card--open {
+  box-shadow: 0 12px 28px -14px rgba(45, 22, 15, 0.5);
+}
+/* Urgent = an action you still owe the trip. Pull focus with the
+   accent green edge + tinted header. */
+.dash-card--urgent {
+  border-color: var(--green-400);
+  box-shadow: 0 0 0 1px var(--green-300), 0 10px 26px -12px rgba(46, 74, 54, 0.5);
+}
+
+.dash-card__head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: transparent;
+  color: var(--fg);
+  border-radius: 0;
+  text-align: left;
+}
+.dash-card__head:active {
+  transform: none;
+}
+.dash-card--urgent .dash-card__head {
+  background: var(--green-100);
+}
+.dash-card__icon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.dash-card__titles {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dash-card__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  color: var(--brown-900);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dash-card__flag {
+  flex-shrink: 0;
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--green-700);
+  background: var(--green-200);
+  border-radius: 6px;
+  padding: 2px 7px;
+}
+.dash-card__summary {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dash-badge {
+  flex-shrink: 0;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--brown-700);
+  background: var(--stone-100);
+  border: 1px solid var(--stone-200);
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+.dash-chevron {
+  flex-shrink: 0;
+  color: var(--brown-400);
+  font-size: 14px;
+  transition: transform 200ms var(--ease-out);
+}
+.dash-chevron.open {
+  transform: rotate(180deg);
+}
+.dash-card__body {
+  padding: 0 16px 16px;
+}
+.dash-card__body .col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Weather strip */
+.wx-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.wx-row::-webkit-scrollbar {
+  display: none;
+}
+.wx-day {
+  flex: 0 0 auto;
+  min-width: 84px;
+  text-align: center;
+  background: var(--stone-50);
+  border: 1px solid var(--stone-200);
+  border-radius: 12px;
+  padding: 10px 8px;
+}
+.wx-day__date {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--brown-600);
+}
+.wx-day__icon {
+  font-size: 26px;
+  margin: 4px 0;
+}
+.wx-day__temp {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--brown-900);
+}
+.wx-day__precip {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--accent);
+}

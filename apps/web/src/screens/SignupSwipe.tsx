@@ -59,7 +59,7 @@ export default function SignupSwipe() {
       }
     }
     await refresh();
-    navigate(`/trips/${tripId}/info`, { replace: true });
+    navigate(`/trips/${tripId}/board`, { replace: true });
   };
 
   const onNotJoining = async () => {

@@ -7,6 +7,9 @@ export const TripSchema = z.object({
   accommodation_type: z.string().nullable(),
   accommodation_details: z.string().nullable(),
   notes: z.string().nullable(),
+  latitude: z.number().nullable(),
+  longitude: z.number().nullable(),
+  place_label: z.string().nullable(),
 });
 
 export const GearCategoryFieldSchema = z.object({
@@ -43,6 +46,9 @@ export const UpdateTripBodySchema = z.object({
   accommodation_type: z.string().nullable().optional(),
   accommodation_details: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
+  place_label: z.string().nullable().optional(),
 });
 
 export const TripIndexEntrySchema = z.object({

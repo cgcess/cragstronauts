@@ -100,6 +100,9 @@ export class TripDO extends DurableObject<Env> {
     accommodation_type?: string | null;
     accommodation_details?: string | null;
     notes?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    place_label?: string | null;
   }): Promise<Trip> {
     const row = this.db.get(trip, { where: eq("id", 1) });
     if (!row) throw new Error("Trip not found");
@@ -107,6 +110,10 @@ export class TripDO extends DurableObject<Env> {
     const location =
       data.location !== undefined ? data.location.trim() : row.location;
     if (!location) throw new Error("Location required");
+
+    // lat/lon are stored as TEXT; coerce incoming numbers to strings.
+    const numToText = (v: number | null | undefined, current: string | null) =>
+      v !== undefined ? (v === null ? null : String(v)) : current;
 
     this.db.update(
       trip,
@@ -124,6 +131,10 @@ export class TripDO extends DurableObject<Env> {
             ? data.accommodation_details
             : row.accommodation_details,
         notes: data.notes !== undefined ? data.notes : row.notes,
+        latitude: numToText(data.latitude, row.latitude),
+        longitude: numToText(data.longitude, row.longitude),
+        place_label:
+          data.place_label !== undefined ? data.place_label : row.place_label,
       },
       { where: eq("id", 1) }
     );
@@ -433,6 +444,9 @@ function formatTrip(r: {
   accommodation_type: string | null;
   accommodation_details: string | null;
   notes: string | null;
+  latitude?: string | null;
+  longitude?: string | null;
+  place_label?: string | null;
 }): Trip {
   return {
     location: r.location,
@@ -441,6 +455,9 @@ function formatTrip(r: {
     accommodation_type: r.accommodation_type,
     accommodation_details: r.accommodation_details,
     notes: r.notes,
+    latitude: r.latitude != null ? Number(r.latitude) : null,
+    longitude: r.longitude != null ? Number(r.longitude) : null,
+    place_label: r.place_label ?? null,
   };
 }
 

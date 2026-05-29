@@ -111,7 +111,7 @@ export default function OrganizerWizard() {
           })),
       });
       localStorage.setItem(userKey(res.trip_id), String(res.organizer_user_id));
-      navigate(`/trips/${res.trip_id}/info`, { replace: true });
+      navigate(`/trips/${res.trip_id}/board`, { replace: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {

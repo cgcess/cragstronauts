@@ -318,7 +318,7 @@ export default function TripListing() {
   }, []);
 
   const onCreate = () => navigate("/trips/new");
-  const onSelect = (id: string) => navigate(`/trips/${id}/info`);
+  const onSelect = (id: string) => navigate(`/trips/${id}/board`);
 
   const reduceMotion = useReducedMotion();
   const todayStr = useMemo(todayISO, []);

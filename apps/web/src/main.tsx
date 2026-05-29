@@ -8,10 +8,8 @@ import OrganizerWizard from "./screens/OrganizerWizard";
 import TripLayout from "./screens/TripLayout";
 import Landing from "./screens/Landing";
 import SignupSwipe from "./screens/SignupSwipe";
-import TabsLayout from "./screens/TabsLayout";
-import InfoTab from "./screens/InfoTab";
-import CarsTab from "./screens/CarsTab";
-import GearTab from "./screens/GearTab";
+import TripDashboard from "./screens/TripDashboard";
+import AdminPage from "./screens/AdminPage";
 import NotFound from "./screens/NotFound";
 
 import "./styles.css";
@@ -52,14 +50,8 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <Landing /> },
           { path: "signup", element: <SignupSwipe /> },
-          {
-            element: <TabsLayout />,
-            children: [
-              { path: "info", element: <InfoTab /> },
-              { path: "cars", element: <CarsTab /> },
-              { path: "gear", element: <GearTab /> },
-            ],
-          },
+          { path: "admin", element: <AdminPage /> },
+          { path: "board", element: <TripDashboard /> },
         ],
       },
       { path: "*", element: <NotFound /> },

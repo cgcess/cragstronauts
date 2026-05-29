@@ -345,6 +345,7 @@ export default function TripListing() {
 
   return (
     <div className="app-shell app-shell--landing">
+      <div className="fade-overlay fade-overlay--top" aria-hidden="true" />
       <div className="content content--landing">
         <motion.div {...fade}>
           <div className="brand-mark">

@@ -39,11 +39,12 @@ export default function Landing() {
 
   return (
     <div className="app-shell">
+      <div className="fade-overlay fade-overlay--top" aria-hidden="true" />
       <div className="content">
         <button
           className="glass-surface nav-pill"
           onClick={() => navigate("/")}
-          style={{ marginBottom: 8 }}
+          style={{ marginBottom: 8, position: "relative", zIndex: 6 }}
         >
           ← Trips
         </button>

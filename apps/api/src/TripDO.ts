@@ -222,6 +222,32 @@ export class TripDO extends DurableObject<Env> {
     return formatCategory(row);
   }
 
+  async updateCategory(
+    catId: number,
+    data: {
+      name?: string;
+      fields?: { key: string; label: string; type: string }[];
+    }
+  ): Promise<Category> {
+    const row = this.db.get(gearCategory, { where: eq("id", catId) });
+    if (!row) throw new Error("Category not found");
+
+    const patch: { name?: string; fields?: string } = {};
+    if (data.name !== undefined) {
+      const trimmed = data.name.trim();
+      if (!trimmed) throw new Error("Name cannot be empty");
+      patch.name = trimmed;
+    }
+    if (data.fields !== undefined) {
+      patch.fields = JSON.stringify(data.fields);
+    }
+
+    this.db.update(gearCategory, patch, { where: eq("id", catId) });
+
+    const updated = this.db.get(gearCategory, { where: eq("id", catId) })!;
+    return formatCategory(updated);
+  }
+
   async deleteCategory(catId: number): Promise<{ ok: boolean }> {
     this.db.delete(gearCategory, { where: eq("id", catId) });
     return { ok: true };

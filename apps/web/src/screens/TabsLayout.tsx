@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Outlet, NavLink, Navigate, useNavigate, useLocation } from "react-router";
 import { motion, LayoutGroup } from "framer-motion";
 import { api } from "../api";
@@ -9,10 +9,18 @@ import type { CarSchema, GearContributionSchema } from "@cragstronauts/contract"
 type Car = z.infer<typeof CarSchema>;
 type Contribution = z.infer<typeof GearContributionSchema>;
 
+export interface EditModeHandle {
+  onCancel: () => void;
+  onSave: () => void | Promise<void>;
+  canSave: boolean;
+  saving: boolean;
+}
+
 export interface TabsOutletContext {
   cars: Car[];
   gear: Contribution[];
   reload: () => Promise<void>;
+  setEditMode: (mode: EditModeHandle | null) => void;
 }
 
 const TABS = [
@@ -36,6 +44,11 @@ export default function TabsLayout() {
   const [cars, setCars] = useState<Car[]>([]);
   const [gear, setGear] = useState<Contribution[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [editMode, setEditModeState] = useState<EditModeHandle | null>(null);
+  const setEditMode = useCallback(
+    (m: EditModeHandle | null) => setEditModeState(m),
+    [],
+  );
 
   const reload = async () => {
     setError(null);
@@ -73,6 +86,8 @@ export default function TabsLayout() {
 
   return (
     <div className="app-shell">
+      <div className="fade-overlay fade-overlay--top" aria-hidden="true" />
+      <div className="fade-overlay fade-overlay--bottom" aria-hidden="true" />
       <div className="topbar">
         {error && <div className="error-banner">{error}</div>}
         <div className="row between">
@@ -99,35 +114,58 @@ export default function TabsLayout() {
       </div>
 
       <div className="content content--tabs">
-        <Outlet context={{ cars, gear, reload } satisfies TabsOutletContext} />
+        <Outlet
+          context={{ cars, gear, reload, setEditMode } satisfies TabsOutletContext}
+        />
       </div>
 
-      <LayoutGroup>
-        <div className="glass-surface tabbar">
-          {TABS.map((t) => (
-            <NavLink
-              key={t.id}
-              to={t.id}
-              className={activeTab === t.id ? "active" : ""}
-            >
-              {activeTab === t.id && (
-                <motion.span
-                  layoutId="tab-pill"
-                  className="tab-pill"
-                  transition={{
-                    type: "spring",
-                    stiffness: 420,
-                    damping: 34,
-                    mass: 0.8,
-                  }}
-                />
-              )}
-              <span className="icon">{t.icon}</span>
-              {t.label}
-            </NavLink>
-          ))}
+      {editMode ? (
+        <div className="tabbar-edit-actions">
+          <button
+            className="btn-3d btn-3d--earth"
+            onClick={editMode.onCancel}
+            disabled={editMode.saving}
+            style={{ flex: 1 }}
+          >
+            Cancel
+          </button>
+          <button
+            className="btn-3d"
+            onClick={editMode.onSave}
+            disabled={!editMode.canSave}
+            style={{ flex: 1 }}
+          >
+            {editMode.saving ? "Saving…" : "Save"}
+          </button>
         </div>
-      </LayoutGroup>
+      ) : (
+        <LayoutGroup>
+          <div className="glass-surface tabbar">
+            {TABS.map((t) => (
+              <NavLink
+                key={t.id}
+                to={t.id}
+                className={activeTab === t.id ? "active" : ""}
+              >
+                {activeTab === t.id && (
+                  <motion.span
+                    layoutId="tab-pill"
+                    className="tab-pill"
+                    transition={{
+                      type: "spring",
+                      stiffness: 420,
+                      damping: 34,
+                      mass: 0.8,
+                    }}
+                  />
+                )}
+                <span className="icon">{t.icon}</span>
+                {t.label}
+              </NavLink>
+            ))}
+          </div>
+        </LayoutGroup>
+      )}
     </div>
   );
 }

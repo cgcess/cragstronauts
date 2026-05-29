@@ -12,6 +12,11 @@ export const AddGearCategoryBodySchema = z.object({
   fields: z.array(GearCategoryFieldSchema),
 });
 
+export const UpdateGearCategoryBodySchema = z.object({
+  name: z.string().min(1).optional(),
+  fields: z.array(GearCategoryFieldSchema).optional(),
+});
+
 export const GearContributionSchema = z.object({
   id: z.number(),
   user_id: z.number(),

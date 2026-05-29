@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useNavigate } from "react-router";
 import { api } from "../api.js";
 import DateRangePicker from "../components/DateRangePicker.jsx";
 
@@ -51,7 +52,10 @@ function todayLocal() {
 // CSS default ease-out. Used as the default for everything entering.
 const EASE_OUT = [0.23, 1, 0.32, 1];
 
-export default function OrganizerWizard({ onComplete, onCancel }) {
+const userKey = (tripId) => `climbingTrip.userId.${tripId}`;
+
+export default function OrganizerWizard() {
+  const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [location, setLocation] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -95,10 +99,8 @@ export default function OrganizerWizard({ onComplete, onCancel }) {
             fields: c.fields.filter((f) => f.key.trim() && f.label.trim()),
           })),
       });
-      onComplete({
-        trip_id: res.trip_id,
-        organizer_user_id: res.organizer_user_id,
-      });
+      localStorage.setItem(userKey(res.trip_id), String(res.organizer_user_id));
+      navigate(`/trips/${res.trip_id}/info`, { replace: true });
     } catch (e) {
       setError(e.message);
     } finally {
@@ -133,11 +135,9 @@ export default function OrganizerWizard({ onComplete, onCancel }) {
           transition={{ duration: 0.32, ease: EASE_OUT }}
         >
           <div className="h1">{STEP_TITLES[step]}</div>
-          {onCancel && (
-            <button className="glass-surface nav-pill" onClick={onCancel}>
-              Cancel
-            </button>
-          )}
+          <button className="glass-surface nav-pill" onClick={() => navigate("/")}>
+            Cancel
+          </button>
         </motion.div>
         <motion.p
           className="step-tag"

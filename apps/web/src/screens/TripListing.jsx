@@ -6,6 +6,8 @@ import {
   useReducedMotion,
   useTransform,
 } from "framer-motion";
+import { useNavigate } from "react-router";
+import { api } from "../api.js";
 
 const EASE_OUT = [0.23, 1, 0.32, 1];
 const SWIPE_THRESHOLD = 90; // px past which a swipe commits
@@ -349,7 +351,18 @@ function TripDeck({ trips, todayStr, onSelect }) {
   );
 }
 
-export default function TripListing({ trips, onCreate, onSelect }) {
+export default function TripListing() {
+  const navigate = useNavigate();
+  const [trips, setTrips] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    api.listTrips().then((t) => { setTrips(t); setLoaded(true); });
+  }, []);
+
+  const onCreate = () => navigate("/trips/new");
+  const onSelect = (id) => navigate(`/trips/${id}/info`);
+
   const reduceMotion = useReducedMotion();
   const todayStr = useMemo(todayISO, []);
 
@@ -360,6 +373,16 @@ export default function TripListing({ trips, onCreate, onSelect }) {
         animate: { opacity: 1, y: 0 },
         transition: { duration: 0.36, ease: EASE_OUT },
       };
+
+  if (!loaded) {
+    return (
+      <div className="app-shell">
+        <div className="center-screen">
+          <p className="muted">Loading…</p>
+        </div>
+      </div>
+    );
+  }
 
   const hasAnyTrip = trips.length > 0;
 

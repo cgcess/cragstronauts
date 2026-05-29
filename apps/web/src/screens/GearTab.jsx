@@ -1,7 +1,11 @@
 import React, { useState } from "react";
+import { useOutletContext } from "react-router";
 import { api } from "../api.js";
+import { useTripContext } from "../context/TripContext.jsx";
 
-export default function GearTab({ tripId, trip, categories, gear, currentUserId, onChanged }) {
+export default function GearTab() {
+  const { tripId, trip, categories, currentUserId } = useTripContext();
+  const { gear, reload: onChanged } = useOutletContext();
   const [addingFor, setAddingFor] = useState(null); // category id
   const [values, setValues] = useState({});
   const [error, setError] = useState(null);
@@ -34,7 +38,7 @@ export default function GearTab({ tripId, trip, categories, gear, currentUserId,
       {error && <div className="error-banner">{error}</div>}
 
       {categories.length === 0 && (
-        <p className="muted">No gear categories yet. Organizer can add some from Info tab.</p>
+        <p className="muted">No gear categories yet. Organizer can add some from the Admin page.</p>
       )}
 
       {categories.map((cat) => (

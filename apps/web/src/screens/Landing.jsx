@@ -1,16 +1,34 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router";
+import { api } from "../api.js";
+import { useTripContext } from "../context/TripContext.jsx";
 
-export default function Landing({ trip, users, onPickExisting, onJoinNew, onBack }) {
+export default function Landing() {
+  const { tripId, trip, users, setUser, refresh } = useTripContext();
+  const navigate = useNavigate();
   const [mode, setMode] = useState("choose"); // choose | new
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
+  const pickExisting = (userId) => {
+    setUser(userId);
+    const me = users.find((u) => u.id === userId);
+    if (me?.signup_completed) {
+      navigate(`/trips/${tripId}/info`, { replace: true });
+    } else {
+      navigate(`/trips/${tripId}/signup`, { replace: true });
+    }
+  };
+
   const joinNew = async () => {
     setError(null);
     setBusy(true);
     try {
-      await onJoinNew(name.trim());
+      const u = await api.createUser(tripId, name.trim());
+      await refresh();
+      setUser(u.id);
+      navigate(`/trips/${tripId}/signup`, { replace: true });
     } catch (e) {
       setError(e.message);
     } finally {
@@ -21,15 +39,13 @@ export default function Landing({ trip, users, onPickExisting, onJoinNew, onBack
   return (
     <div className="app-shell">
       <div className="content">
-        {onBack && (
-          <button
-            className="glass-surface nav-pill"
-            onClick={onBack}
-            style={{ marginBottom: 8 }}
-          >
-            ← Trips
-          </button>
-        )}
+        <button
+          className="glass-surface nav-pill"
+          onClick={() => navigate("/")}
+          style={{ marginBottom: 8 }}
+        >
+          ← Trips
+        </button>
         <div className="h1">🧗 {trip.location}</div>
         {trip.start_date && (
           <p className="muted">
@@ -51,7 +67,7 @@ export default function Landing({ trip, users, onPickExisting, onJoinNew, onBack
                   <button
                     key={u.id}
                     className="secondary"
-                    onClick={() => onPickExisting(u.id)}
+                    onClick={() => pickExisting(u.id)}
                   >
                     {u.name} {u.is_organizer && "👑"}
                   </button>

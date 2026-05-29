@@ -1,6 +1,18 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
+
 import App from "./App.jsx";
+import TripListing from "./screens/TripListing.jsx";
+import OrganizerWizard from "./screens/OrganizerWizard.jsx";
+import TripLayout from "./screens/TripLayout.jsx";
+import Landing from "./screens/Landing.jsx";
+import SignupSwipe from "./screens/SignupSwipe.jsx";
+import TabsLayout from "./screens/TabsLayout.jsx";
+import InfoTab from "./screens/InfoTab.jsx";
+import CarsTab from "./screens/CarsTab.jsx";
+import GearTab from "./screens/GearTab.jsx";
+
 import "./styles.css";
 
 // SVG-backdrop-filter capability probe.
@@ -26,7 +38,36 @@ if (!isSafari) {
   document.documentElement.classList.add("has-svg-glass");
 }
 
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <App />,
+    children: [
+      { index: true, element: <TripListing /> },
+      { path: "trips/new", element: <OrganizerWizard /> },
+      {
+        path: "trips/:tripId",
+        element: <TripLayout />,
+        children: [
+          { index: true, element: <Landing /> },
+          { path: "signup", element: <SignupSwipe /> },
+          {
+            element: <TabsLayout />,
+            children: [
+              { path: "info", element: <InfoTab /> },
+              { path: "cars", element: <CarsTab /> },
+              { path: "gear", element: <GearTab /> },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+]);
+
 // NOTE: StrictMode was deadlocking framer-motion's AnimatePresence
 // (cards stuck at opacity 0 on first mount). Disabled until we move to
 // a more StrictMode-tolerant animation pattern.
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <RouterProvider router={router} />
+);

@@ -1,8 +1,12 @@
 import React, { useState } from "react";
+import { useOutletContext } from "react-router";
 import { api } from "../api.js";
 import Linkify from "../components/Linkify.jsx";
+import { useTripContext } from "../context/TripContext.jsx";
 
-export default function CarsTab({ tripId, trip, cars, users, currentUserId, onChanged }) {
+export default function CarsTab() {
+  const { tripId, trip, users, currentUserId } = useTripContext();
+  const { cars, reload: onChanged } = useOutletContext();
   const [adding, setAdding] = useState(false);
   const [seats, setSeats] = useState(4);
   const [notes, setNotes] = useState("");

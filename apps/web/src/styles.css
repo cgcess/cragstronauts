@@ -515,9 +515,11 @@ label {
   z-index: 1;
 }
 
-.tabbar button {
+.tabbar a {
   flex: 1;
   background: transparent;
+  text-decoration: none;
+  border: none;
   color: var(--brown-600);
   border-radius: 999px;
   padding: 10px 0;
@@ -533,8 +535,8 @@ label {
   z-index: 2;
   transition: color 200ms var(--ease-out);
 }
-.tabbar button:active { transform: none; }
-.tabbar button.active { color: white; }
+.tabbar a:active { transform: none; }
+.tabbar a.active { color: white; text-decoration: none; }
 .tabbar .icon { font-size: 22px; line-height: 1; position: relative; }
 
 /* The sliding green pill that sits behind the active tab. Rendered

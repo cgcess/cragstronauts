@@ -1,8 +1,16 @@
 import React, { useState } from "react";
+import { useOutletContext } from "react-router";
 import { api } from "../api.js";
 import Linkify from "../components/Linkify.jsx";
+import { useTripContext } from "../context/TripContext.jsx";
 
-export default function InfoTab({ tripId, trip, users, categories, isOrganizer, onChanged, onDeleteTrip }) {
+export default function InfoTab() {
+  const { tripId, trip, users, categories, currentUserId, deleteTrip } = useTripContext();
+  const { reload: onChanged } = useOutletContext();
+
+  const me = users.find((u) => u.id === currentUserId);
+  const isOrganizer = me?.is_organizer;
+
   const joining = users.filter((u) => u.joining);
   const notJoining = users.filter((u) => !u.joining);
   const [addingCat, setAddingCat] = useState(false);
@@ -11,13 +19,12 @@ export default function InfoTab({ tripId, trip, users, categories, isOrganizer, 
   // Share link
   const [copied, setCopied] = useState(false);
   const shareLink = async () => {
-    const url = window.location.href;
+    const url = `${window.location.origin}/trips/${tripId}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
-      // clipboard API needs a secure context; fall back to a manual prompt
       window.prompt("Copy this trip link:", url);
     }
   };
@@ -219,7 +226,7 @@ export default function InfoTab({ tripId, trip, users, categories, isOrganizer, 
           </span>
         </div>
       ))}
-      {isOrganizer && onDeleteTrip && (
+      {isOrganizer && deleteTrip && (
         <div className="card" style={{ marginTop: 20, borderColor: "var(--danger)" }}>
           <div className="h2" style={{ marginTop: 0, color: "var(--danger)" }}>Danger zone</div>
           <p className="muted" style={{ fontSize: 13 }}>
@@ -230,7 +237,7 @@ export default function InfoTab({ tripId, trip, users, categories, isOrganizer, 
             style={{ color: "var(--danger)", borderColor: "var(--danger)" }}
             onClick={async () => {
               if (confirm(`Delete the "${trip.location}" trip? This can't be undone.`)) {
-                await onDeleteTrip();
+                await deleteTrip();
               }
             }}
           >

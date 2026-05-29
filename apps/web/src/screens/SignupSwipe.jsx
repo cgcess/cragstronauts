@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { animate, motion, useMotionValue, useTransform, AnimatePresence } from "framer-motion";
+import { useNavigate, Navigate } from "react-router";
 import { api } from "../api.js";
+import { useTripContext } from "../context/TripContext.jsx";
 
 // Build the question list from gear categories
 function buildQuestions(categories) {
@@ -31,7 +33,33 @@ function buildQuestions(categories) {
   return qs;
 }
 
-export default function SignupSwipe({ tripId, trip, categories, userId, onComplete, onNotJoining }) {
+export default function SignupSwipe() {
+  const { tripId, trip, categories, currentUserId: userId, switchUser, refresh } = useTripContext();
+  const navigate = useNavigate();
+
+  // Guard: need a user to do signup
+  if (!userId) {
+    return <Navigate to={`/trips/${tripId}`} replace />;
+  }
+
+  const onComplete = async () => {
+    if (userId) {
+      try {
+        await api.completeSignup(tripId, userId);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    await refresh();
+    navigate(`/trips/${tripId}/info`, { replace: true });
+  };
+
+  const onNotJoining = async () => {
+    switchUser();
+    await refresh();
+    navigate(`/trips/${tripId}`, { replace: true });
+  };
+
   const questions = useMemo(() => buildQuestions(categories), [categories]);
   const [idx, setIdx] = useState(0);
   const [details, setDetails] = useState(null); // for showing detail form

@@ -14,7 +14,10 @@ export interface EditModeHandle {
   onSave: () => void | Promise<void>;
   canSave: boolean;
   saving: boolean;
+  isDirty: boolean;
 }
+
+const DISCARD_CONFIRM = "Discard your unsaved changes?";
 
 export interface TabsOutletContext {
   cars: Car[];
@@ -84,6 +87,29 @@ export default function TabsLayout() {
   const pathEnd = location.pathname.split("/").pop();
   const activeTab = TABS.find((t) => t.id === pathEnd)?.id || "info";
 
+  const confirmDiscard = (): boolean => {
+    if (!editMode?.isDirty) return true;
+    return confirm(DISCARD_CONFIRM);
+  };
+
+  const handleCancelEdit = () => {
+    if (!editMode || !confirmDiscard()) return;
+    editMode.onCancel();
+  };
+
+  const goTrips = () => {
+    if (!confirmDiscard()) return;
+    editMode?.onCancel();
+    navigate("/", { replace: true });
+  };
+
+  const goSwitchUser = () => {
+    if (!confirmDiscard()) return;
+    editMode?.onCancel();
+    switchUser();
+    navigate(`/trips/${tripId}`, { replace: true });
+  };
+
   return (
     <div className="app-shell">
       <div className="fade-overlay fade-overlay--top" aria-hidden="true" />
@@ -93,7 +119,7 @@ export default function TabsLayout() {
         <div className="row between">
           <button
             className="glass-surface nav-pill"
-            onClick={() => navigate("/")}
+            onClick={goTrips}
           >
             ← Trips
           </button>
@@ -103,10 +129,7 @@ export default function TabsLayout() {
           </div>
           <button
             className="glass-surface nav-pill"
-            onClick={() => {
-              switchUser();
-              navigate(`/trips/${tripId}`);
-            }}
+            onClick={goSwitchUser}
           >
             Switch
           </button>
@@ -123,7 +146,7 @@ export default function TabsLayout() {
         <div className="tabbar-edit-actions">
           <button
             className="btn-3d btn-3d--earth"
-            onClick={editMode.onCancel}
+            onClick={handleCancelEdit}
             disabled={editMode.saving}
             style={{ flex: 1 }}
           >
@@ -145,6 +168,7 @@ export default function TabsLayout() {
               <NavLink
                 key={t.id}
                 to={t.id}
+                replace
                 className={activeTab === t.id ? "active" : ""}
               >
                 {activeTab === t.id && (

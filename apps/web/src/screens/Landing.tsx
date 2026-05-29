@@ -43,7 +43,7 @@ export default function Landing() {
       <div className="content">
         <button
           className="glass-surface nav-pill"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/", { replace: true })}
           style={{ marginBottom: 8, position: "relative", zIndex: 6 }}
         >
           ← Trips

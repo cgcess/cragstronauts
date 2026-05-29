@@ -6,19 +6,19 @@
  */
 
 /** Parse an ISO date string into a local-midnight Date. */
-function parse(dateStr) {
+function parse(dateStr: string | null | undefined): Date | null {
   if (!dateStr) return null;
   return new Date(dateStr + "T00:00:00");
 }
 
-const SHORT_MONTH = { month: "short", day: "numeric" };
-const SHORT_MONTH_YEAR = { month: "short", day: "numeric", year: "numeric" };
+const SHORT_MONTH: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+const SHORT_MONTH_YEAR: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", year: "numeric" };
 
 /**
  * Format a single date.
  *   "May 28, 2026"
  */
-export function formatDate(dateStr) {
+export function formatDate(dateStr: string | null | undefined): string {
   const d = parse(dateStr);
   if (!d) return "";
   return d.toLocaleDateString(undefined, SHORT_MONTH_YEAR);
@@ -35,7 +35,10 @@ export function formatDate(dateStr) {
  *   Only end          → "May 28, 2026"
  *   Neither           → "Dates TBD"
  */
-export function formatDateRange(startStr, endStr) {
+export function formatDateRange(
+  startStr: string | null | undefined,
+  endStr: string | null | undefined
+): string {
   const s = parse(startStr);
   const e = parse(endStr);
 

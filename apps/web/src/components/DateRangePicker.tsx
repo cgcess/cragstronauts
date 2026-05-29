@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { DayPicker } from "react-day-picker";
+import { DayPicker, type DateRange } from "react-day-picker";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import "./DateRangePicker.css";
 
 const EASE_OUT = [0.23, 1, 0.32, 1];
 
-function sameDay(a, b) {
+function sameDay(a: Date, b: Date): boolean {
   return (
     a.getFullYear() === b.getFullYear() &&
     a.getMonth() === b.getMonth() &&
@@ -13,12 +13,11 @@ function sameDay(a, b) {
   );
 }
 
-function formatRange(range) {
+function formatRange(range: DateRange | undefined): string | null {
   if (!range?.from) return null;
-  const opts = { month: "short", day: "numeric" };
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
   const from = range.from.toLocaleDateString(undefined, opts);
   if (!range.to || sameDay(range.from, range.to)) return from;
-  // Tight form when same month: "May 8 – 12"
   if (
     range.from.getMonth() === range.to.getMonth() &&
     range.from.getFullYear() === range.to.getFullYear()
@@ -28,13 +27,21 @@ function formatRange(range) {
   return `${from} – ${range.to.toLocaleDateString(undefined, opts)}`;
 }
 
+interface DateRangePickerProps {
+  value: DateRange | undefined;
+  onChange: (range: DateRange | undefined) => void;
+  minDate?: Date;
+  placeholder?: string;
+  heading?: string;
+}
+
 export default function DateRangePicker({
   value,
   onChange,
   minDate,
   placeholder = "Add dates",
   heading = "When are you climbing?",
-}) {
+}: DateRangePickerProps) {
   const [open, setOpen] = useState(false);
   const reduceMotion = useReducedMotion();
   const display = formatRange(value);
@@ -50,17 +57,16 @@ export default function DateRangePicker({
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e) => {
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const handleSelect = (range) => {
+  const handleSelect = (range: DateRange | undefined) => {
     onChange(range);
     if (range?.from && range?.to && !sameDay(range.from, range.to)) {
-      // Auto-confirm once a full range is selected
       setOpen(false);
     }
   };

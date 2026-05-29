@@ -7,22 +7,23 @@ import {
   useTransform,
 } from "framer-motion";
 import { useNavigate } from "react-router";
-import { api } from "../api.js";
-import { formatDateRange } from "../dateUtils.js";
+import { api } from "../api";
+import { formatDateRange } from "../dateUtils";
+import type { z } from "zod";
+import type { TripIndexEntrySchema } from "@cragstronauts/contract";
+
+type TripEntry = z.infer<typeof TripIndexEntrySchema>;
 
 const EASE_OUT = [0.23, 1, 0.32, 1];
-const SWIPE_THRESHOLD = 90; // px past which a swipe commits
+const SWIPE_THRESHOLD = 90;
 
-// Slot transforms. Top is centred; peeks sit slightly lower and rotated.
-// `x: 0` is included so cards that get dragged then transition to a peek
-// slot animate cleanly back to centre.
 const SLOTS = [
   { x: 0, y: 0,  scale: 1,    opacity: 1, rotate: 0 },
   { x: 0, y: 12, scale: 0.96, opacity: 1, rotate: 1.6 },
   { x: 0, y: 24, scale: 0.92, opacity: 1, rotate: -2.0 },
 ];
 
-function todayISO() {
+function todayISO(): string {
   const d = new Date();
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -30,16 +31,16 @@ function todayISO() {
   return `${y}-${m}-${day}`;
 }
 
-function isPast(trip, today) {
+function isPast(trip: TripEntry, today: string): boolean {
   const ref = trip.end_date || trip.start_date;
   return ref != null && ref < today;
 }
 
-function dateRangeShort(trip) {
+function dateRangeShort(trip: TripEntry): string {
   return formatDateRange(trip.start_date, trip.end_date);
 }
 
-function daysUntil(trip, todayStr) {
+function daysUntil(trip: TripEntry, todayStr: string): number | null {
   const ref = trip.start_date || trip.end_date;
   if (!ref) return null;
   const a = new Date(todayStr + "T00:00:00").getTime();
@@ -47,7 +48,7 @@ function daysUntil(trip, todayStr) {
   return Math.round((b - a) / 86400000);
 }
 
-function daysSince(trip, todayStr) {
+function daysSince(trip: TripEntry, todayStr: string): number | null {
   const ref = trip.end_date || trip.start_date;
   if (!ref) return null;
   const a = new Date(todayStr + "T00:00:00").getTime();
@@ -55,7 +56,7 @@ function daysSince(trip, todayStr) {
   return Math.round((a - b) / 86400000);
 }
 
-function chipLabelFor(trip, todayStr) {
+function chipLabelFor(trip: TripEntry, todayStr: string): { label: string; tone: string } {
   if (isPast(trip, todayStr)) {
     const ago = daysSince(trip, todayStr);
     if (ago == null) return { label: "Past", tone: "past" };
@@ -71,7 +72,7 @@ function chipLabelFor(trip, todayStr) {
   return { label: `In ${Math.round(days / 7)} wk`, tone: "soon" };
 }
 
-function TripCardFace({ trip, todayStr }) {
+function TripCardFace({ trip, todayStr }: { trip: TripEntry; todayStr: string }) {
   const past = isPast(trip, todayStr);
   const chip = chipLabelFor(trip, todayStr);
   return (
@@ -84,14 +85,6 @@ function TripCardFace({ trip, todayStr }) {
       </div>
       <div>
         <div className="deck-card__title">{trip.location}</div>
-        {trip.accommodation_type && (
-          <div className="deck-card__meta">
-            {trip.accommodation_type}
-            {trip.accommodation_details
-              ? ` · ${trip.accommodation_details}`
-              : ""}
-          </div>
-        )}
       </div>
       <div className="deck-card__footer">
         <span className="deck-card__cta">
@@ -102,24 +95,21 @@ function TripCardFace({ trip, todayStr }) {
   );
 }
 
-/**
- * DeckLayer — one card layer.
- *
- * Owns its own `x` and `dragRotate` motion values so the drag state of
- * one card never leaks to another. When the user releases without
- * committing, framer-motion's own dragConstraints + elastic spring
- * snaps `x` back to 0 — we never call `.set(0)` manually.
- *
- * Variants:
- *   • staggerDelay > 0  → first-mount swoop from below (the assembly).
- *   • dir > 0           → forward shuffle: this card enters as the new
- *                         bottom peek (fades in below the stack).
- *   • dir < 0           → backward shuffle: this card enters as the
- *                         new top, sliding in from above.
- *   • exit dir > 0      → old top flies off-left (user threw it).
- *   • exit dir < 0      → old bottom peek fades down (nobody touched it).
- */
-const DeckLayer = React.forwardRef(function DeckLayer(
+interface DeckLayerProps {
+  trip: TripEntry;
+  slot: number;
+  isTop: boolean;
+  todayStr: string;
+  onSelect: (id: string) => void;
+  onCommit: (dir: number) => void;
+  canGoNext: boolean;
+  canGoPrev: boolean;
+  reduceMotion: boolean | null;
+  staggerDelay: number;
+  dir: number;
+}
+
+const DeckLayer = React.forwardRef<HTMLButtonElement, DeckLayerProps>(function DeckLayer(
   {
     trip,
     slot,
@@ -137,25 +127,17 @@ const DeckLayer = React.forwardRef(function DeckLayer(
 ) {
   const target = SLOTS[slot];
 
-  // Per-card motion values — *not* shared with siblings.
   const x = useMotionValue(0);
   const dragRotate = useTransform(x, [-220, 0, 220], [-14, 0, 14]);
 
-  const handleDragEnd = (_e, info) => {
+  const handleDragEnd = (_e: unknown, info: { offset: { x: number } }) => {
     if (info.offset.x < -SWIPE_THRESHOLD && canGoNext) {
       onCommit(1);
     } else if (info.offset.x > SWIPE_THRESHOLD && canGoPrev) {
       onCommit(-1);
     }
-    // else: do NOTHING — framer-motion's dragConstraints/dragElastic
-    // will spring `x` back to 0 on release naturally. Calling
-    // `x.set(0)` here teleports and fights the spring.
   };
 
-  // Crucial: `initial` and `animate` must have IDENTICAL keys. If a key
-  // appears in one but not the other, framer-motion 11 silently fails to
-  // interpolate (the element stays stuck at the initial state). Top
-  // cards skip `rotate` everywhere — style.dragRotate owns it.
   const animateState = isTop
     ? { x: target.x, y: target.y, scale: target.scale, opacity: target.opacity }
     : {
@@ -168,7 +150,6 @@ const DeckLayer = React.forwardRef(function DeckLayer(
 
   let initialState;
   if (staggerDelay > 0) {
-    // First mount — swoop in from below the stack.
     initialState = isTop
       ? { x: 0, y: target.y + 90, scale: target.scale * 0.94, opacity: 0 }
       : {
@@ -179,11 +160,8 @@ const DeckLayer = React.forwardRef(function DeckLayer(
           rotate: target.rotate,
         };
   } else if (dir < 0 && slot === 0) {
-    // Backward shuffle — new top slides in from above.
     initialState = { x: 0, y: target.y - 70, scale: target.scale * 0.92, opacity: 0 };
   } else {
-    // Forward shuffle or peek entry — fade in at target Y, slightly
-    // smaller, BEHIND the stack so we never traverse through other cards.
     initialState = isTop
       ? { x: 0, y: target.y, scale: target.scale * 0.85, opacity: 0 }
       : {
@@ -202,8 +180,6 @@ const DeckLayer = React.forwardRef(function DeckLayer(
       className={`deck-card ${isTop ? "deck-card--top" : "deck-card--peek"}`}
       style={{
         zIndex: 10 - slot,
-        // Top card alone binds style to the drag motion values.
-        // Peek cards leave x/rotate to the animate prop.
         ...(isTop && !reduceMotion ? { x, rotate: dragRotate } : {}),
       }}
       initial={false}
@@ -221,7 +197,6 @@ const DeckLayer = React.forwardRef(function DeckLayer(
       onClick={
         isTop
           ? () => {
-              // Suppress click if a real drag just happened
               if (Math.abs(x.get()) > 4) return;
               onSelect(trip.id);
             }
@@ -233,7 +208,7 @@ const DeckLayer = React.forwardRef(function DeckLayer(
   );
 });
 
-function TripDeck({ trips, todayStr, onSelect }) {
+function TripDeck({ trips, todayStr, onSelect }: { trips: TripEntry[]; todayStr: string; onSelect: (id: string) => void }) {
   const reduceMotion = useReducedMotion();
 
   const ordered = useMemo(() => {
@@ -263,10 +238,7 @@ function TripDeck({ trips, todayStr, onSelect }) {
   const canGoPrev = active > 0;
   const canGoNext = active < ordered.length - 1;
 
-  const commit = (direction) => {
-    // Bounds check INSIDE the updater so rapid-fire clicks can't
-    // accumulate setActive calls past the end of the deck (was causing
-    // all cards to fly away when you spammed past the last trip).
+  const commit = (direction: number) => {
     setActive((i) => {
       if (direction > 0 && i < ordered.length - 1) return i + 1;
       if (direction < 0 && i > 0) return i - 1;
@@ -275,17 +247,11 @@ function TripDeck({ trips, todayStr, onSelect }) {
     setDir(direction);
   };
 
-  // Visible window: top + up to 2 peek cards.
   const visible = ordered.slice(active, active + 3);
 
   return (
     <>
       <div className="deck-shell">
-        {/* No AnimatePresence — it was leaving cards stuck at their
-            initial opacity 0 in dev (StrictMode-related deadlock). Cards
-            still animate from initial → animate via plain motion props,
-            and the exiting top card is handled by an imperative animation
-            in the commit handler. */}
         {visible.map((trip, slot) => (
           <DeckLayer
             key={trip.id}
@@ -344,7 +310,7 @@ function TripDeck({ trips, todayStr, onSelect }) {
 
 export default function TripListing() {
   const navigate = useNavigate();
-  const [trips, setTrips] = useState([]);
+  const [trips, setTrips] = useState<TripEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -352,13 +318,13 @@ export default function TripListing() {
   }, []);
 
   const onCreate = () => navigate("/trips/new");
-  const onSelect = (id) => navigate(`/trips/${id}/info`);
+  const onSelect = (id: string) => navigate(`/trips/${id}/info`);
 
   const reduceMotion = useReducedMotion();
   const todayStr = useMemo(todayISO, []);
 
   const fade = reduceMotion
-    ? { initial: false, animate: {}, transition: {} }
+    ? { initial: false as const, animate: {}, transition: {} }
     : {
         initial: { opacity: 0, y: -10 },
         animate: { opacity: 1, y: 0 },

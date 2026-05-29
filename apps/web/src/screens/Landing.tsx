@@ -1,18 +1,18 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router";
-import { api } from "../api.js";
-import { useTripContext } from "../context/TripContext.jsx";
-import { formatDateRange } from "../dateUtils.js";
+import { api } from "../api";
+import { useTripContext, type User } from "../context/TripContext";
+import { formatDateRange } from "../dateUtils";
 
 export default function Landing() {
   const { tripId, trip, users, setUser, refresh } = useTripContext();
   const navigate = useNavigate();
-  const [mode, setMode] = useState("choose"); // choose | new
+  const [mode, setMode] = useState<"choose" | "new">("choose");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const pickExisting = (userId) => {
+  const pickExisting = (userId: number) => {
     setUser(userId);
     const me = users.find((u) => u.id === userId);
     if (me?.signup_completed) {
@@ -31,7 +31,7 @@ export default function Landing() {
       setUser(u.id);
       navigate(`/trips/${tripId}/signup`, { replace: true });
     } catch (e) {
-      setError(e.message);
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }
@@ -62,7 +62,7 @@ export default function Landing() {
             {users.length > 0 && (
               <>
                 <p className="muted" style={{ marginTop: 16 }}>
-                  Or pick yourself if you've been here before:
+                  Or pick yourself if you&apos;ve been here before:
                 </p>
                 {users.map((u) => (
                   <button

@@ -1,7 +1,7 @@
 import React from "react";
 import { Outlet } from "react-router";
-import AlpsBackground from "./components/AlpsBackground.jsx";
-import GlassFilter from "./components/GlassFilter.jsx";
+import AlpsBackground from "./components/AlpsBackground";
+import GlassFilter from "./components/GlassFilter";
 
 export default function App() {
   return (

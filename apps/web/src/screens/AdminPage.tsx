@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Navigate } from "react-router";
-import { api } from "../api.js";
-import { useTripContext } from "../context/TripContext.jsx";
+import { api } from "../api";
+import { useTripContext, type Trip, type User, type Category } from "../context/TripContext";
 
 export default function AdminPage() {
   const { tripId, trip, users, categories, currentUserId, refresh, deleteTrip } =
@@ -53,9 +53,9 @@ export default function AdminPage() {
   );
 }
 
-function TripDetailsSection({ tripId, trip, onSaved }) {
+function TripDetailsSection({ tripId, trip, onSaved }: { tripId: string; trip: Trip; onSaved: () => Promise<void> }) {
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     location: trip.location || "",
     start_date: trip.start_date || "",
@@ -79,7 +79,7 @@ function TripDetailsSection({ tripId, trip, onSaved }) {
       });
       await onSaved();
     } catch (e) {
-      setError(e.message);
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setSaving(false);
     }
@@ -179,10 +179,10 @@ function TripDetailsSection({ tripId, trip, onSaved }) {
   );
 }
 
-function GearCategoriesSection({ tripId, categories, onChanged }) {
+function GearCategoriesSection({ tripId, categories, onChanged }: { tripId: string; categories: Category[]; onChanged: () => Promise<void> }) {
   const [newName, setNewName] = useState("");
   const [adding, setAdding] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   const addCategory = async () => {
     setError(null);
@@ -192,17 +192,17 @@ function GearCategoriesSection({ tripId, categories, onChanged }) {
       setAdding(false);
       await onChanged();
     } catch (e) {
-      setError(e.message);
+      setError(e instanceof Error ? e.message : String(e));
     }
   };
 
-  const removeCategory = async (catId) => {
+  const removeCategory = async (catId: number) => {
     setError(null);
     try {
       await api.deleteCategory(tripId, catId);
       await onChanged();
     } catch (e) {
-      setError(e.message);
+      setError(e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -267,10 +267,10 @@ function GearCategoriesSection({ tripId, categories, onChanged }) {
   );
 }
 
-function MembersSection({ tripId, users, currentUserId, onChanged }) {
-  const [error, setError] = useState(null);
+function MembersSection({ tripId, users, currentUserId, onChanged }: { tripId: string; users: User[]; currentUserId: number | null; onChanged: () => Promise<void> }) {
+  const [error, setError] = useState<string | null>(null);
 
-  const removeMember = async (userId, userName) => {
+  const removeMember = async (userId: number, userName: string) => {
     setError(null);
     try {
       const [cars, gear] = await Promise.all([
@@ -294,7 +294,7 @@ function MembersSection({ tripId, users, currentUserId, onChanged }) {
       await api.deleteUser(tripId, userId);
       await onChanged();
     } catch (e) {
-      setError(e.message);
+      setError(e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -336,7 +336,7 @@ function MembersSection({ tripId, users, currentUserId, onChanged }) {
   );
 }
 
-function DangerSection({ trip, onDelete }) {
+function DangerSection({ trip, onDelete }: { trip: Trip; onDelete: () => Promise<void> }) {
   return (
     <section className="admin-section admin-section--danger">
       <h2 className="admin-section-title admin-section-title--danger">
@@ -344,7 +344,7 @@ function DangerSection({ trip, onDelete }) {
       </h2>
       <p className="admin-muted">
         Deleting the trip removes it for everyone, along with all cars and gear.
-        This can't be undone.
+        This can&apos;t be undone.
       </p>
       <button
         className="admin-btn admin-btn--danger"

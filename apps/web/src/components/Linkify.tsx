@@ -6,13 +6,13 @@ const URL_RE = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
 // Punctuation that commonly trails a URL in prose but isn't part of it.
 const TRAILING_RE = /[.,;:!?)\]}'"]+$/;
 
-export default function Linkify({ children }) {
+export default function Linkify({ children }: { children?: React.ReactNode }) {
   const text = typeof children === "string" ? children : "";
   if (!text) return children ?? null;
 
-  const parts = [];
+  const parts: React.ReactNode[] = [];
   let lastIndex = 0;
-  let match;
+  let match: RegExpExecArray | null;
   URL_RE.lastIndex = 0;
 
   while ((match = URL_RE.exec(text)) !== null) {

@@ -1,8 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { Outlet, NavLink, Navigate, useNavigate, useLocation } from "react-router";
 import { motion, LayoutGroup } from "framer-motion";
-import { api } from "../api.js";
-import { useTripContext } from "../context/TripContext.jsx";
+import { api } from "../api";
+import { useTripContext } from "../context/TripContext";
+import type { z } from "zod";
+import type { CarSchema, GearContributionSchema } from "@cragstronauts/contract";
+
+type Car = z.infer<typeof CarSchema>;
+type Contribution = z.infer<typeof GearContributionSchema>;
+
+export interface TabsOutletContext {
+  cars: Car[];
+  gear: Contribution[];
+  reload: () => Promise<void>;
+}
 
 const TABS = [
   { id: "info", label: "Info", icon: "📍" },
@@ -22,9 +33,9 @@ export default function TabsLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [cars, setCars] = useState([]);
-  const [gear, setGear] = useState([]);
-  const [error, setError] = useState(null);
+  const [cars, setCars] = useState<Car[]>([]);
+  const [gear, setGear] = useState<Contribution[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const reload = async () => {
     setError(null);
@@ -37,7 +48,7 @@ export default function TabsLayout() {
       setGear(g);
       await refresh();
     } catch (e) {
-      setError(e.message);
+      setError(e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -88,7 +99,7 @@ export default function TabsLayout() {
       </div>
 
       <div className="content content--tabs">
-        <Outlet context={{ cars, gear, reload }} />
+        <Outlet context={{ cars, gear, reload } satisfies TabsOutletContext} />
       </div>
 
       <LayoutGroup>

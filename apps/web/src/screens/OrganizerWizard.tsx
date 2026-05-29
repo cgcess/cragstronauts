@@ -1,10 +1,21 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router";
-import { api } from "../api.js";
-import DateRangePicker from "../components/DateRangePicker.jsx";
+import { api } from "../api";
+import DateRangePicker from "../components/DateRangePicker";
 
-const defaultCategories = [
+interface CategoryField {
+  key: string;
+  label: string;
+  type: string;
+}
+
+interface CategoryDraft {
+  name: string;
+  fields: CategoryField[];
+}
+
+const defaultCategories: CategoryDraft[] = [
   {
     name: "Rope",
     fields: [
@@ -29,30 +40,27 @@ const STEP_TAGS = [
   "Rope captain · 3 of 3",
 ];
 
-function toLocalISO(d) {
+function toLocalISO(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
 
-function isoToDate(iso) {
+function isoToDate(iso: string | undefined): Date | undefined {
   if (!iso) return undefined;
-  // Parse as local midnight (not UTC) so calendar shows the picked day.
   return new Date(`${iso}T00:00:00`);
 }
 
-function todayLocal() {
+function todayLocal(): Date {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
   return d;
 }
 
-// Strong custom easing per emil-design-eng skill — punchier than the
-// CSS default ease-out. Used as the default for everything entering.
 const EASE_OUT = [0.23, 1, 0.32, 1];
 
-const userKey = (tripId) => `climbingTrip.userId.${tripId}`;
+const userKey = (tripId: string) => `climbingTrip.userId.${tripId}`;
 
 export default function OrganizerWizard() {
   const navigate = useNavigate();
@@ -63,22 +71,25 @@ export default function OrganizerWizard() {
   const [accomType, setAccomType] = useState("campsite");
   const [accomDetails, setAccomDetails] = useState("");
   const [notes, setNotes] = useState("");
-  const [categories, setCategories] = useState(defaultCategories);
+  const [categories, setCategories] = useState<CategoryDraft[]>(defaultCategories);
   const [organizerName, setOrganizerName] = useState("");
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const reduceMotion = useReducedMotion();
   const today = useMemo(todayLocal, []);
 
   const range = useMemo(
-    () => ({ from: isoToDate(startDate), to: isoToDate(endDate) }),
+    () => ({ from: isoToDate(startDate || undefined), to: isoToDate(endDate || undefined) }),
     [startDate, endDate],
   );
-  const onRangeChange = (r) => {
+  const onRangeChange = (r: { from?: Date; to?: Date } | undefined) => {
     setStartDate(r?.from ? toLocalISO(r.from) : "");
     setEndDate(r?.to ? toLocalISO(r.to) : "");
   };
+
+  // Dates are valid if: both empty, or start <= end
+  const datesValid = !startDate || !endDate || startDate <= endDate;
 
   const submit = async () => {
     setError(null);
@@ -102,13 +113,12 @@ export default function OrganizerWizard() {
       localStorage.setItem(userKey(res.trip_id), String(res.organizer_user_id));
       navigate(`/trips/${res.trip_id}/info`, { replace: true });
     } catch (e) {
-      setError(e.message);
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Stagger preset for forms: each child fades up by 12px, 60ms apart.
   const stagger = reduceMotion
     ? { hidden: {}, show: {} }
     : {
@@ -360,14 +370,14 @@ export default function OrganizerWizard() {
               exit={reduceMotion ? undefined : { opacity: 0, x: -24, transition: { duration: 0.2 } }}
             >
               <motion.p variants={item} className="muted">
-                You're the rope captain — the trip lives on your account.
+                You&apos;re the rope captain — the trip lives on your account.
                 What should the squad call you?
               </motion.p>
               <motion.input
                 variants={item}
                 placeholder="Your name"
                 value={organizerName}
-                onChange={(e) => setOrganizerName(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOrganizerName(e.target.value)}
               />
               <motion.div variants={item} className="row">
                 <button className="secondary" onClick={() => setStep(1)}>

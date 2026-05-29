@@ -1,0 +1,33 @@
+import { createContext, useContext, type ReactNode } from "react";
+import type { z } from "zod";
+import type { TripSchema, UserSchema, GearCategorySchema } from "@cragstronauts/contract";
+
+export type Trip = z.infer<typeof TripSchema>;
+export type User = z.infer<typeof UserSchema>;
+export type Category = z.infer<typeof GearCategorySchema>;
+
+export interface TripContextValue {
+  tripId: string;
+  trip: Trip;
+  users: User[];
+  categories: Category[];
+  currentUserId: number | null;
+  setUser: (userId: number | null) => void;
+  switchUser: () => void;
+  refresh: () => Promise<void>;
+  deleteTrip: () => Promise<void>;
+}
+
+const TripContext = createContext<TripContextValue | null>(null);
+
+export function TripProvider({ children, value }: { children: ReactNode; value: TripContextValue }) {
+  return <TripContext.Provider value={value}>{children}</TripContext.Provider>;
+}
+
+export function useTripContext(): TripContextValue {
+  const context = useContext(TripContext);
+  if (!context) {
+    throw new Error("useTripContext must be used within a TripProvider");
+  }
+  return context;
+}

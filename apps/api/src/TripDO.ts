@@ -10,6 +10,20 @@ import {
   carSignup,
   gearContribution,
 } from "./db/schema";
+import type { z } from "zod";
+import type {
+  TripSchema,
+  UserSchema,
+  GearCategorySchema,
+  CarSchema,
+  GearContributionSchema,
+} from "@cragstronauts/contract";
+
+type Trip = z.infer<typeof TripSchema>;
+type User = z.infer<typeof UserSchema>;
+type Category = z.infer<typeof GearCategorySchema>;
+type Car = z.infer<typeof CarSchema>;
+type Contribution = z.infer<typeof GearContributionSchema>;
 
 export class TripDO extends DurableObject<Env> {
   db: Database;
@@ -26,7 +40,7 @@ export class TripDO extends DurableObject<Env> {
 
   // ---- Trip ----
 
-  async getTrip(): Promise<Record<string, unknown> | null> {
+  async getTrip(): Promise<Trip | null> {
     const row = this.db.get(trip, { where: eq("id", 1) });
     return row ? formatTrip(row) : null;
   }
@@ -86,7 +100,7 @@ export class TripDO extends DurableObject<Env> {
     accommodation_type?: string | null;
     accommodation_details?: string | null;
     notes?: string | null;
-  }): Promise<Record<string, unknown>> {
+  }): Promise<Trip> {
     const row = this.db.get(trip, { where: eq("id", 1) });
     if (!row) throw new Error("Trip not found");
 
@@ -131,13 +145,13 @@ export class TripDO extends DurableObject<Env> {
 
   // ---- Users ----
 
-  async listUsers(): Promise<Record<string, unknown>[]> {
+  async listUsers(): Promise<User[]> {
     return this.db.all(user).map(formatUser);
   }
 
   async createUser(
     data: { name: string; joining: boolean }
-  ): Promise<Record<string, unknown>> {
+  ): Promise<User> {
     const name = data.name.trim();
     if (!name) throw new Error("Name required");
 
@@ -157,7 +171,7 @@ export class TripDO extends DurableObject<Env> {
     return { ok: true };
   }
 
-  async completeSignup(userId: number): Promise<Record<string, unknown>> {
+  async completeSignup(userId: number): Promise<User> {
     const row = this.db.get(user, { where: eq("id", userId) });
     if (!row) throw new Error("User not found");
 
@@ -170,7 +184,7 @@ export class TripDO extends DurableObject<Env> {
   async updateUser(
     userId: number,
     data: { name?: string; joining?: boolean }
-  ): Promise<Record<string, unknown>> {
+  ): Promise<User> {
     const row = this.db.get(user, { where: eq("id", userId) });
     if (!row) throw new Error("User not found");
 
@@ -190,7 +204,7 @@ export class TripDO extends DurableObject<Env> {
 
   // ---- Gear Categories ----
 
-  async listCategories(): Promise<Record<string, unknown>[]> {
+  async listCategories(): Promise<Category[]> {
     return this.db.all(gearCategory).map(formatCategory);
   }
 
@@ -199,7 +213,7 @@ export class TripDO extends DurableObject<Env> {
       name: string;
       fields: { key: string; label: string; type: string }[];
     }
-  ): Promise<Record<string, unknown>> {
+  ): Promise<Category> {
     const row = this.db.insertReturning(
       gearCategory,
       { name: data.name, fields: JSON.stringify(data.fields) },
@@ -215,7 +229,7 @@ export class TripDO extends DurableObject<Env> {
 
   // ---- Cars ----
 
-  async listCars(): Promise<Record<string, unknown>[]> {
+  async listCars(): Promise<Car[]> {
     const rows = this.db.all(car);
     return rows.map((r) => this.formatCar(r));
   }
@@ -224,7 +238,7 @@ export class TripDO extends DurableObject<Env> {
     driver_user_id: number;
     total_seats: number;
     notes: string | null;
-  }): Promise<Record<string, unknown>> {
+  }): Promise<Car> {
     if (data.total_seats < 1) throw new Error("total_seats must be >= 1");
 
     const driver = this.db.get(user, { where: eq("id", data.driver_user_id) });
@@ -267,7 +281,7 @@ export class TripDO extends DurableObject<Env> {
   async carSignup(
     carId: number,
     userId: number
-  ): Promise<Record<string, unknown>> {
+  ): Promise<Car> {
     const c = this.db.get(car, { where: eq("id", carId) });
     if (!c) throw new Error("Car not found");
 
@@ -290,7 +304,7 @@ export class TripDO extends DurableObject<Env> {
   async carSignoff(
     carId: number,
     userId: number
-  ): Promise<Record<string, unknown>> {
+  ): Promise<Car> {
     // Use raw SQL for compound WHERE since do-orm eq() is single-column
     this.db.raw(
       "DELETE FROM car_signup WHERE car_id = ? AND user_id = ?",
@@ -304,7 +318,7 @@ export class TripDO extends DurableObject<Env> {
 
   // ---- Gear Contributions ----
 
-  async listGear(): Promise<Record<string, unknown>[]> {
+  async listGear(): Promise<Contribution[]> {
     const rows = this.db.all(gearContribution);
     return rows.map((r) => this.formatContribution(r));
   }
@@ -313,7 +327,7 @@ export class TripDO extends DurableObject<Env> {
     user_id: number;
     category_id: number;
     details: Record<string, unknown>;
-  }): Promise<Record<string, unknown>> {
+  }): Promise<Contribution> {
     const u = this.db.get(user, { where: eq("id", data.user_id) });
     if (!u) throw new Error("User not found");
 
@@ -341,7 +355,7 @@ export class TripDO extends DurableObject<Env> {
     driver_user_id: number;
     total_seats: number;
     notes: string | null;
-  }): Record<string, unknown> {
+  }): Car {
     const driver = this.db.get(user, {
       where: eq("id", r.driver_user_id),
     });
@@ -368,7 +382,7 @@ export class TripDO extends DurableObject<Env> {
     user_id: number;
     category_id: number;
     details: string;
-  }): Record<string, unknown> {
+  }): Contribution {
     const u = this.db.get(user, { where: eq("id", r.user_id) });
     const cat = this.db.get(gearCategory, {
       where: eq("id", r.category_id),
@@ -393,7 +407,7 @@ function formatTrip(r: {
   accommodation_type: string | null;
   accommodation_details: string | null;
   notes: string | null;
-}): Record<string, unknown> {
+}): Trip {
   return {
     location: r.location,
     start_date: r.start_date,
@@ -410,7 +424,7 @@ function formatUser(r: {
   joining: number;
   is_organizer: number;
   signup_completed: number;
-}): Record<string, unknown> {
+}): User {
   return {
     id: r.id,
     name: r.name,
@@ -424,7 +438,7 @@ function formatCategory(r: {
   id: number;
   name: string;
   fields: string;
-}): Record<string, unknown> {
+}): Category {
   return {
     id: r.id,
     name: r.name,

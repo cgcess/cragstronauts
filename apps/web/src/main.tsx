@@ -2,18 +2,18 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
 
-import App from "./App.jsx";
-import TripListing from "./screens/TripListing.jsx";
-import OrganizerWizard from "./screens/OrganizerWizard.jsx";
-import TripLayout from "./screens/TripLayout.jsx";
-import Landing from "./screens/Landing.jsx";
-import SignupSwipe from "./screens/SignupSwipe.jsx";
-import TabsLayout from "./screens/TabsLayout.jsx";
-import InfoTab from "./screens/InfoTab.jsx";
-import CarsTab from "./screens/CarsTab.jsx";
-import GearTab from "./screens/GearTab.jsx";
-import AdminPage from "./screens/AdminPage.jsx";
-import NotFound from "./screens/NotFound.jsx";
+import App from "./App";
+import TripListing from "./screens/TripListing";
+import OrganizerWizard from "./screens/OrganizerWizard";
+import TripLayout from "./screens/TripLayout";
+import Landing from "./screens/Landing";
+import SignupSwipe from "./screens/SignupSwipe";
+import TabsLayout from "./screens/TabsLayout";
+import InfoTab from "./screens/InfoTab";
+import CarsTab from "./screens/CarsTab";
+import GearTab from "./screens/GearTab";
+import AdminPage from "./screens/AdminPage";
+import NotFound from "./screens/NotFound";
 
 import "./styles.css";
 
@@ -72,6 +72,6 @@ const router = createBrowserRouter([
 // NOTE: StrictMode was deadlocking framer-motion's AnimatePresence
 // (cards stuck at opacity 0 on first mount). Disabled until we move to
 // a more StrictMode-tolerant animation pattern.
-ReactDOM.createRoot(document.getElementById("root")).render(
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <RouterProvider router={router} />
 );

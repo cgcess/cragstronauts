@@ -1,0 +1,53 @@
+import { z } from "zod";
+
+export const TripSchema = z.object({
+  location: z.string(),
+  start_date: z.string().nullable(),
+  end_date: z.string().nullable(),
+  accommodation_type: z.string().nullable(),
+  accommodation_details: z.string().nullable(),
+  notes: z.string().nullable(),
+});
+
+export const GearCategoryFieldSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  type: z.string(),
+});
+
+export const CreateTripBodySchema = z.object({
+  location: z.string().min(1),
+  start_date: z.string().nullable(),
+  end_date: z.string().nullable(),
+  accommodation_type: z.string().nullable(),
+  accommodation_details: z.string().nullable(),
+  notes: z.string().nullable(),
+  gear_categories: z.array(
+    z.object({
+      name: z.string(),
+      fields: z.array(GearCategoryFieldSchema),
+    })
+  ),
+  organizer_name: z.string().min(1),
+});
+
+export const CreateTripResponseSchema = z.object({
+  trip_id: z.string(),
+  organizer_user_id: z.number(),
+});
+
+export const UpdateTripBodySchema = z.object({
+  location: z.string().optional(),
+  start_date: z.string().nullable().optional(),
+  end_date: z.string().nullable().optional(),
+  accommodation_type: z.string().nullable().optional(),
+  accommodation_details: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+});
+
+export const TripIndexEntrySchema = z.object({
+  id: z.string(),
+  location: z.string(),
+  start_date: z.string().nullable(),
+  end_date: z.string().nullable(),
+});

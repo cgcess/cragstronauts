@@ -10,7 +10,7 @@ export default function NotFound() {
         <div style={{ fontSize: 64, marginBottom: 8 }}>🧭</div>
         <div className="h1">Off the map</div>
         <p className="muted" style={{ marginBottom: 24 }}>
-          This route doesn't lead anywhere. Maybe the trail washed out.
+          This route doesn&apos;t lead anywhere. Maybe the trail washed out.
         </p>
         <button onClick={() => navigate("/")}>
           Back to base camp

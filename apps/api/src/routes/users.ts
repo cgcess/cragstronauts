@@ -1,21 +1,30 @@
-import { Hono } from "hono";
+import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Env } from "../types";
 import { getTripDO } from "../do";
+import {
+  listUsersRoute,
+  createUserRoute,
+  deleteUserRoute,
+  completeSignupRoute,
+  updateUserRoute,
+} from "@cragstronauts/contract";
 
-export const userRoutes = new Hono<{ Bindings: Env }>();
+export const userRoutes = new OpenAPIHono<{ Bindings: Env }>();
 
-userRoutes.get("/api/trips/:trip_id/users", async (c) => {
-  const stub = getTripDO(c.env, c.req.param("trip_id"));
+userRoutes.openapi(listUsersRoute, async (c) => {
+  const { trip_id: tripId } = c.req.valid("param");
+  const stub = getTripDO(c.env, tripId);
   const users = await stub.listUsers();
-  return c.json(users);
+  return c.json([...users], 200);
 });
 
-userRoutes.post("/api/trips/:trip_id/users", async (c) => {
-  const stub = getTripDO(c.env, c.req.param("trip_id"));
-  const body = await c.req.json();
+userRoutes.openapi(createUserRoute, async (c) => {
+  const { trip_id: tripId } = c.req.valid("param");
+  const body = c.req.valid("json");
   try {
+    const stub = getTripDO(c.env, tripId);
     const user = await stub.createUser(body);
-    return c.json(user);
+    return c.json(user, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg === "Trip not found") {
@@ -25,24 +34,26 @@ userRoutes.post("/api/trips/:trip_id/users", async (c) => {
   }
 });
 
-userRoutes.delete("/api/trips/:trip_id/users/:user_id", async (c) => {
-  const stub = getTripDO(c.env, c.req.param("trip_id"));
-  const userId = Number(c.req.param("user_id"));
+userRoutes.openapi(deleteUserRoute, async (c) => {
+  const { trip_id: tripId, user_id } = c.req.valid("param");
+  const userId = Number(user_id);
   try {
+    const stub = getTripDO(c.env, tripId);
     const result = await stub.deleteUser(userId);
-    return c.json(result);
+    return c.json(result, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return c.json({ detail: msg }, 400);
   }
 });
 
-userRoutes.post("/api/trips/:trip_id/users/:user_id/complete-signup", async (c) => {
-  const stub = getTripDO(c.env, c.req.param("trip_id"));
-  const userId = Number(c.req.param("user_id"));
+userRoutes.openapi(completeSignupRoute, async (c) => {
+  const { trip_id: tripId, user_id } = c.req.valid("param");
+  const userId = Number(user_id);
   try {
+    const stub = getTripDO(c.env, tripId);
     const user = await stub.completeSignup(userId);
-    return c.json(user);
+    return c.json(user, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg === "User not found") {
@@ -52,13 +63,14 @@ userRoutes.post("/api/trips/:trip_id/users/:user_id/complete-signup", async (c) 
   }
 });
 
-userRoutes.patch("/api/trips/:trip_id/users/:user_id", async (c) => {
-  const stub = getTripDO(c.env, c.req.param("trip_id"));
-  const userId = Number(c.req.param("user_id"));
-  const body = await c.req.json();
+userRoutes.openapi(updateUserRoute, async (c) => {
+  const { trip_id: tripId, user_id } = c.req.valid("param");
+  const userId = Number(user_id);
+  const body = c.req.valid("json");
   try {
+    const stub = getTripDO(c.env, tripId);
     const user = await stub.updateUser(userId, body);
-    return c.json(user);
+    return c.json(user, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg === "User not found") {

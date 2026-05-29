@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { useNavigate, useOutletContext } from "react-router";
-import Linkify from "../components/Linkify.jsx";
-import { useTripContext } from "../context/TripContext.jsx";
-import { formatDateRange } from "../dateUtils.js";
+import Linkify from "../components/Linkify";
+import { useTripContext } from "../context/TripContext";
+import { formatDateRange } from "../dateUtils";
+import type { TabsOutletContext } from "./TabsLayout";
 
 export default function InfoTab() {
   const { tripId, trip, users, categories, currentUserId } = useTripContext();
-  const { reload } = useOutletContext();
+  const { reload } = useOutletContext<TabsOutletContext>();
   const navigate = useNavigate();
 
   const me = users.find((u) => u.id === currentUserId);

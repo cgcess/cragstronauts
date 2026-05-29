@@ -1,12 +1,20 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { animate, motion, useMotionValue, useTransform, AnimatePresence } from "framer-motion";
 import { useNavigate, Navigate } from "react-router";
-import { api } from "../api.js";
-import { useTripContext } from "../context/TripContext.jsx";
+import { api } from "../api";
+import { useTripContext, type Category } from "../context/TripContext";
+
+interface Question {
+  id: string;
+  title: string;
+  sub: string;
+  kind?: "gear" | "driving";
+  category?: Category;
+}
 
 // Build the question list from gear categories
-function buildQuestions(categories) {
-  const qs = [
+function buildQuestions(categories: Category[]): Question[] {
+  const qs: Question[] = [
     {
       id: "joining",
       title: "Are you joining the trip?",
@@ -34,7 +42,7 @@ function buildQuestions(categories) {
 }
 
 export default function SignupSwipe() {
-  const { tripId, trip, categories, currentUserId: userId, switchUser, refresh } = useTripContext();
+  const { tripId, categories, currentUserId: userId, switchUser, refresh } = useTripContext();
   const navigate = useNavigate();
 
   // Guard: need a user to do signup
@@ -62,26 +70,22 @@ export default function SignupSwipe() {
 
   const questions = useMemo(() => buildQuestions(categories), [categories]);
   const [idx, setIdx] = useState(0);
-  const [details, setDetails] = useState(null); // for showing detail form
-  const [error, setError] = useState(null);
+  const [details, setDetails] = useState<DetailState | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [exitDir, setExitDir] = useState(null); // "left" | "right" — drives exit animation
-  // answers shape:
-  // { joining: bool, driving: {seats}|null, gear: { [catId]: details|null } }
-  const [answers, setAnswers] = useState({ joining: true, driving: null, gear: {} });
+  const [exitDir, setExitDir] = useState<"left" | "right" | null>(null);
+  const [answers] = useState({ joining: true, driving: null, gear: {} });
 
   const q = questions[idx];
 
-  const persistAnswer = async (qq, yes, extra) => {
+  const persistAnswer = async (qq: Question, yes: boolean, extra: Record<string, string> | null) => {
     setError(null);
     setSubmitting(true);
     try {
-      // "joining" question: user is created with joining=true; nothing to persist on yes,
-      // and the no-path is handled above by short-circuiting to onComplete.
       if (qq.kind === "gear" && yes) {
         await api.addGear(tripId, {
           user_id: userId,
-          category_id: qq.category.id,
+          category_id: qq.category!.id,
           details: extra || {},
         });
       }
@@ -93,7 +97,7 @@ export default function SignupSwipe() {
         });
       }
     } catch (e) {
-      setError(e.message);
+      setError(e instanceof Error ? e.message : String(e));
       throw e;
     } finally {
       setSubmitting(false);
@@ -108,21 +112,20 @@ export default function SignupSwipe() {
     }
   };
 
-  const handleAnswer = async (yes) => {
-    // If yes and the question has follow-up details, open the detail form
-    if (yes && q.kind === "gear" && q.category.fields.length) {
-      setDetails({ kind: "gear", category: q.category, values: {} });
+  const handleAnswer = async (yes: boolean) => {
+    if (yes && q.kind === "gear" && q.category!.fields.length) {
+      setDetails({ kind: "gear", category: q.category!, values: {} });
       return;
     }
     if (yes && q.kind === "driving") {
-      setDetails({ kind: "driving", values: { seats: 4 } });
+      setDetails({ kind: "driving", values: { seats: "4" } });
       return;
     }
     if (q.id === "joining" && !yes) {
       try {
         await api.deleteUser(tripId, userId);
       } catch (e) {
-        setError(e.message);
+        setError(e instanceof Error ? e.message : String(e));
         return;
       }
       onNotJoining();
@@ -137,7 +140,7 @@ export default function SignupSwipe() {
 
   const submitDetails = async () => {
     try {
-      await persistAnswer(q, true, details.values);
+      await persistAnswer(q, true, details!.values);
       setDetails(null);
       next();
     } catch {}
@@ -199,18 +202,23 @@ export default function SignupSwipe() {
   );
 }
 
-function SwipeCard({ question, onAnswer, exitDir, hint }) {
+interface SwipeCardProps {
+  question: Question;
+  onAnswer: (yes: boolean) => void;
+  exitDir: "left" | "right" | null;
+  hint: boolean;
+}
+
+function SwipeCard({ question, onAnswer, exitDir, hint }: SwipeCardProps) {
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-220, 220], [-14, 14]);
   const yesOp = useTransform(x, [20, 140], [0, 1]);
   const noOp = useTransform(x, [-140, -20], [1, 0]);
-  // Color-fill overlay: red on the left, green on the right
   const fillOp = useTransform(x, [-180, -20, 0, 20, 180], [0.78, 0, 0, 0, 0.78]);
   const fillBg = useTransform(x, (v) =>
     v < 0 ? "var(--danger)" : "var(--grass-500)"
   );
 
-  // One-time "swipeable" wiggle on the very first card
   useEffect(() => {
     if (!hint) return;
     const controls = animate(x, [0, -26, 22, -14, 12, 0], {
@@ -221,9 +229,7 @@ function SwipeCard({ question, onAnswer, exitDir, hint }) {
     return () => controls.stop();
   }, [hint, x]);
 
-  const onDragEnd = (_, info) => {
-    // Commit the visual direction immediately so it can't be undone by
-    // the drag-release spring back to 0 during the async handleAnswer.
+  const onDragEnd = (_: unknown, info: { offset: { x: number } }) => {
     if (info.offset.x > 120) {
       animate(x, 520, { duration: 0.3, ease: [0.4, 0, 0.2, 1] });
       onAnswer(true);
@@ -243,9 +249,7 @@ function SwipeCard({ question, onAnswer, exitDir, hint }) {
       initial={{ scale: 0.94, opacity: 0, y: 8 }}
       animate={{ scale: 1, opacity: 1, y: 0 }}
       custom={exitDir}
-      exit={(dir) => {
-        // Prefer the current drag/imperative position over `dir` so the
-        // exit can't reverse a swipe that's already committed visually.
+      exit={((dir: string) => {
         const current = x.get();
         const goingLeft =
           Math.abs(current) > 40 ? current < 0 : dir === "left";
@@ -255,11 +259,10 @@ function SwipeCard({ question, onAnswer, exitDir, hint }) {
           opacity: 0,
           transition: { duration: 0.32, ease: [0.4, 0, 0.2, 1] },
         };
-      }}
+      }) as never}
       transition={{ type: "spring", stiffness: 320, damping: 32 }}
       whileTap={{ cursor: "grabbing" }}
     >
-      {/* Colored fill that intensifies as the card is dragged */}
       <motion.div
         className="swipe-card__fill"
         style={{ opacity: fillOp, background: fillBg }}
@@ -292,7 +295,7 @@ function SwipeCard({ question, onAnswer, exitDir, hint }) {
   );
 }
 
-function SwipeActions({ disabled, onNo, onYes }) {
+function SwipeActions({ disabled, onNo, onYes }: { disabled: boolean; onNo: () => void; onYes: () => void }) {
   return (
     <div className="swipe-actions">
       <button
@@ -321,17 +324,7 @@ function SwipeActions({ disabled, onNo, onYes }) {
 
 function CloseIcon() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      width="28"
-      height="28"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M6 6l12 12M18 6l-12 12" />
     </svg>
   );
@@ -339,36 +332,15 @@ function CloseIcon() {
 
 function CheckIcon() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      width="28"
-      height="28"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M5 12.5l4.5 4.5L19 7.5" />
     </svg>
   );
 }
 
-// Double chevrons evoke a swipe motion better than a single arrow
 function SwipeLeftIcon() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      width="18"
-      height="18"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M17 6l-6 6 6 6" />
       <path d="M11 6l-6 6 6 6" />
     </svg>
@@ -377,24 +349,26 @@ function SwipeLeftIcon() {
 
 function SwipeRightIcon() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      width="18"
-      height="18"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M7 6l6 6-6 6" />
       <path d="M13 6l6 6-6 6" />
     </svg>
   );
 }
 
-function DetailForm({ details, setDetails, onCancel, onSubmit, submitting }) {
+type DetailState =
+  | { kind: "gear"; category: Category; values: Record<string, string> }
+  | { kind: "driving"; values: Record<string, string> };
+
+interface DetailFormProps {
+  details: DetailState;
+  setDetails: (d: DetailState | null) => void;
+  onCancel: () => void;
+  onSubmit: () => void;
+  submitting: boolean;
+}
+
+function DetailForm({ details, setDetails, onCancel, onSubmit, submitting }: DetailFormProps) {
   if (details.kind === "gear") {
     return (
       <div className="card" style={{ marginTop: 16 }}>

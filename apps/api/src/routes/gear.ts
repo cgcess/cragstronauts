@@ -1,52 +1,66 @@
-import { Hono } from "hono";
+import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Env } from "../types";
 import { getTripDO } from "../do";
+import {
+  listCategoriesRoute,
+  addCategoryRoute,
+  deleteCategoryRoute,
+  listGearRoute,
+  addGearRoute,
+  deleteGearRoute,
+} from "@cragstronauts/contract";
 
-export const gearRoutes = new Hono<{ Bindings: Env }>();
+export const gearRoutes = new OpenAPIHono<{ Bindings: Env }>();
 
 // Gear categories
-gearRoutes.get("/api/trips/:trip_id/gear-categories", async (c) => {
-  const stub = getTripDO(c.env, c.req.param("trip_id"));
+gearRoutes.openapi(listCategoriesRoute, async (c) => {
+  const { trip_id: tripId } = c.req.valid("param");
+  const stub = getTripDO(c.env, tripId);
   const categories = await stub.listCategories();
-  return c.json(categories);
+  return c.json([...categories], 200);
 });
 
-gearRoutes.post("/api/trips/:trip_id/gear-categories", async (c) => {
-  const stub = getTripDO(c.env, c.req.param("trip_id"));
-  const body = await c.req.json();
+gearRoutes.openapi(addCategoryRoute, async (c) => {
+  const { trip_id: tripId } = c.req.valid("param");
+  const body = c.req.valid("json");
+  const stub = getTripDO(c.env, tripId);
   const cat = await stub.addCategory(body);
-  return c.json(cat);
+  return c.json(cat, 200);
 });
 
-gearRoutes.delete("/api/trips/:trip_id/gear-categories/:cat_id", async (c) => {
-  const stub = getTripDO(c.env, c.req.param("trip_id"));
-  const catId = Number(c.req.param("cat_id"));
+gearRoutes.openapi(deleteCategoryRoute, async (c) => {
+  const { trip_id: tripId, cat_id } = c.req.valid("param");
+  const catId = Number(cat_id);
+  const stub = getTripDO(c.env, tripId);
   const result = await stub.deleteCategory(catId);
-  return c.json(result);
+  return c.json(result, 200);
 });
 
 // Gear contributions
-gearRoutes.get("/api/trips/:trip_id/gear", async (c) => {
-  const stub = getTripDO(c.env, c.req.param("trip_id"));
+gearRoutes.openapi(listGearRoute, async (c) => {
+  const { trip_id: tripId } = c.req.valid("param");
+  const stub = getTripDO(c.env, tripId);
   const gear = await stub.listGear();
-  return c.json(gear);
+  return c.json([...gear], 200);
 });
 
-gearRoutes.post("/api/trips/:trip_id/gear", async (c) => {
-  const stub = getTripDO(c.env, c.req.param("trip_id"));
-  const body = await c.req.json();
+gearRoutes.openapi(addGearRoute, async (c) => {
+  const { trip_id: tripId } = c.req.valid("param");
+  const body = c.req.valid("json");
   try {
+    const stub = getTripDO(c.env, tripId);
     const contrib = await stub.addGear(body);
-    return c.json(contrib);
+    return c.json(contrib, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return c.json({ detail: msg }, 400);
   }
 });
 
-gearRoutes.delete("/api/trips/:trip_id/gear/:contrib_id", async (c) => {
-  const stub = getTripDO(c.env, c.req.param("trip_id"));
-  const contribId = Number(c.req.param("contrib_id"));
+gearRoutes.openapi(deleteGearRoute, async (c) => {
+  const { trip_id: tripId, contrib_id } = c.req.valid("param");
+  const contribId = Number(contrib_id);
+  const stub = getTripDO(c.env, tripId);
   const result = await stub.deleteGear(contribId);
-  return c.json(result);
+  return c.json(result, 200);
 });

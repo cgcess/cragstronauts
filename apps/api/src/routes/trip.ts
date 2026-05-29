@@ -1,17 +1,24 @@
-import { Hono } from "hono";
+import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Env } from "../types";
 import { getTripDO, getTripIndexDO } from "../do";
+import {
+  listTripsRoute,
+  createTripRoute,
+  getTripRoute,
+  updateTripRoute,
+  deleteTripRoute,
+} from "@cragstronauts/contract";
 
-export const tripRoutes = new Hono<{ Bindings: Env }>();
+export const tripRoutes = new OpenAPIHono<{ Bindings: Env }>();
 
-tripRoutes.get("/api/trips", async (c) => {
+tripRoutes.openapi(listTripsRoute, async (c) => {
   const index = getTripIndexDO(c.env);
   const trips = await index.listTrips();
-  return c.json(trips);
+  return c.json([...trips], 200);
 });
 
-tripRoutes.post("/api/trips", async (c) => {
-  const body = await c.req.json();
+tripRoutes.openapi(createTripRoute, async (c) => {
+  const body = c.req.valid("json");
   try {
     const id = c.env.TRIP_DO.newUniqueId();
     const tripId = id.toString();
@@ -25,35 +32,35 @@ tripRoutes.post("/api/trips", async (c) => {
       end_date: body.end_date ?? null,
     });
 
-    return c.json({ trip_id: tripId, organizer_user_id: result.organizer_user_id });
+    return c.json({ trip_id: tripId, organizer_user_id: result.organizer_user_id }, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return c.json({ detail: msg }, 400);
   }
 });
 
-tripRoutes.get("/api/trips/:trip_id", async (c) => {
-  const tripId = c.req.param("trip_id");
+tripRoutes.openapi(getTripRoute, async (c) => {
+  const { trip_id: tripId } = c.req.valid("param");
   const stub = getTripDO(c.env, tripId);
   const trip = await stub.getTrip();
   if (!trip) return c.json({ detail: "Trip not found" }, 404);
-  return c.json(trip);
+  return c.json(trip, 200);
 });
 
-tripRoutes.patch("/api/trips/:trip_id", async (c) => {
-  const tripId = c.req.param("trip_id");
-  const body = await c.req.json();
+tripRoutes.openapi(updateTripRoute, async (c) => {
+  const { trip_id: tripId } = c.req.valid("param");
+  const body = c.req.valid("json");
   try {
     const stub = getTripDO(c.env, tripId);
     const trip = await stub.updateTrip(body);
     // Keep the listing index in sync — location/dates power the trip list.
     const index = getTripIndexDO(c.env);
     await index.updateTrip(tripId, {
-      location: trip.location as string,
-      start_date: (trip.start_date as string | null) ?? null,
-      end_date: (trip.end_date as string | null) ?? null,
+      location: trip.location,
+      start_date: trip.start_date,
+      end_date: trip.end_date,
     });
-    return c.json(trip);
+    return c.json(trip, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg === "Trip not found") return c.json({ detail: msg }, 404);
@@ -61,14 +68,14 @@ tripRoutes.patch("/api/trips/:trip_id", async (c) => {
   }
 });
 
-tripRoutes.delete("/api/trips/:trip_id", async (c) => {
-  const tripId = c.req.param("trip_id");
+tripRoutes.openapi(deleteTripRoute, async (c) => {
+  const { trip_id: tripId } = c.req.valid("param");
   try {
     const stub = getTripDO(c.env, tripId);
     await stub.destroy();
     const index = getTripIndexDO(c.env);
     await index.unregisterTrip(tripId);
-    return c.json({ ok: true });
+    return c.json({ ok: true }, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return c.json({ detail: msg }, 400);

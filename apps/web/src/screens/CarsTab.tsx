@@ -1,16 +1,17 @@
 import React, { useState } from "react";
 import { useOutletContext } from "react-router";
-import { api } from "../api.js";
-import Linkify from "../components/Linkify.jsx";
-import { useTripContext } from "../context/TripContext.jsx";
+import { api } from "../api";
+import Linkify from "../components/Linkify";
+import { useTripContext } from "../context/TripContext";
+import type { TabsOutletContext } from "./TabsLayout";
 
 export default function CarsTab() {
-  const { tripId, trip, users, currentUserId } = useTripContext();
-  const { cars, reload: onChanged } = useOutletContext();
+  const { tripId, currentUserId } = useTripContext();
+  const { cars, reload: onChanged } = useOutletContext<TabsOutletContext>();
   const [adding, setAdding] = useState(false);
-  const [seats, setSeats] = useState(4);
+  const [seats, setSeats] = useState("4");
   const [notes, setNotes] = useState("");
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   const myCar = cars.find((c) => c.driver_user_id === currentUserId);
 
@@ -18,7 +19,7 @@ export default function CarsTab() {
     setError(null);
     try {
       await api.createCar(tripId, {
-        driver_user_id: currentUserId,
+        driver_user_id: currentUserId!,
         total_seats: Number(seats),
         notes: notes.trim() || null,
       });
@@ -26,7 +27,7 @@ export default function CarsTab() {
       setNotes("");
       onChanged();
     } catch (e) {
-      setError(e.message);
+      setError(e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -50,7 +51,7 @@ export default function CarsTab() {
           <div className="card" key={c.id}>
             <div className="row between">
               <div>
-                <div style={{ fontWeight: 600 }}>{c.driver_name}'s car</div>
+                <div style={{ fontWeight: 600 }}>{c.driver_name}&apos;s car</div>
                 <div className="muted" style={{ fontSize: 13 }}>
                   {c.total_seats} seats · {passengerCount}/{passengerCapacity} passengers
                 </div>
@@ -84,7 +85,7 @@ export default function CarsTab() {
                       className="ghost"
                       style={{ padding: "0 4px", color: "var(--danger)" }}
                       onClick={async () => {
-                        await api.carSignoff(tripId, c.id, currentUserId);
+                        await api.carSignoff(tripId, c.id, currentUserId!);
                         onChanged();
                       }}
                     >
@@ -101,10 +102,10 @@ export default function CarsTab() {
                   onClick={async () => {
                     setError(null);
                     try {
-                      await api.carSignup(tripId, c.id, currentUserId);
+                      await api.carSignup(tripId, c.id, currentUserId!);
                       onChanged();
                     } catch (e) {
-                      setError(e.message);
+                      setError(e instanceof Error ? e.message : String(e));
                     }
                   }}
                   style={{

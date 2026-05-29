@@ -3,6 +3,10 @@ import { migrate, createDb, eq, type Database } from "do-orm";
 import type { Env } from "./types";
 import { indexMigrations } from "./db/index-migrations";
 import { tripIndex } from "./db/index-schema";
+import type { z } from "zod";
+import type { TripIndexEntrySchema } from "@cragstronauts/contract";
+
+type TripIndexEntry = z.infer<typeof TripIndexEntrySchema>;
 
 export class TripIndexDO extends DurableObject<Env> {
   db: Database;
@@ -16,8 +20,8 @@ export class TripIndexDO extends DurableObject<Env> {
     });
   }
 
-  async listTrips(): Promise<Record<string, unknown>[]> {
-    return this.db.all(tripIndex);
+  async listTrips(): Promise<TripIndexEntry[]> {
+    return this.db.all(tripIndex) as TripIndexEntry[];
   }
 
   async registerTrip(

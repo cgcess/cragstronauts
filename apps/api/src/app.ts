@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { OpenAPIHono } from "@hono/zod-openapi";
 import { cors } from "hono/cors";
 import type { Env } from "./types";
 import { tripRoutes } from "./routes/trip";
@@ -7,7 +7,7 @@ import { gearRoutes } from "./routes/gear";
 import { carRoutes } from "./routes/cars";
 
 export const createApp = () => {
-  const app = new Hono<{ Bindings: Env }>();
+  const app = new OpenAPIHono<{ Bindings: Env }>();
 
   app.use("/api/*", cors({ origin: "*" }));
 
@@ -18,3 +18,5 @@ export const createApp = () => {
 
   return app;
 };
+
+export type AppType = ReturnType<typeof createApp>;

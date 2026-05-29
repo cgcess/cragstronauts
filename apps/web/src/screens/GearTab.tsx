@@ -1,26 +1,27 @@
 import React, { useState } from "react";
 import { useOutletContext } from "react-router";
-import { api } from "../api.js";
-import { useTripContext } from "../context/TripContext.jsx";
+import { api } from "../api";
+import { useTripContext, type Category } from "../context/TripContext";
+import type { TabsOutletContext } from "./TabsLayout";
 
 export default function GearTab() {
-  const { tripId, trip, categories, currentUserId } = useTripContext();
-  const { gear, reload: onChanged } = useOutletContext();
-  const [addingFor, setAddingFor] = useState(null); // category id
-  const [values, setValues] = useState({});
-  const [error, setError] = useState(null);
+  const { tripId, categories, currentUserId } = useTripContext();
+  const { gear, reload: onChanged } = useOutletContext<TabsOutletContext>();
+  const [addingFor, setAddingFor] = useState<number | null>(null); // category id
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string | null>(null);
 
-  const byCat = {};
+  const byCat: Record<number, typeof gear> = {};
   for (const c of categories) byCat[c.id] = [];
   for (const g of gear) {
     if (byCat[g.category_id]) byCat[g.category_id].push(g);
   }
 
-  const addContribution = async (cat) => {
+  const addContribution = async (cat: Category) => {
     setError(null);
     try {
       await api.addGear(tripId, {
-        user_id: currentUserId,
+        user_id: currentUserId!,
         category_id: cat.id,
         details: values,
       });
@@ -28,7 +29,7 @@ export default function GearTab() {
       setValues({});
       onChanged();
     } catch (e) {
-      setError(e.message);
+      setError(e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -49,7 +50,7 @@ export default function GearTab() {
           </div>
 
           {byCat[cat.id].length === 0 && (
-            <p className="muted" style={{ fontSize: 14 }}>Nobody's bringing one yet.</p>
+            <p className="muted" style={{ fontSize: 14 }}>Nobody&apos;s bringing one yet.</p>
           )}
           {byCat[cat.id].map((g) => (
             <div className="list-item" key={g.id}>
@@ -119,7 +120,7 @@ export default function GearTab() {
               }}
               style={{ marginTop: 10 }}
             >
-              + I'm bringing one
+              + I&apos;m bringing one
             </button>
           )}
         </div>
@@ -128,7 +129,7 @@ export default function GearTab() {
   );
 }
 
-function labelFor(cat, key) {
+function labelFor(cat: Category, key: string): string {
   const f = cat.fields.find((f) => f.key === key);
   return f ? f.label : key;
 }

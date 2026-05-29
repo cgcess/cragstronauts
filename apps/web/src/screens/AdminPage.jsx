@@ -40,6 +40,12 @@ export default function AdminPage() {
             categories={categories}
             onChanged={refresh}
           />
+          <MembersSection
+            tripId={tripId}
+            users={users}
+            currentUserId={currentUserId}
+            onChanged={refresh}
+          />
           <DangerSection trip={trip} onDelete={deleteTrip} />
         </div>
       </div>
@@ -257,6 +263,75 @@ function GearCategoriesSection({ tripId, categories, onChanged }) {
           + Add category
         </button>
       )}
+    </section>
+  );
+}
+
+function MembersSection({ tripId, users, currentUserId, onChanged }) {
+  const [error, setError] = useState(null);
+
+  const removeMember = async (userId, userName) => {
+    setError(null);
+    try {
+      const [cars, gear] = await Promise.all([
+        api.listCars(tripId),
+        api.listGear(tripId),
+      ]);
+      const hasCar = cars.some((c) => c.driver_user_id === userId);
+      const hasGear = gear.some((g) => g.user_id === userId);
+
+      let msg = `Remove ${userName} from the trip?`;
+      if (hasCar && hasGear) {
+        msg += "\n\nThey have a car and gear contributions that will also be removed.";
+      } else if (hasCar) {
+        msg += "\n\nThey have a car that will also be removed.";
+      } else if (hasGear) {
+        msg += "\n\nThey have gear contributions that will also be removed.";
+      }
+
+      if (!confirm(msg)) return;
+
+      await api.deleteUser(tripId, userId);
+      await onChanged();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  return (
+    <section className="admin-section">
+      <h2 className="admin-section-title">Members</h2>
+      {error && <div className="admin-error">{error}</div>}
+      {users.length === 0 && (
+        <p className="admin-list-empty">No members yet.</p>
+      )}
+      <div className="admin-list">
+        {users.map((u) => (
+          <div className="admin-list-item" key={u.id}>
+            <span>
+              {u.name}
+              {u.is_organizer && (
+                <span className="admin-muted" style={{ marginLeft: 6 }}>
+                  (organizer)
+                </span>
+              )}
+              {!u.is_organizer && (
+                <span className="admin-muted" style={{ marginLeft: 6 }}>
+                  {u.joining ? "joining" : "not joining"}
+                </span>
+              )}
+            </span>
+            {!u.is_organizer && (
+              <button
+                className="admin-btn-text admin-btn-text--danger"
+                onClick={() => removeMember(u.id, u.name)}
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
     </section>
   );
 }

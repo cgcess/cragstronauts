@@ -12,7 +12,6 @@ import TabsLayout from "./screens/TabsLayout";
 import InfoTab from "./screens/InfoTab";
 import CarsTab from "./screens/CarsTab";
 import GearTab from "./screens/GearTab";
-import AdminPage from "./screens/AdminPage";
 import NotFound from "./screens/NotFound";
 
 import "./styles.css";
@@ -53,7 +52,6 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <Landing /> },
           { path: "signup", element: <SignupSwipe /> },
-          { path: "admin", element: <AdminPage /> },
           {
             element: <TabsLayout />,
             children: [

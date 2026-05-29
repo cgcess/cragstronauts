@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   GearCategorySchema,
   AddGearCategoryBodySchema,
+  UpdateGearCategoryBodySchema,
   GearContributionSchema,
   AddGearBodySchema,
 } from "../schemas/gear";
@@ -49,6 +50,28 @@ export const addCategoryRoute = createRoute({
     200: {
       content: { "application/json": { schema: GearCategorySchema } },
       description: "Category added",
+    },
+  },
+});
+
+export const updateCategoryRoute = createRoute({
+  method: "patch",
+  path: "/api/trips/{trip_id}/gear-categories/{cat_id}",
+  summary: "Update a gear category",
+  request: {
+    params: CategoryParamsSchema,
+    body: {
+      content: { "application/json": { schema: UpdateGearCategoryBodySchema } },
+    },
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: GearCategorySchema } },
+      description: "Category updated",
+    },
+    400: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Error",
     },
   },
 });

@@ -4,6 +4,7 @@ import { getTripDO } from "../do";
 import {
   listCategoriesRoute,
   addCategoryRoute,
+  updateCategoryRoute,
   deleteCategoryRoute,
   listGearRoute,
   addGearRoute,
@@ -26,6 +27,20 @@ gearRoutes.openapi(addCategoryRoute, async (c) => {
   const stub = getTripDO(c.env, tripId);
   const cat = await stub.addCategory(body);
   return c.json(cat, 200);
+});
+
+gearRoutes.openapi(updateCategoryRoute, async (c) => {
+  const { trip_id: tripId, cat_id } = c.req.valid("param");
+  const catId = Number(cat_id);
+  const body = c.req.valid("json");
+  try {
+    const stub = getTripDO(c.env, tripId);
+    const cat = await stub.updateCategory(catId, body);
+    return c.json(cat, 200);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return c.json({ detail: msg }, 400);
+  }
 });
 
 gearRoutes.openapi(deleteCategoryRoute, async (c) => {

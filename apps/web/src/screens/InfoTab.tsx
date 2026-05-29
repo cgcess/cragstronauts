@@ -62,6 +62,39 @@ function snapshotCategories(cats: Category[]): EditableCategory[] {
   }));
 }
 
+function serializeCategories(cats: EditableCategory[]): string {
+  return JSON.stringify(
+    cats.map((c) => ({
+      id: c.id,
+      name: c.name,
+      fields: c.fields.map((f) => ({
+        key: f.key,
+        label: f.label,
+        type: f.type,
+      })),
+    })),
+  );
+}
+
+function editFormIsDirty(
+  form: EditForm | null,
+  baseline: EditForm | null,
+): boolean {
+  if (!form || !baseline) return false;
+  if (form.removedCategoryIds.length > 0) return true;
+  if (
+    form.location !== baseline.location ||
+    form.start_date !== baseline.start_date ||
+    form.end_date !== baseline.end_date ||
+    form.accommodation_type !== baseline.accommodation_type ||
+    form.accommodation_details !== baseline.accommodation_details ||
+    form.notes !== baseline.notes
+  ) {
+    return true;
+  }
+  return serializeCategories(form.categories) !== serializeCategories(baseline.categories);
+}
+
 export default function InfoTab() {
   const {
     tripId,
@@ -103,12 +136,13 @@ export default function InfoTab() {
   // actions doesn't loop.
   const formRef = useRef<EditForm | null>(form);
   formRef.current = form;
+  const baselineRef = useRef<EditForm | null>(null);
   const originalCategoriesRef = useRef<EditableCategory[]>([]);
 
   const startEdit = () => {
     setError(null);
     originalCategoriesRef.current = snapshotCategories(categories);
-    setForm({
+    const baseline: EditForm = {
       location: trip.location || "",
       start_date: trip.start_date || "",
       end_date: trip.end_date || "",
@@ -117,6 +151,14 @@ export default function InfoTab() {
       notes: trip.notes || "",
       categories: snapshotCategories(categories),
       removedCategoryIds: [],
+    };
+    baselineRef.current = baseline;
+    setForm({
+      ...baseline,
+      categories: baseline.categories.map((c) => ({
+        ...c,
+        fields: c.fields.map((f) => ({ ...f })),
+      })),
     });
     setEditing(true);
   };
@@ -125,6 +167,7 @@ export default function InfoTab() {
     setEditing(false);
     setError(null);
     setForm(null);
+    baselineRef.current = null;
   }, []);
 
   const stableSave = useCallback(async () => {
@@ -184,6 +227,7 @@ export default function InfoTab() {
       await reload();
       setEditing(false);
       setForm(null);
+      baselineRef.current = null;
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -203,12 +247,13 @@ export default function InfoTab() {
       onSave: stableSave,
       canSave: !!form?.location?.trim() && !saving,
       saving,
+      isDirty: editFormIsDirty(form, baselineRef.current),
     });
     return () => setEditMode(null);
   }, [
     editing,
     saving,
-    form?.location,
+    form,
     stableCancel,
     stableSave,
     setEditMode,

@@ -7,10 +7,25 @@ import React, {
 } from "react";
 import { useOutletContext } from "react-router";
 import { api } from "../api";
+import DateRangePicker from "../components/DateRangePicker";
 import Linkify from "../components/Linkify";
 import { useTripContext, type Category } from "../context/TripContext";
 import { formatDateRange } from "../dateUtils";
 import type { TabsOutletContext } from "./TabsLayout";
+
+// Same local-date helpers used by the new-trip wizard, so the inline
+// edit picker round-trips the YYYY-MM-DD strings the API expects
+// without timezone drift.
+function toLocalISO(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function isoToDate(iso: string | undefined): Date | undefined {
+  if (!iso) return undefined;
+  return new Date(`${iso}T00:00:00`);
+}
 
 type GearField = { key: string; label: string; type: string };
 type EditableCategory = { id: number | null; name: string; fields: GearField[] };
@@ -309,40 +324,25 @@ export default function InfoTab() {
                 placeholder="e.g. Yosemite Valley"
               />
             </div>
-            <div className="row">
-              <div style={{ flex: 1 }}>
-                <label>Start</label>
-                <input
-                  type="date"
-                  value={form.start_date}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setForm((f) =>
-                      f
-                        ? {
-                            ...f,
-                            start_date: v,
-                            end_date:
-                              f.end_date && f.end_date < v ? v : f.end_date,
-                          }
-                        : f,
-                    );
-                  }}
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label>End</label>
-                <input
-                  type="date"
-                  min={form.start_date || undefined}
-                  value={form.end_date}
-                  onChange={(e) =>
-                    setForm((f) =>
-                      f ? { ...f, end_date: e.target.value } : f,
-                    )
-                  }
-                />
-              </div>
+            <div>
+              <label>When</label>
+              <DateRangePicker
+                value={{
+                  from: isoToDate(form.start_date || undefined),
+                  to: isoToDate(form.end_date || undefined),
+                }}
+                onChange={(r) =>
+                  setForm((f) =>
+                    f
+                      ? {
+                          ...f,
+                          start_date: r?.from ? toLocalISO(r.from) : "",
+                          end_date: r?.to ? toLocalISO(r.to) : "",
+                        }
+                      : f,
+                  )
+                }
+              />
             </div>
           </div>
         </div>

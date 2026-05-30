@@ -50,6 +50,9 @@ export const api = {
     accommodation_type: string | null;
     accommodation_details: string | null;
     notes: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    place_label?: string | null;
     organizer_name: string;
     gear_categories: { name: string; fields: { key: string; label: string; type: string }[] }[];
   }) => req<CreateTripResponse>("POST", "/api/trips", data),

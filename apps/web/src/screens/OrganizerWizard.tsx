@@ -15,6 +15,14 @@ interface CategoryDraft {
   fields: CategoryField[];
 }
 
+interface GeoResult {
+  name: string;
+  admin1?: string;
+  country_code?: string;
+  latitude: number;
+  longitude: number;
+}
+
 const defaultCategories: CategoryDraft[] = [
   {
     name: "Rope",
@@ -66,6 +74,12 @@ export default function OrganizerWizard() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [location, setLocation] = useState("");
+  const [pinLat, setPinLat] = useState<number | null>(null);
+  const [pinLon, setPinLon] = useState<number | null>(null);
+  const [placeLabel, setPlaceLabel] = useState<string | null>(null);
+  const [geoResults, setGeoResults] = useState<GeoResult[]>([]);
+  const [geoSearching, setGeoSearching] = useState(false);
+  const [geoSearched, setGeoSearched] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [accomType, setAccomType] = useState("campsite");
@@ -88,6 +102,42 @@ export default function OrganizerWizard() {
     setEndDate(r?.to ? toLocalISO(r.to) : "");
   };
 
+  const labelForGeo = (r: GeoResult) =>
+    [r.name, r.admin1, r.country_code].filter(Boolean).join(", ");
+
+  const geoSearch = async () => {
+    if (!location.trim()) return;
+    setGeoSearching(true);
+    setGeoSearched(false);
+    try {
+      const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
+        location.trim(),
+      )}&count=6&language=en&format=json`;
+      const r = await fetch(url);
+      const d = (await r.json()) as { results?: GeoResult[] };
+      setGeoResults(d.results || []);
+    } catch {
+      setGeoResults([]);
+    } finally {
+      setGeoSearched(true);
+      setGeoSearching(false);
+    }
+  };
+
+  const pickPlace = (r: GeoResult) => {
+    setPinLat(r.latitude);
+    setPinLon(r.longitude);
+    setPlaceLabel(labelForGeo(r));
+    setGeoResults([]);
+    setGeoSearched(false);
+  };
+
+  const clearPin = () => {
+    setPinLat(null);
+    setPinLon(null);
+    setPlaceLabel(null);
+  };
+
   // Dates are valid if: both empty, or start <= end
   const datesValid = !startDate || !endDate || startDate <= endDate;
 
@@ -102,6 +152,9 @@ export default function OrganizerWizard() {
         accommodation_type: accomType,
         accommodation_details: accomDetails.trim() || null,
         notes: notes.trim() || null,
+        latitude: pinLat,
+        longitude: pinLon,
+        place_label: placeLabel,
         organizer_name: organizerName.trim(),
         gear_categories: categories
           .filter((c) => c.name.trim())
@@ -173,11 +226,65 @@ export default function OrganizerWizard() {
             >
               <motion.div variants={item}>
                 <label>Where are we climbing? *</label>
-                <input
-                  placeholder="e.g. Yosemite Valley"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                />
+                <div className="row" style={{ gap: 6 }}>
+                  <input
+                    placeholder="e.g. Yosemite Valley"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        geoSearch();
+                      }
+                    }}
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={geoSearch}
+                    disabled={geoSearching || !location.trim()}
+                  >
+                    {geoSearching ? "…" : "Find"}
+                  </button>
+                </div>
+
+                {placeLabel ? (
+                  <div className="list-item" style={{ marginTop: 8 }}>
+                    <span>📍 {placeLabel}</span>
+                    <button type="button" className="ghost" onClick={clearPin}>
+                      Clear
+                    </button>
+                  </div>
+                ) : (
+                  <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                    Search and pin a place to load the weather forecast.
+                    Optional — you can set it later.
+                  </p>
+                )}
+
+                {geoResults.length > 0 && (
+                  <div style={{ marginTop: 8 }}>
+                    {geoResults.map((r, i) => (
+                      <div className="list-item" key={i}>
+                        <span>{labelForGeo(r)}</span>
+                        <button
+                          type="button"
+                          className="ghost"
+                          onClick={() => pickPlace(r)}
+                        >
+                          Pin
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {geoSearched && geoResults.length === 0 && !placeLabel && (
+                  <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>
+                    No matches — you can still create the trip and pin the exact
+                    spot later.
+                  </p>
+                )}
               </motion.div>
 
               <motion.div variants={item}>

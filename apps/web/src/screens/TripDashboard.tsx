@@ -17,6 +17,109 @@ type Contribution = z.infer<typeof GearContributionSchema>;
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
 /* ------------------------------------------------------------------ */
+/* Share + add-to-calendar                                             */
+/* ------------------------------------------------------------------ */
+
+type ShareableTrip = {
+  location: string;
+  start_date: string | null;
+  end_date: string | null;
+  accommodation_details: string | null;
+  notes: string | null;
+  place_label: string | null;
+  latitude: number | null;
+  longitude: number | null;
+};
+
+/** Escape a value for an iCalendar TEXT field (RFC 5545 §3.3.11). */
+function icsEscape(value: string): string {
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\r?\n/g, "\\n");
+}
+
+/** ISO date ("2026-05-28") → iCalendar DATE value ("20260528"). */
+function icsDate(isoDate: string): string {
+  return isoDate.replace(/-/g, "");
+}
+
+/** Add whole days to an ISO date string, returning a new ISO date. */
+function addDaysIso(isoDate: string, days: number): string {
+  const d = new Date(isoDate + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Build an all-day VEVENT .ics document for a trip. Opening the file triggers
+ * the native "add to calendar" flow on both iOS (Apple Calendar) and Android
+ * (Google Calendar). Returns null when the trip has no dates to anchor to.
+ */
+function buildTripIcs(trip: ShareableTrip, url: string): string | null {
+  const start = trip.start_date || trip.end_date;
+  if (!start) return null;
+  // DTEND is exclusive for all-day events → the day after the last day.
+  const end = addDaysIso(trip.end_date || start, 1);
+  const stamp =
+    new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const uid = `${icsDate(start)}-${Math.random().toString(36).slice(2)}@cragstronauts`;
+
+  const place = [trip.place_label || trip.location, trip.accommodation_details]
+    .filter(Boolean)
+    .join(" · ");
+  const description = [trip.notes, `Trip details: ${url}`]
+    .filter(Boolean)
+    .join("\n");
+
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Cragstronauts//Trip//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:${uid}`,
+    `DTSTAMP:${stamp}`,
+    `SUMMARY:${icsEscape("🧗 " + trip.location)}`,
+    `DTSTART;VALUE=DATE:${icsDate(start)}`,
+    `DTEND;VALUE=DATE:${icsDate(end)}`,
+    `LOCATION:${icsEscape(place)}`,
+    `DESCRIPTION:${icsEscape(description)}`,
+    `URL:${icsEscape(url)}`,
+  ];
+  if (trip.latitude != null && trip.longitude != null) {
+    lines.push(`GEO:${trip.latitude};${trip.longitude}`);
+  }
+  lines.push("END:VEVENT", "END:VCALENDAR");
+  return lines.join("\r\n");
+}
+
+/** Slugify a trip name into a safe download filename stem. */
+function slugify(value: string): string {
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "trip"
+  );
+}
+
+/** Hand the .ics off to the OS so the native calendar app can import it. */
+function openCalendarFile(filename: string, ics: string) {
+  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  const href = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = href;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(href), 1000);
+}
+
+/* ------------------------------------------------------------------ */
 /* Weather                                                             */
 /* ------------------------------------------------------------------ */
 
@@ -221,7 +324,38 @@ export default function TripDashboard() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingHero, setEditingHero] = useState(false);
   const [weatherSheetOpen, setWeatherSheetOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const initExpanded = useRef(false);
+
+  const shareTrip = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: trip.location,
+          text: `Join the "${trip.location}" climbing trip`,
+          url,
+        });
+        return;
+      } catch (e) {
+        // User dismissed the native share sheet — don't fall back to copy.
+        if (e instanceof DOMException && e.name === "AbortError") return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2200);
+    } catch {
+      window.prompt("Copy this trip link:", url);
+    }
+  };
+
+  const addToCalendar = () => {
+    const ics = buildTripIcs(trip, window.location.href);
+    if (!ics) return;
+    openCalendarFile(`${slugify(trip.location)}.ics`, ics);
+  };
 
   const reload = async () => {
     setError(null);
@@ -541,6 +675,36 @@ export default function TripDashboard() {
               )}
             </div>
           )}
+          <div className="fl-detail-hero__actions">
+            <button
+              type="button"
+              className={"fl-hero-action" + (copied ? " is-copied" : "")}
+              onClick={shareTrip}
+            >
+              {copied ? (
+                "Link copied!"
+              ) : (
+                <>
+                  <span className="fl-hero-action__icon" aria-hidden="true">
+                    📲
+                  </span>
+                  Share trip
+                </>
+              )}
+            </button>
+            {(trip.start_date || trip.end_date) && (
+              <button
+                type="button"
+                className="fl-hero-action"
+                onClick={addToCalendar}
+              >
+                <span className="fl-hero-action__icon" aria-hidden="true">
+                  📅
+                </span>
+                Add to calendar
+              </button>
+            )}
+          </div>
         </div>
         )}
 
@@ -1035,18 +1199,6 @@ function HeroEdit({
   const [notes, setNotes] = useState(trip.notes || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-
-  const share = async () => {
-    const url = window.location.href;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      window.prompt("Copy this trip link:", url);
-    }
-  };
 
   const save = async () => {
     setError(null);
@@ -1127,9 +1279,6 @@ function HeroEdit({
             {saving ? "Saving…" : "Save changes"}
           </button>
         </div>
-        <button className="secondary" onClick={share}>
-          {copied ? "Link copied ✓" : "Share trip link"}
-        </button>
         <DangerZone tripLocation={trip.location} onDelete={deleteTrip} />
       </div>
     </div>

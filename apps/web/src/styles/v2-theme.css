@@ -1,0 +1,1125 @@
+/* ============================================================
+   v2 theme — Flighty-inspired dark mode, weather-app layout.
+   Loaded AFTER styles.css so it overrides semantic tokens.
+   ============================================================ */
+
+:root {
+  /* Flighty palette */
+  --fl-bg:            #05070b;
+  --fl-surface:       #0c1014;
+  --fl-surface-2:     #161b22;
+  --fl-surface-3:     #1f262f;
+  --fl-glass:         rgba(14, 17, 22, 0.78);
+  --fl-glass-strong:  rgba(8, 10, 14, 0.92);
+  --fl-divider:       rgba(255, 255, 255, 0.06);
+
+  --fl-fg:            #f5f7fa;
+  --fl-fg-2:          #c5cbd4;
+  --fl-fg-3:          #7f8794;
+  --fl-fg-mute:       #4f5663;
+
+  --fl-accent:        #b29a82;
+  --fl-accent-soft:   rgba(178, 154, 130, 0.18);
+  --fl-accent-ring:   rgba(178, 154, 130, 0.38);
+  --fl-past:          #6c6760;
+  --fl-now:           #ffb55a;
+  --fl-danger:        #ff6b6b;
+
+  --fl-font-display:  "Funnel Display", system-ui, -apple-system, sans-serif;
+  --fl-font-body:     "Geist", system-ui, -apple-system, sans-serif;
+  --fl-font-mono:     "SF Mono", ui-monospace, Menlo, monospace;
+
+  --fl-radius-card:   18px;
+  --fl-radius-pill:   999px;
+  --fl-shadow-card:   0 8px 24px rgba(0, 0, 0, 0.35);
+
+  --fl-ease-out:      cubic-bezier(0.23, 1, 0.32, 1);
+
+  /* Rebind semantic tokens so existing screens re-theme automatically. */
+  --bg:        var(--fl-bg);
+  --bg-elev:   var(--fl-surface);
+  --bg-card:   var(--fl-surface-2);
+  --fg:        var(--fl-fg);
+  --muted:     var(--fl-fg-3);
+  --accent:    var(--fl-accent);
+  --accent-2:  var(--fl-accent);
+  --border:    var(--fl-divider);
+  --danger:    var(--fl-danger);
+
+  /* Rebind the BASE palette tokens too — there are ~110 rules in
+     styles.css that reference --green-*, --brown-*, --stone-*, --grass-*
+     directly (not through --accent), so we have to remap the family
+     to flighty equivalents or those rules will keep painting green/cream. */
+
+  /* Canvas / surfaces */
+  --stone-50:  var(--fl-bg);
+  --stone-100: var(--fl-surface);
+  --stone-200: var(--fl-divider);
+  --stone-300: rgba(255, 255, 255, 0.12);
+  --stone-900: var(--fl-fg);
+
+  /* Earth / rock — used for text + buttons + step indicators */
+  --brown-300: var(--fl-accent);
+  --brown-400: var(--fl-fg-3);
+  --brown-500: var(--fl-fg-3);
+  --brown-600: var(--fl-fg-3);
+  --brown-700: var(--fl-fg-2);
+  --brown-900: var(--fl-fg);
+
+  /* Polo / forest greens — used as the previous accent family.
+     Map everything to the warm stone accent so no green slips through. */
+  --green-100: rgba(178, 154, 130, 0.10);
+  --green-200: rgba(178, 154, 130, 0.18);
+  --green-300: var(--fl-accent);
+  --green-400: var(--fl-accent);
+  --green-500: var(--fl-accent);
+  --green-600: var(--fl-accent);
+  --green-700: var(--fl-accent);    /* used as both bg AND text — pick text-legible */
+  --green-900: rgba(0, 0, 0, 0.4);  /* used in btn-3d depth shadows */
+
+  /* Alpine accents — also map to stone accent */
+  --grass-500: var(--fl-accent);
+  --grass-700: var(--fl-accent);
+}
+
+html { background: var(--fl-bg); }
+
+/* Dim the rock photo so dark UI sits comfortably over it.
+   Keeps Colin's "the rock background is nice" without fighting contrast. */
+.alps-bg::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(5,7,11,0.78) 0%, rgba(5,7,11,0.92) 100%);
+  pointer-events: none;
+}
+.alps-bg {
+  filter: saturate(0.7) brightness(0.55);
+}
+.alps-bg-credit {
+  color: rgba(245, 247, 250, 0.35) !important;
+}
+
+/* ----------  Type overrides  ---------- */
+.h1 {
+  color: var(--fl-fg);
+  font-family: var(--fl-font-display);
+}
+.h2 {
+  color: var(--fl-fg-2);
+  font-family: var(--fl-font-display);
+}
+.muted { color: var(--fl-fg-3); }
+
+/* ----------  Cards re-themed for dark  ---------- */
+.card {
+  background: var(--fl-surface-2);
+  border: 1px solid var(--fl-divider);
+  border-radius: var(--fl-radius-card);
+  box-shadow: var(--fl-shadow-card);
+  color: var(--fl-fg);
+  padding: 18px;
+  margin: 12px 0;
+}
+
+/* List items inside InfoTab roster / gear categories */
+.list-item {
+  background: var(--fl-surface-2);
+  border: 1px solid var(--fl-divider);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin: 6px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--fl-fg);
+}
+
+/* Pills */
+.pill {
+  background: var(--fl-surface-3);
+  color: var(--fl-fg-2);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.pill.accent {
+  background: var(--fl-accent-soft);
+  color: var(--fl-accent);
+  box-shadow: inset 0 0 0 1px var(--fl-accent-ring);
+}
+
+/* ----------  Inputs re-themed  ---------- */
+input, select, textarea {
+  background: var(--fl-surface-3);
+  color: var(--fl-fg);
+  border: 1px solid var(--fl-divider);
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--fl-accent);
+  box-shadow: 0 0 0 3px var(--fl-accent-soft);
+}
+label { color: var(--fl-fg-3); }
+
+/* ----------  Buttons re-themed  ---------- */
+button { background: var(--fl-surface-3); color: var(--fl-fg); }
+
+button.secondary {
+  background: var(--fl-surface-2);
+  color: var(--fl-fg-2);
+  border: 1px solid var(--fl-divider);
+}
+button.secondary:hover { background: var(--fl-surface-3); }
+
+/* Override 3D button to use accent stone color */
+button.btn-3d {
+  background: linear-gradient(180deg, #c5ad94 0%, #8c7660 100%);
+  color: var(--fl-bg);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.35),
+    0 5px 0 0 #6e5a48,
+    0 6px 0 0 #4a3a2e,
+    0 14px 28px -10px rgba(0, 0, 0, 0.65);
+}
+button.btn-3d.btn-3d--earth {
+  background: linear-gradient(180deg, var(--fl-surface-3) 0%, var(--fl-surface) 100%);
+  color: var(--fl-fg-2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.5),
+    0 5px 0 0 #0a0d11,
+    0 6px 0 0 #05070b,
+    0 14px 28px -10px rgba(0, 0, 0, 0.65);
+}
+
+/* Floating glass nav pills + nav-cap on dark */
+.glass-surface {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+  border: 1px solid var(--fl-divider);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    inset 0 -1px 0 rgba(0,0,0,0.4),
+    0 8px 20px -8px rgba(0,0,0,0.7);
+}
+.glass-surface::before { display: none; }
+
+button.nav-pill { color: var(--fl-fg-2); }
+button.nav-pill:hover { color: var(--fl-fg); }
+.nav-cap { color: var(--fl-fg-2); }
+.nav-cap strong { color: var(--fl-fg); }
+
+/* Tabbar dark */
+.tabbar a {
+  color: var(--fl-fg-3);
+  font-family: var(--fl-font-display);
+}
+.tabbar a.active { color: var(--fl-bg); }
+.tabbar .tab-pill {
+  background: var(--fl-accent);
+  box-shadow: 0 4px 14px rgba(178, 154, 130, 0.35);
+}
+
+/* Fade overlays: switch to dark wash */
+.fade-overlay--top {
+  background: linear-gradient(180deg,
+    rgba(5,7,11,0.92) 0%,
+    rgba(5,7,11,0.55) 55%,
+    rgba(5,7,11,0) 100%);
+}
+.fade-overlay--bottom {
+  background: linear-gradient(0deg,
+    rgba(5,7,11,0.92) 0%,
+    rgba(5,7,11,0.55) 55%,
+    rgba(5,7,11,0) 100%);
+}
+
+/* ============================================================
+   New components — trip list + hero
+   ============================================================ */
+
+.fl-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 24px;
+}
+
+.fl-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--fl-font-display);
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  color: var(--fl-fg);
+  padding: 4px 4px 0;
+  position: relative;
+  z-index: 6;
+}
+.fl-brand__sub {
+  position: relative;
+  z-index: 6;
+}
+.fl-brand__glyph {
+  font-size: 22px;
+  filter: grayscale(0.2);
+}
+.fl-brand__sub {
+  color: var(--fl-fg-3);
+  font-size: 13px;
+  margin: 2px 4px 12px;
+  font-family: var(--fl-font-body);
+}
+
+.fl-section-label {
+  font-family: var(--fl-font-body);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fl-fg-3);
+  margin: 14px 4px 6px;
+}
+
+/* ---------- Trip card (compact list row) ---------- */
+.fl-trip-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: 14px;
+  align-items: center;
+  width: 100%;
+  padding: 14px;
+  border-radius: var(--fl-radius-card);
+  background: var(--fl-surface-2);
+  border: 1px solid var(--fl-divider);
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font-family: var(--fl-font-body);
+  overflow: hidden;
+  transition: background 180ms var(--fl-ease-out), border-color 180ms var(--fl-ease-out);
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.fl-trip-card:hover { background: var(--fl-surface-3); border-color: rgba(255,255,255,0.1); }
+.fl-trip-card:focus-visible { outline: 2px solid var(--fl-accent-ring); outline-offset: 2px; }
+.fl-trip-card--past { filter: saturate(0.6); }
+
+.fl-trip-card__count-col {
+  display: flex; flex-direction: column;
+  align-items: flex-start; justify-content: center;
+  min-width: 0;
+}
+.fl-trip-card__count {
+  font-family: var(--fl-font-display);
+  font-weight: 800;
+  font-size: 44px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--fl-fg);
+  font-variant-numeric: tabular-nums;
+}
+.fl-trip-card--past .fl-trip-card__count { font-weight: 600; color: var(--fl-past); }
+.fl-trip-card__label {
+  margin-top: 6px;
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--fl-fg-3);
+}
+
+.fl-now-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px; border-radius: 999px;
+  background: rgba(255, 181, 90, 0.16); color: var(--fl-now);
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  box-shadow: 0 0 0 1px rgba(255,181,90,0.35), 0 0 18px rgba(255,181,90,0.25);
+}
+.fl-now-pill::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--fl-now); box-shadow: 0 0 8px var(--fl-now);
+}
+
+.fl-trip-card__details {
+  display: flex; flex-direction: column; gap: 6px;
+  min-width: 0; padding-right: 10px;
+}
+.fl-trip-card__meta {
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+}
+.fl-trip-card__icon { font-size: 14px; line-height: 1; color: var(--fl-fg-3); }
+.fl-trip-card__code {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px;
+  font-family: var(--fl-font-mono);
+  font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
+  color: var(--fl-fg-2); background: var(--fl-surface-3);
+  border-radius: 999px;
+}
+.fl-trip-card__title {
+  font-family: var(--fl-font-display);
+  font-weight: 700;
+  font-size: 22px; line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--fl-fg); margin: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fl-trip-card__dates {
+  font-size: 13px; color: var(--fl-fg-2);
+}
+.fl-trip-card__dates--muted { color: var(--fl-fg-mute); font-style: italic; }
+.fl-trip-card__accent {
+  position: absolute; top: 14px; bottom: 14px; right: 6px;
+  width: 2px; border-radius: 2px; background: var(--fl-accent);
+}
+.fl-trip-card--past .fl-trip-card__accent { background: var(--fl-past); }
+.fl-trip-card--now .fl-trip-card__accent {
+  background: var(--fl-now);
+  box-shadow: 0 0 10px rgba(255, 181, 90, 0.5);
+}
+
+/* ---------- Trip HERO card (weather-app pattern) ---------- */
+.fl-hero {
+  position: relative;
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 22px;
+  border-radius: 24px;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 0%, rgba(178,154,130,0.16) 0%, transparent 70%),
+    linear-gradient(180deg, var(--fl-surface-2) 0%, var(--fl-surface) 100%);
+  border: 1px solid var(--fl-divider);
+  box-shadow: var(--fl-shadow-card);
+  color: var(--fl-fg);
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  font-family: var(--fl-font-body);
+}
+.fl-hero:hover { border-color: rgba(255,255,255,0.12); }
+.fl-hero__top {
+  display: flex; align-items: center; gap: 10px;
+  color: var(--fl-fg-3); font-size: 11px;
+  letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700;
+}
+.fl-hero__top .fl-trip-card__code {
+  background: rgba(178,154,130,0.16);
+  color: var(--fl-accent);
+}
+.fl-hero__countdown {
+  display: flex; align-items: baseline; gap: 12px;
+  margin-top: 2px;
+}
+.fl-hero__countdown-num {
+  font-family: var(--fl-font-display);
+  font-weight: 800;
+  font-size: 96px;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  color: var(--fl-fg);
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(180deg, var(--fl-fg) 0%, #d6c2a8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.fl-hero__countdown-label {
+  font-size: 14px; font-weight: 600;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--fl-fg-3);
+}
+.fl-hero__title {
+  font-family: var(--fl-font-display);
+  font-weight: 700;
+  font-size: 30px;
+  line-height: 1.1; letter-spacing: -0.015em;
+  margin: 0;
+  color: var(--fl-fg);
+}
+.fl-hero__dates {
+  font-size: 14px; color: var(--fl-fg-2);
+}
+.fl-hero__cta {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 6px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: var(--fl-accent);
+  color: var(--fl-bg);
+  font-weight: 700; font-size: 13px;
+  letter-spacing: 0.02em;
+  align-self: flex-start;
+}
+.fl-hero__accent-glow {
+  position: absolute; pointer-events: none;
+  inset: -40% -40% auto auto;
+  width: 220px; height: 220px;
+  background: radial-gradient(circle, rgba(178,154,130,0.35) 0%, transparent 60%);
+  filter: blur(20px);
+}
+.fl-hero--now {
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 0%, rgba(255,181,90,0.18) 0%, transparent 70%),
+    linear-gradient(180deg, var(--fl-surface-2) 0%, var(--fl-surface) 100%);
+}
+.fl-hero--past .fl-hero__countdown-num {
+  background: linear-gradient(180deg, var(--fl-fg-3) 0%, var(--fl-past) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.fl-hero--past .fl-hero__cta { background: var(--fl-fg-3); }
+
+/* ---------- Empty state ---------- */
+.fl-empty {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px; padding: 56px 16px;
+  text-align: center;
+  background: var(--fl-surface-2);
+  border: 1px dashed var(--fl-divider);
+  border-radius: 24px;
+  color: var(--fl-fg-3);
+  cursor: pointer;
+  appearance: none;
+  width: 100%;
+  font-family: var(--fl-font-body);
+}
+.fl-empty__plus {
+  font-family: var(--fl-font-display);
+  font-size: 52px; font-weight: 800;
+  color: var(--fl-accent);
+  line-height: 1;
+}
+.fl-empty__title {
+  font-family: var(--fl-font-display);
+  font-size: 18px; font-weight: 700;
+  color: var(--fl-fg-2);
+}
+.fl-empty__sub { font-size: 13px; }
+
+/* ============================================================
+   Trip detail — weather-app layout
+   ============================================================ */
+
+.fl-detail-hero {
+  position: relative;
+  padding: 22px;
+  border-radius: 24px;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 0%, rgba(178,154,130,0.18) 0%, transparent 70%),
+    linear-gradient(180deg, var(--fl-surface-2) 0%, var(--fl-surface) 100%);
+  border: 1px solid var(--fl-divider);
+  box-shadow: var(--fl-shadow-card);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.fl-detail-hero__meta {
+  display: flex; gap: 10px; align-items: center;
+  color: var(--fl-fg-3);
+  font-size: 11px; letter-spacing: 0.14em;
+  text-transform: uppercase; font-weight: 700;
+  margin-bottom: 14px;
+}
+.fl-detail-hero__title {
+  font-family: var(--fl-font-display);
+  font-weight: 800;
+  font-size: 36px;
+  line-height: 1.05; letter-spacing: -0.02em;
+  margin: 0 0 6px;
+  color: var(--fl-fg);
+}
+.fl-detail-hero__dates {
+  font-size: 14px; color: var(--fl-fg-2);
+  margin-bottom: 18px;
+}
+
+/* Edit affordance — top-right of the read-only hero (organizers only). */
+.fl-detail-hero__edit {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--fl-divider);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fl-fg-2);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: border-color 160ms var(--fl-ease-out),
+    color 160ms var(--fl-ease-out);
+}
+.fl-detail-hero__edit:hover {
+  border-color: var(--fl-accent-ring);
+  color: var(--fl-fg);
+}
+
+/* Inline editable hero title (matches .fl-detail-hero__title typography). */
+.fl-detail-hero__title-input {
+  font-family: var(--fl-font-display);
+  font-weight: 800;
+  font-size: 36px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--fl-fg);
+  background: transparent;
+  border: none;
+  border-bottom: 2px dashed var(--fl-divider);
+  border-radius: 0;
+  padding: 0 0 4px;
+  margin: 0 0 6px;
+  width: 100%;
+  outline: none;
+  box-shadow: none;
+  transition: border-color 160ms var(--fl-ease-out);
+}
+.fl-detail-hero__title-input::placeholder { color: var(--fl-fg-mute); }
+.fl-detail-hero__title-input:focus {
+  border-bottom-color: var(--fl-accent);
+  border-bottom-style: solid;
+  box-shadow: none;
+}
+
+/* Inline date-range picker slot — strip the default boxed look and let
+   the picker button read as part of the hero copy. */
+.fl-detail-hero__dates-edit { margin-bottom: 18px; }
+.fl-detail-hero__dates-edit .date-range-input {
+  background: transparent;
+  border: 1px dashed var(--fl-divider);
+  border-radius: 10px;
+  padding: 8px 12px;
+  color: var(--fl-fg-2);
+  font-family: var(--fl-font-body);
+  font-size: 14px;
+  width: auto;
+  min-width: 0;
+}
+.fl-detail-hero__dates-edit .date-range-input:hover {
+  border-color: var(--fl-accent-ring);
+  color: var(--fl-fg);
+}
+.fl-detail-hero__dates-edit .date-range-input.is-filled {
+  color: var(--fl-fg-2);
+}
+.fl-detail-hero__dates-edit .date-range-input__value {
+  color: inherit;
+  font-family: var(--fl-font-body);
+}
+.fl-detail-hero__row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: nowrap;
+}
+.fl-detail-hero__count-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.fl-detail-hero__count {
+  font-family: var(--fl-font-display);
+  font-weight: 800;
+  font-size: 72px;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  color: var(--fl-fg);
+  font-variant-numeric: tabular-nums;
+}
+.fl-detail-hero__count-label {
+  font-size: 13px; font-weight: 600;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--fl-fg-3);
+}
+
+/* Read-mode logistics — accommodation + notes shown beneath the countdown. */
+.fl-detail-hero__logistics {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--fl-divider);
+}
+.fl-detail-hero__logistics-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.fl-detail-hero__logistics-icon {
+  font-size: 18px;
+  line-height: 1.3;
+  flex: 0 0 auto;
+}
+.fl-detail-hero__logistics-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.fl-detail-hero__logistics-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fl-fg-3);
+}
+.fl-detail-hero__flag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fl-accent);
+  background: var(--fl-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--fl-accent-ring);
+  border-radius: 6px;
+  padding: 2px 7px;
+}
+/* Accommodation prompt when dates are set but no location yet (organizers). */
+.fl-detail-hero__logistics-item--action {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: none;
+  box-shadow: none;
+  cursor: pointer;
+}
+.fl-detail-hero__logistics-item--action:hover .fl-detail-hero__logistics-detail {
+  color: var(--fl-fg);
+}
+.fl-detail-hero__logistics-detail {
+  font-size: 14px;
+  color: var(--fl-fg-2);
+  line-height: 1.5;
+  word-break: break-word;
+}
+.fl-detail-hero__notes {
+  white-space: pre-wrap;
+}
+
+/* Past trips read weathered — lower the glow + warmth. */
+.fl-detail-hero--past {
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 0%, rgba(108,103,96,0.14) 0%, transparent 70%),
+    linear-gradient(180deg, var(--fl-surface-2) 0%, var(--fl-surface) 100%);
+}
+.fl-detail-hero--past .fl-detail-hero__count { color: var(--fl-past); }
+
+/* ---------- Weather widget (right of countdown in detail hero) ---------- */
+.fl-weather {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--fl-divider);
+  min-width: 96px;
+  text-align: right;
+  font-family: var(--fl-font-body);
+}
+.fl-weather__icon {
+  font-size: 28px;
+  line-height: 1;
+  margin-bottom: 2px;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
+}
+.fl-weather__temps {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: var(--fl-font-display);
+  font-weight: 700;
+  color: var(--fl-fg);
+  font-variant-numeric: tabular-nums;
+}
+.fl-weather__high {
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+.fl-weather__sep {
+  color: var(--fl-fg-mute);
+  font-weight: 500;
+  font-size: 16px;
+}
+.fl-weather__low {
+  font-size: 16px;
+  color: var(--fl-fg-3);
+  letter-spacing: -0.01em;
+}
+.fl-weather__sub {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fl-fg-3);
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The chip is a button that opens the forecast sheet. */
+.fl-weather--btn {
+  cursor: pointer;
+  appearance: none;
+  font: inherit;
+  transition: transform 0.15s var(--fl-ease-out),
+    border-color 0.15s var(--fl-ease-out), background 0.15s var(--fl-ease-out);
+}
+.fl-weather--btn:hover {
+  border-color: var(--fl-accent-ring);
+  background: rgba(255, 255, 255, 0.06);
+}
+.fl-weather--btn:active {
+  transform: scale(0.97);
+}
+.fl-weather--mute .fl-weather__icon {
+  opacity: 0.7;
+}
+.fl-weather--action {
+  background: var(--fl-accent-soft);
+  border-color: var(--fl-accent-ring);
+}
+.fl-weather--action .fl-weather__sub {
+  color: var(--fl-accent);
+}
+
+/* ---------- Bottom sheet (forecast detail, drag-to-dismiss) ---------- */
+.sheet-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+.sheet {
+  width: 100%;
+  max-width: 560px;
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--fl-surface);
+  border: 1px solid var(--fl-divider);
+  border-bottom: none;
+  border-top-left-radius: 26px;
+  border-top-right-radius: 26px;
+  box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.5);
+  padding: 6px 20px calc(22px + env(safe-area-inset-bottom));
+}
+.sheet__grip {
+  flex: 0 0 auto;
+  cursor: grab;
+}
+.sheet__grip:active {
+  cursor: grabbing;
+}
+.sheet__grabber {
+  width: 40px;
+  height: 5px;
+  margin: 8px auto 12px;
+  border-radius: var(--fl-radius-pill);
+  background: var(--fl-fg-mute);
+}
+.sheet__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+}
+.sheet__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.sheet__title {
+  margin: 0;
+  font-family: var(--fl-font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--fl-fg);
+}
+.sheet__subtitle {
+  font-size: 13px;
+  color: var(--fl-fg-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sheet__close {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--fl-radius-pill);
+  background: var(--fl-surface-3);
+  border: 1px solid var(--fl-divider);
+  color: var(--fl-fg-2);
+  font-size: 13px;
+  cursor: pointer;
+}
+.sheet__close:hover {
+  background: var(--fl-surface-2);
+  color: var(--fl-fg);
+}
+.sheet__body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* "Cards underneath" grid spec */
+.fl-card-grid {
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+.fl-info-card {
+  background: var(--fl-surface-2);
+  border: 1px solid var(--fl-divider);
+  border-radius: var(--fl-radius-card);
+  padding: 16px 18px;
+  color: var(--fl-fg);
+}
+.fl-info-card__label {
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--fl-fg-3);
+  margin-bottom: 8px;
+}
+.fl-info-card__value {
+  font-family: var(--fl-font-display);
+  font-size: 22px; font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--fl-fg);
+}
+.fl-info-card__sub { color: var(--fl-fg-2); font-size: 14px; margin-top: 6px; }
+
+/* ---------- Belayer badges ---------- */
+.fl-badges {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-top: 8px;
+}
+.fl-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.02em;
+  background: var(--fl-surface-3);
+  color: var(--fl-fg-2);
+  border: 1px solid var(--fl-divider);
+}
+.fl-badge--lead {
+  background: var(--fl-accent-soft);
+  color: var(--fl-accent);
+  border-color: var(--fl-accent-ring);
+}
+.fl-badge--grade {
+  background: rgba(110, 144, 105, 0.18);
+  color: #a8c79f;
+  border-color: rgba(110, 144, 105, 0.4);
+}
+.fl-badge--anchor {
+  background: rgba(255, 181, 90, 0.14);
+  color: var(--fl-now);
+  border-color: rgba(255, 181, 90, 0.35);
+}
+.fl-badge--coffee {
+  background: rgba(140, 100, 75, 0.22);
+  color: #d2a98a;
+  border-color: rgba(140, 100, 75, 0.45);
+}
+
+/* Roster row: stack name + badges vertically */
+.fl-roster-row {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  background: var(--fl-surface-2);
+  border: 1px solid var(--fl-divider);
+  border-radius: 14px;
+  margin: 6px 0;
+}
+.fl-roster-row__left { min-width: 0; flex: 1; }
+.fl-roster-row__name {
+  font-family: var(--fl-font-display);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--fl-fg);
+}
+.fl-roster-row__right {
+  display: flex; align-items: center; gap: 8px;
+}
+
+/* ============================================================
+   Dashboard (.dash-*) — TripDashboard expandable cards
+   The base palette rebind handles most of this, but a few rules
+   need explicit treatment because they were tinted with --green-100
+   or used opacity tricks that read wrong on a dark surface.
+   ============================================================ */
+
+.dash-card {
+  background: var(--fl-surface-2);
+  border-color: var(--fl-divider);
+  box-shadow: 0 6px 18px -12px rgba(0, 0, 0, 0.6);
+}
+.dash-card--open {
+  box-shadow: 0 12px 28px -14px rgba(0, 0, 0, 0.7);
+}
+.dash-card--urgent {
+  border-color: var(--fl-accent-ring);
+  box-shadow:
+    0 0 0 1px var(--fl-accent-ring),
+    0 10px 26px -12px rgba(178, 154, 130, 0.25);
+}
+.dash-card--urgent .dash-card__head {
+  background: var(--fl-accent-soft);
+}
+.dash-card__head { color: var(--fl-fg); }
+.dash-card__head:hover { background: rgba(255, 255, 255, 0.02); }
+.dash-card__title { color: var(--fl-fg); }
+.dash-card__flag {
+  color: var(--fl-accent);
+  background: var(--fl-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--fl-accent-ring);
+}
+.dash-card__summary { color: var(--fl-fg-3); }
+.dash-badge {
+  color: var(--fl-fg-2);
+  background: var(--fl-surface-3);
+  border-color: var(--fl-divider);
+}
+.dash-chevron { color: var(--fl-fg-3); }
+
+/* Weather strip inside the dashboard's Weather card */
+.wx-day {
+  background: var(--fl-surface-3);
+  border-color: var(--fl-divider);
+}
+.wx-day__date { color: var(--fl-fg-3); }
+.wx-day__temp { color: var(--fl-fg); }
+.wx-day__precip { color: var(--fl-accent); }
+
+/* Danger zone */
+.dash-danger {
+  background: rgba(255, 107, 107, 0.06);
+  border-color: var(--fl-danger);
+}
+.dash-danger__title { color: var(--fl-danger); }
+
+/* ============================================================
+   DateRangePicker — patch hardcoded whites for dark mode
+   ============================================================ */
+
+.date-range-input {
+  background: var(--fl-surface-3);
+  color: var(--fl-fg);
+  border-color: var(--fl-divider);
+}
+.date-range-input:hover { border-color: var(--fl-accent-ring); }
+.date-range-input:focus-visible {
+  border-color: var(--fl-accent);
+  box-shadow: 0 0 0 3px var(--fl-accent-soft);
+}
+.date-range-input__placeholder { color: var(--fl-fg-3); }
+.date-range-input__value { color: var(--fl-fg); }
+
+.date-range-backdrop {
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+}
+.date-range-sheet {
+  background: var(--fl-surface);
+  box-shadow: 0 -20px 60px -10px rgba(0, 0, 0, 0.65);
+}
+.date-range-sheet__head { color: var(--fl-fg); }
+.date-range-close { color: var(--fl-fg-3); }
+
+/* Calendar — react-day-picker (rdp) cells */
+.rdp-day_button { color: var(--fl-fg); }
+.rdp-day_button:hover {
+  background: var(--fl-surface-3);
+  color: var(--fl-fg);
+}
+.rdp-day_disabled .rdp-day_button { color: var(--fl-fg-mute); }
+.rdp-weekday { color: var(--fl-fg-3); }
+.rdp-caption_label, .rdp-nav button { color: var(--fl-fg-2); }
+
+.rdp-range_middle .rdp-day_button {
+  background: var(--fl-accent-soft);
+  color: var(--fl-fg);
+}
+.rdp-range_middle .rdp-day_button:hover {
+  background: var(--fl-accent-ring);
+}
+
+/* Anchor pills — the "Airbnb dark circle" becomes the stone accent */
+.rdp-range_start .rdp-day_button,
+.rdp-selected:not(.rdp-range_end):not(.rdp-range_middle) .rdp-day_button {
+  background: var(--fl-accent);
+  color: var(--fl-bg);
+}
+.rdp-range_start .rdp-day_button:hover { background: var(--fl-accent); }
+
+.rdp-range_end .rdp-day_button {
+  background: var(--fl-surface);
+  color: var(--fl-fg);
+  box-shadow: inset 0 0 0 2px var(--fl-accent);
+}
+.rdp-range_end .rdp-day_button:hover { background: var(--fl-surface); }
+
+/* ============================================================
+   Wizard step indicator + misc bits
+   ============================================================ */
+
+.step-tag {
+  color: var(--fl-accent);
+  background: var(--fl-accent-soft);
+}
+
+.error-banner {
+  background: rgba(255, 107, 107, 0.1);
+  color: var(--fl-danger);
+  border: 1px solid var(--fl-danger);
+}
+
+/* AlpsBackground — push the dark wash heavier so the photo
+   reads as an atmospheric backdrop, not a competing layer. */
+.alps-bg::after {
+  background: linear-gradient(180deg,
+    rgba(5, 7, 11, 0.88) 0%,
+    rgba(5, 7, 11, 0.96) 100%);
+}
+.alps-bg { filter: saturate(0.5) brightness(0.45); }

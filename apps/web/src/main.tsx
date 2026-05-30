@@ -12,6 +12,7 @@ import TripDashboard from "./screens/TripDashboard";
 import NotFound from "./screens/NotFound";
 
 import "./styles.css";
+import "./styles/v2-theme.css";
 
 // SVG-backdrop-filter capability probe.
 //

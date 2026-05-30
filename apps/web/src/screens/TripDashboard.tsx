@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import type { DateRange } from "react-day-picker";
 import type { z } from "zod";
 import type { CarSchema, GearContributionSchema } from "@cragstronauts/contract";
@@ -9,11 +9,12 @@ import { useTripContext, type Category } from "../context/TripContext";
 import { formatDateRange } from "../dateUtils";
 import Linkify from "../components/Linkify";
 import DateRangePicker from "../components/DateRangePicker";
+import BottomSheet from "../components/BottomSheet";
 
 type Car = z.infer<typeof CarSchema>;
 type Contribution = z.infer<typeof GearContributionSchema>;
 
-const SPRING = { type: "spring" as const, stiffness: 380, damping: 36, mass: 0.9 };
+const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
 /* ------------------------------------------------------------------ */
 /* Weather                                                             */
@@ -60,7 +61,7 @@ function iso(d: Date): string {
   ).padStart(2, "0")}`;
 }
 const DAY_MS = 86400000;
-const FORECAST_HORIZON = 16;
+const FORECAST_HORIZON = 15;
 
 function daysUntil(startStr: string | null): number | null {
   if (!startStr) return null;
@@ -108,7 +109,7 @@ function useWeather(
     const url =
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
       `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max` +
-      `&temperature_unit=fahrenheit&timezone=auto&start_date=${iso(fStart)}&end_date=${iso(fEnd)}`;
+      `&temperature_unit=celsius&timezone=auto&start_date=${iso(fStart)}&end_date=${iso(fEnd)}`;
     fetch(url)
       .then((r) => r.json())
       .then((d: any) => {
@@ -160,9 +161,7 @@ function DashCard({
   children: React.ReactNode;
 }) {
   return (
-    <motion.div
-      layout
-      transition={SPRING}
+    <div
       className={`dash-card${urgent ? " dash-card--urgent" : ""}${
         expanded ? " dash-card--open" : ""
       }`}
@@ -179,8 +178,22 @@ function DashCard({
         {badge != null && <span className="dash-badge">{badge}</span>}
         <span className={`dash-chevron${expanded ? " open" : ""}`}>▾</span>
       </button>
-      {expanded && <div className="dash-card__body">{children}</div>}
-    </motion.div>
+      {/* Clean reveal — content fades in, the card grows instantly.
+          No shared-layout morph (the animation the crew disliked). */}
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            className="dash-card__body"
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.16, ease: EASE_OUT }}
+          >
+            {children}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -206,6 +219,8 @@ export default function TripDashboard() {
   const [gear, setGear] = useState<Contribution[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingHero, setEditingHero] = useState(false);
+  const [weatherSheetOpen, setWeatherSheetOpen] = useState(false);
   const initExpanded = useRef(false);
 
   const reload = async () => {
@@ -267,33 +282,6 @@ export default function TripDashboard() {
   };
 
   const cards: CardDef[] = [];
-
-  // Weather — climbs as the trip nears.
-  let weatherScore = 30;
-  if (tripUpcoming && trip.latitude != null && dUntil != null) {
-    if (dUntil <= 3) weatherScore = 130;
-    else if (dUntil <= 7) weatherScore = 90;
-    else if (dUntil <= 14) weatherScore = 60;
-    else weatherScore = 40;
-  } else if (!tripUpcoming) {
-    weatherScore = 5;
-  }
-  cards.push({
-    id: "weather",
-    score: weatherScore,
-    icon: weatherSummaryIcon(weather),
-    title: "Weather",
-    summary: weatherSummaryText(weather, me.is_organizer),
-    body: (
-      <WeatherBody
-        weather={weather}
-        trip={trip}
-        tripId={tripId}
-        isOrganizer={me.is_organizer}
-        onChanged={reload}
-      />
-    ),
-  });
 
   // Cars — prominent if you have no ride.
   cards.push({
@@ -364,26 +352,6 @@ export default function TripDashboard() {
     ),
   });
 
-  // Logistics (trip basics)
-  cards.push({
-    id: "logistics",
-    score: 50,
-    icon: "📍",
-    title: trip.location,
-    summary: `${formatDateRange(trip.start_date, trip.end_date)} · ${
-      trip.accommodation_type || "—"
-    }`,
-    body: (
-      <LogisticsBody
-        trip={trip}
-        tripId={tripId}
-        isOrganizer={me.is_organizer}
-        onChanged={reload}
-        deleteTrip={deleteTrip}
-      />
-    ),
-  });
-
   cards.sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
 
   // Auto-expand the top card once data has loaded.
@@ -420,7 +388,163 @@ export default function TripDashboard() {
 
       <div className="content content--dash">
         {error && <div className="error-banner">{error}</div>}
-        <motion.div layout className="dash-stack">
+
+        {/* Weather-app hero: date / trip name / countdown / weather.
+            Organizers edit title, dates & logistics inline here. */}
+        {editingHero && me.is_organizer ? (
+          <HeroEdit
+            trip={trip}
+            tripId={tripId}
+            tripUpcoming={tripUpcoming}
+            onCancel={() => setEditingHero(false)}
+            onSaved={async () => {
+              setEditingHero(false);
+              await reload();
+            }}
+            deleteTrip={deleteTrip}
+          />
+        ) : (
+        <div className={"fl-detail-hero" + (tripUpcoming ? "" : " fl-detail-hero--past")}>
+          {me.is_organizer && (
+            <button
+              className="fl-detail-hero__edit"
+              onClick={() => setEditingHero(true)}
+              aria-label="Edit trip"
+            >
+              ✏️ Edit
+            </button>
+          )}
+          <div className="fl-detail-hero__meta">
+            <span aria-hidden="true">🧗</span>
+            <span>
+              {trip.start_date || trip.end_date
+                ? formatDateRange(trip.start_date, trip.end_date)
+                : "Dates TBD"}
+            </span>
+          </div>
+          <h1 className="fl-detail-hero__title">{trip.location}</h1>
+          <div className="fl-detail-hero__row">
+            <div className="fl-detail-hero__count-col">
+              {dUntil == null ? (
+                <span className="fl-detail-hero__count-label">Dates TBD</span>
+              ) : dUntil > 0 ? (
+                <>
+                  <span className="fl-detail-hero__count">{dUntil}</span>
+                  <span className="fl-detail-hero__count-label">
+                    {dUntil === 1 ? "Day to go" : "Days to go"}
+                  </span>
+                </>
+              ) : dUntil === 0 ? (
+                <span className="fl-now-pill" style={{ fontSize: 13, padding: "8px 14px" }}>
+                  On Now
+                </span>
+              ) : (
+                <>
+                  <span className="fl-detail-hero__count">{Math.abs(dUntil)}</span>
+                  <span className="fl-detail-hero__count-label">Days ago</span>
+                </>
+              )}
+            </div>
+            <HeroWeatherChip
+              weather={weather}
+              isOrganizer={me.is_organizer}
+              onOpen={() => setWeatherSheetOpen(true)}
+            />
+          </div>
+          {(trip.accommodation_details ||
+            trip.start_date ||
+            trip.end_date ||
+            trip.notes) && (
+            <div className="fl-detail-hero__logistics">
+              {trip.accommodation_details ? (
+                <div className="fl-detail-hero__logistics-item">
+                  <span
+                    className="fl-detail-hero__logistics-icon"
+                    aria-hidden="true"
+                  >
+                    {accomMeta(trip.accommodation_type)?.icon ?? "🏠"}
+                  </span>
+                  <div className="fl-detail-hero__logistics-text">
+                    <span className="fl-detail-hero__logistics-label">
+                      {accomMeta(trip.accommodation_type)?.label ??
+                        "Accommodation"}
+                    </span>
+                    <span className="fl-detail-hero__logistics-detail">
+                      <Linkify>{trip.accommodation_details}</Linkify>
+                    </span>
+                  </div>
+                </div>
+              ) : trip.start_date || trip.end_date ? (
+                me.is_organizer ? (
+                  <button
+                    type="button"
+                    className="fl-detail-hero__logistics-item fl-detail-hero__logistics-item--action"
+                    onClick={() => setEditingHero(true)}
+                  >
+                    <span
+                      className="fl-detail-hero__logistics-icon"
+                      aria-hidden="true"
+                    >
+                      🏠
+                    </span>
+                    <div className="fl-detail-hero__logistics-text">
+                      <span className="fl-detail-hero__logistics-label">
+                        Accommodation
+                        <span className="fl-detail-hero__flag">
+                          action needed
+                        </span>
+                      </span>
+                      <span className="fl-detail-hero__logistics-detail">
+                        Add where you're staying
+                      </span>
+                    </div>
+                  </button>
+                ) : (
+                  <div className="fl-detail-hero__logistics-item">
+                    <span
+                      className="fl-detail-hero__logistics-icon"
+                      aria-hidden="true"
+                    >
+                      🏠
+                    </span>
+                    <div className="fl-detail-hero__logistics-text">
+                      <span className="fl-detail-hero__logistics-label">
+                        Accommodation
+                        <span className="fl-detail-hero__flag">
+                          action needed
+                        </span>
+                      </span>
+                      <span className="fl-detail-hero__logistics-detail">
+                        Not set yet
+                      </span>
+                    </div>
+                  </div>
+                )
+              ) : null}
+              {trip.notes && (
+                <div className="fl-detail-hero__logistics-item">
+                  <span
+                    className="fl-detail-hero__logistics-icon"
+                    aria-hidden="true"
+                  >
+                    📝
+                  </span>
+                  <div className="fl-detail-hero__logistics-text">
+                    <span className="fl-detail-hero__logistics-label">
+                      Notes
+                    </span>
+                    <span className="fl-detail-hero__logistics-detail fl-detail-hero__notes">
+                      <Linkify>{trip.notes}</Linkify>
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        )}
+
+        <div className="dash-stack">
           {cards.map((c) => (
             <DashCard
               key={c.id}
@@ -435,41 +559,105 @@ export default function TripDashboard() {
               {c.body}
             </DashCard>
           ))}
-        </motion.div>
+        </div>
       </div>
+
+      <BottomSheet
+        open={weatherSheetOpen}
+        onClose={() => setWeatherSheetOpen(false)}
+        title="Weather"
+        subtitle={trip.place_label || undefined}
+      >
+        <WeatherBody
+          weather={weather}
+          trip={trip}
+          tripId={tripId}
+          isOrganizer={me.is_organizer}
+          onChanged={reload}
+        />
+      </BottomSheet>
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* Weather summary helpers + body                                      */
+/* Weather: glanceable hero chip + day-by-day body                     */
 /* ------------------------------------------------------------------ */
 
-function weatherSummaryIcon(w: WeatherState): string {
-  if (w.status === "ready" && w.days.length) return wmo(w.days[0].code).icon;
-  return "🌦️";
-}
-function weatherSummaryText(w: WeatherState, isOrganizer: boolean): string {
-  switch (w.status) {
-    case "no-pin":
-      return isOrganizer ? "Pin the location to see weather" : "Location not set";
-    case "no-dates":
-      return "Add trip dates to see the forecast";
-    case "past":
-      return "Trip has passed";
-    case "too-far":
-      return `Forecast opens ~${w.daysUntil - FORECAST_HORIZON}d before the trip`;
+function HeroWeatherChip({
+  weather,
+  isOrganizer,
+  onOpen,
+}: {
+  weather: WeatherState;
+  isOrganizer: boolean;
+  onOpen: () => void;
+}) {
+  let icon = "🌦️";
+  let temps: React.ReactNode = null;
+  let label = "";
+  let tone: "ready" | "mute" | "action" = "mute";
+
+  switch (weather.status) {
+    case "ready":
+      if (weather.days.length) {
+        const d = weather.days[0];
+        icon = wmo(d.code).icon;
+        temps = (
+          <span className="fl-weather__temps">
+            <span className="fl-weather__high">{fmtTemp(d.hi)}</span>
+            <span className="fl-weather__sep">/</span>
+            <span className="fl-weather__low">{fmtTemp(d.lo)}</span>
+          </span>
+        );
+        label = wmo(d.code).label;
+        tone = "ready";
+      } else {
+        label = "No forecast";
+      }
+      break;
     case "loading":
-      return "Loading forecast…";
+      icon = "🌡️";
+      label = "Loading";
+      break;
+    case "too-far":
+      icon = "🗓️";
+      label = `Forecast in ${weather.daysUntil - FORECAST_HORIZON}d`;
+      break;
+    case "no-pin":
+      icon = "📍";
+      label = isOrganizer ? "Set location" : "No location";
+      tone = isOrganizer ? "action" : "mute";
+      break;
+    case "no-dates":
+      icon = "🗓️";
+      label = isOrganizer ? "Add dates" : "Dates TBD";
+      tone = isOrganizer ? "action" : "mute";
+      break;
+    case "past":
+      return null;
     case "error":
-      return "Forecast unavailable";
-    case "ready": {
-      if (!w.days.length) return "No forecast";
-      const d = w.days[0];
-      return `${wmo(d.code).label} · ${fmtTemp(d.hi)}/${fmtTemp(d.lo)}`;
-    }
+      icon = "🌡️";
+      label = "No forecast";
+      break;
   }
+
+  return (
+    <button
+      type="button"
+      className={`fl-weather fl-weather--btn fl-weather--${tone}`}
+      onClick={onOpen}
+      aria-label={`Weather: ${label}. Tap for the full forecast.`}
+    >
+      <span className="fl-weather__icon" aria-hidden="true">
+        {icon}
+      </span>
+      {temps}
+      <span className="fl-weather__sub">{label}</span>
+    </button>
+  );
 }
+
 function fmtTemp(t: number | null): string {
   return t == null ? "—" : `${Math.round(t)}°`;
 }
@@ -564,11 +752,6 @@ function WeatherBody({
   return (
     <div className="col">
       {content}
-      {trip.place_label && (
-        <div className="muted" style={{ fontSize: 12 }}>
-          📍 {trip.place_label}
-        </div>
-      )}
       {isOrganizer && (
         <button
           className="ghost"
@@ -798,82 +981,6 @@ function PinLocationForm({
 /* Section bodies (ported from the old tabs)                           */
 /* ------------------------------------------------------------------ */
 
-function LogisticsBody({
-  trip,
-  tripId,
-  isOrganizer,
-  onChanged,
-  deleteTrip,
-}: {
-  trip: ReturnType<typeof useTripContext>["trip"];
-  tripId: string;
-  isOrganizer: boolean;
-  onChanged: () => Promise<void>;
-  deleteTrip: () => Promise<void>;
-}) {
-  const [copied, setCopied] = useState(false);
-  const [editing, setEditing] = useState(false);
-
-  const share = async () => {
-    const url = window.location.href;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      window.prompt("Copy this trip link:", url);
-    }
-  };
-
-  if (editing && isOrganizer) {
-    return (
-      <TripEditForm
-        trip={trip}
-        tripId={tripId}
-        onCancel={() => setEditing(false)}
-        onSaved={async () => {
-          setEditing(false);
-          await onChanged();
-        }}
-      />
-    );
-  }
-
-  return (
-    <div className="col">
-      <div>
-        <span className="pill accent">{trip.accommodation_type || "—"}</span>
-        {trip.accommodation_details && (
-          <p style={{ marginTop: 8 }}>
-            <Linkify>{trip.accommodation_details}</Linkify>
-          </p>
-        )}
-      </div>
-      {trip.notes && (
-        <p style={{ margin: 0 }}>
-          <Linkify>{trip.notes}</Linkify>
-        </p>
-      )}
-      <div className="row" style={{ gap: 8 }}>
-        <button className="secondary" onClick={share}>
-          {copied ? "Link copied ✓" : "Share trip link"}
-        </button>
-        {isOrganizer && (
-          <button className="secondary" onClick={() => setEditing(true)}>
-            ✎ Edit trip
-          </button>
-        )}
-      </div>
-      {isOrganizer && (
-        <DangerZone
-          tripLocation={trip.location}
-          onDelete={deleteTrip}
-        />
-      )}
-    </div>
-  );
-}
-
 function isoToDate(s: string | null): Date | undefined {
   if (!s) return undefined;
   return new Date(s + "T00:00:00");
@@ -886,16 +993,32 @@ function dateToIso(d: Date | undefined): string | null {
   return `${y}-${m}-${day}`;
 }
 
-function TripEditForm({
+const ACCOM_META: Record<string, { icon: string; label: string }> = {
+  campsite: { icon: "⛺", label: "Campsite" },
+  airbnb: { icon: "🏠", label: "Airbnb" },
+  hotel: { icon: "🏨", label: "Hotel" },
+  hut: { icon: "🛖", label: "Hut / Refuge" },
+  other: { icon: "📍", label: "Other" },
+};
+function accomMeta(type: string | null | undefined) {
+  if (!type) return null;
+  return ACCOM_META[type] ?? { icon: "🏠", label: type };
+}
+
+function HeroEdit({
   trip,
   tripId,
+  tripUpcoming,
   onCancel,
   onSaved,
+  deleteTrip,
 }: {
   trip: ReturnType<typeof useTripContext>["trip"];
   tripId: string;
+  tripUpcoming: boolean;
   onCancel: () => void;
   onSaved: () => Promise<void>;
+  deleteTrip: () => Promise<void>;
 }) {
   const [location, setLocation] = useState(trip.location);
   const [range, setRange] = useState<DateRange | undefined>(
@@ -912,6 +1035,18 @@ function TripEditForm({
   const [notes, setNotes] = useState(trip.notes || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const share = async () => {
+    const url = window.location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      window.prompt("Copy this trip link:", url);
+    }
+  };
 
   const save = async () => {
     setError(null);
@@ -934,64 +1069,68 @@ function TripEditForm({
   };
 
   return (
-    <div className="col">
-      {error && <div className="error-banner">{error}</div>}
-      <div>
-        <label>Location</label>
-        <input
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          placeholder="e.g. Yosemite Valley"
-        />
+    <div className={"fl-detail-hero" + (tripUpcoming ? "" : " fl-detail-hero--past")}>
+      <div className="fl-detail-hero__meta">
+        <span aria-hidden="true">✏️</span>
+        <span>Editing trip</span>
       </div>
-      <div>
-        <label>Dates</label>
-        <DateRangePicker
-          value={range}
-          onChange={setRange}
-          placeholder="Add dates"
-        />
+      <input
+        className="fl-detail-hero__title-input"
+        value={location}
+        onChange={(e) => setLocation(e.target.value)}
+        placeholder="Trip name"
+        aria-label="Trip name"
+      />
+      <div className="fl-detail-hero__dates-edit">
+        <DateRangePicker value={range} onChange={setRange} placeholder="Add dates" />
       </div>
-      <div>
-        <label>Accommodation</label>
-        <select
-          value={accomType}
-          onChange={(e) => setAccomType(e.target.value)}
-        >
-          <option value="campsite">Campsite</option>
-          <option value="airbnb">Airbnb</option>
-          <option value="hotel">Hotel</option>
-          <option value="hut">Hut / Refuge</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
-      <div>
-        <label>Accommodation details</label>
-        <input
-          value={accomDetails}
-          onChange={(e) => setAccomDetails(e.target.value)}
-          placeholder="Name, address, link…"
-        />
-      </div>
-      <div>
-        <label>Notes</label>
-        <textarea
-          rows={3}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-        />
-      </div>
-      <div className="row" style={{ gap: 8 }}>
-        <button className="secondary" onClick={onCancel} disabled={saving}>
-          Cancel
+
+      <div className="col" style={{ gap: 12 }}>
+        <div>
+          <label>Accommodation</label>
+          <select value={accomType} onChange={(e) => setAccomType(e.target.value)}>
+            <option value="campsite">Campsite</option>
+            <option value="airbnb">Airbnb</option>
+            <option value="hotel">Hotel</option>
+            <option value="hut">Hut / Refuge</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label>Accommodation details</label>
+          <input
+            value={accomDetails}
+            onChange={(e) => setAccomDetails(e.target.value)}
+            placeholder="Name, address, link…"
+          />
+        </div>
+        <div>
+          <label>Notes</label>
+          <textarea
+            rows={3}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
+
+        {error && <div className="error-banner">{error}</div>}
+
+        <div className="row" style={{ gap: 8 }}>
+          <button className="secondary" onClick={onCancel} disabled={saving}>
+            Cancel
+          </button>
+          <button
+            onClick={save}
+            disabled={!location.trim() || saving}
+            style={{ flex: 1 }}
+          >
+            {saving ? "Saving…" : "Save changes"}
+          </button>
+        </div>
+        <button className="secondary" onClick={share}>
+          {copied ? "Link copied ✓" : "Share trip link"}
         </button>
-        <button
-          onClick={save}
-          disabled={!location.trim() || saving}
-          style={{ flex: 1 }}
-        >
-          {saving ? "Saving…" : "Save changes"}
-        </button>
+        <DangerZone tripLocation={trip.location} onDelete={deleteTrip} />
       </div>
     </div>
   );

@@ -1,27 +1,25 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  AnimatePresence,
-  motion,
-  useMotionValue,
-  useReducedMotion,
-  useTransform,
-} from "framer-motion";
+import React, { useEffect, useMemo, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router";
 import { api } from "../api";
-import { formatDateRange } from "../dateUtils";
 import type { z } from "zod";
 import type { TripIndexEntrySchema } from "@cragstronauts/contract";
 
 type TripEntry = z.infer<typeof TripIndexEntrySchema>;
 
-const EASE_OUT = [0.23, 1, 0.32, 1];
-const SWIPE_THRESHOLD = 90;
+const MS_PER_DAY = 86_400_000;
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-const SLOTS = [
-  { x: 0, y: 0,  scale: 1,    opacity: 1, rotate: 0 },
-  { x: 0, y: 12, scale: 0.96, opacity: 1, rotate: 1.6 },
-  { x: 0, y: 24, scale: 0.92, opacity: 1, rotate: -2.0 },
-];
+type Status = "upcoming" | "now" | "past" | "tbd";
+
+interface TripModel {
+  status: Status;
+  daysUntil: number;
+  code: string;
+  dateLabel: string;
+  dateMuted: boolean;
+}
 
 function todayISO(): string {
   const d = new Date();
@@ -31,310 +29,246 @@ function todayISO(): string {
   return `${y}-${m}-${day}`;
 }
 
-function isPast(trip: TripEntry, today: string): boolean {
-  const ref = trip.end_date || trip.start_date;
-  return ref != null && ref < today;
+function parseISODate(iso: string | null | undefined): Date | null {
+  if (!iso) return null;
+  const part = iso.slice(0, 10);
+  const [y, m, d] = part.split("-").map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(Date.UTC(y, m - 1, d));
 }
 
-function dateRangeShort(trip: TripEntry): string {
-  return formatDateRange(trip.start_date, trip.end_date);
+function formatShortDate(d: Date): string {
+  return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
 }
 
-function daysUntil(trip: TripEntry, todayStr: string): number | null {
-  const ref = trip.start_date || trip.end_date;
-  if (!ref) return null;
-  const a = new Date(todayStr + "T00:00:00").getTime();
-  const b = new Date(ref + "T00:00:00").getTime();
-  return Math.round((b - a) / 86400000);
-}
-
-function daysSince(trip: TripEntry, todayStr: string): number | null {
-  const ref = trip.end_date || trip.start_date;
-  if (!ref) return null;
-  const a = new Date(todayStr + "T00:00:00").getTime();
-  const b = new Date(ref + "T00:00:00").getTime();
-  return Math.round((a - b) / 86400000);
-}
-
-function chipLabelFor(trip: TripEntry, todayStr: string): { label: string; tone: string } {
-  if (isPast(trip, todayStr)) {
-    const ago = daysSince(trip, todayStr);
-    if (ago == null) return { label: "Past", tone: "past" };
-    if (ago < 14) return { label: `${ago}d ago`, tone: "past" };
-    if (ago < 60) return { label: `${Math.round(ago / 7)}wk ago`, tone: "past" };
-    return { label: `${Math.round(ago / 30)}mo ago`, tone: "past" };
-  }
-  const days = daysUntil(trip, todayStr);
-  if (days == null) return { label: "Soon", tone: "soon" };
-  if (days <= 0) return { label: "On now", tone: "soon" };
-  if (days === 1) return { label: "Tomorrow", tone: "soon" };
-  if (days < 14) return { label: `In ${days} days`, tone: "soon" };
-  return { label: `In ${Math.round(days / 7)} wk`, tone: "soon" };
-}
-
-function TripCardFace({ trip, todayStr }: { trip: TripEntry; todayStr: string }) {
-  const past = isPast(trip, todayStr);
-  const chip = chipLabelFor(trip, todayStr);
-  return (
-    <div className={`deck-card__face ${past ? "deck-card__face--past" : ""}`}>
-      <div className="deck-card__topline">
-        <span className="deck-card__date">{dateRangeShort(trip)}</span>
-        <span className={`deck-card__chip deck-card__chip--${chip.tone}`}>
-          {chip.label}
-        </span>
-      </div>
-      <div>
-        <div className="deck-card__title">{trip.location}</div>
-      </div>
-      <div className="deck-card__footer">
-        <span className="deck-card__cta">
-          {past ? "Look back →" : "Open trip →"}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-interface DeckLayerProps {
-  trip: TripEntry;
-  slot: number;
-  isTop: boolean;
-  todayStr: string;
-  onSelect: (id: string) => void;
-  onCommit: (dir: number) => void;
-  canGoNext: boolean;
-  canGoPrev: boolean;
-  reduceMotion: boolean | null;
-  staggerDelay: number;
-  dir: number;
-}
-
-const DeckLayer = React.forwardRef<HTMLButtonElement, DeckLayerProps>(function DeckLayer(
-  {
-    trip,
-    slot,
-    isTop,
-    todayStr,
-    onSelect,
-    onCommit,
-    canGoNext,
-    canGoPrev,
-    reduceMotion,
-    staggerDelay,
-    dir,
-  },
-  ref
-) {
-  const target = SLOTS[slot];
-
-  const x = useMotionValue(0);
-  const dragRotate = useTransform(x, [-220, 0, 220], [-14, 0, 14]);
-
-  const handleDragEnd = (_e: unknown, info: { offset: { x: number } }) => {
-    if (info.offset.x < -SWIPE_THRESHOLD && canGoNext) {
-      onCommit(1);
-    } else if (info.offset.x > SWIPE_THRESHOLD && canGoPrev) {
-      onCommit(-1);
-    }
-  };
-
-  const animateState = isTop
-    ? { x: target.x, y: target.y, scale: target.scale, opacity: target.opacity }
-    : {
-        x: target.x,
-        y: target.y,
-        scale: target.scale,
-        opacity: target.opacity,
-        rotate: target.rotate,
-      };
-
-  let initialState;
-  if (staggerDelay > 0) {
-    initialState = isTop
-      ? { x: 0, y: target.y + 90, scale: target.scale * 0.94, opacity: 0 }
-      : {
-          x: 0,
-          y: target.y + 90,
-          scale: target.scale * 0.94,
-          opacity: 0,
-          rotate: target.rotate,
-        };
-  } else if (dir < 0 && slot === 0) {
-    initialState = { x: 0, y: target.y - 70, scale: target.scale * 0.92, opacity: 0 };
+function makeTripCode(location: string): string {
+  if (!location) return "XXXX";
+  const cleaned = location.replace(/[^A-Za-z\s]/g, " ").trim();
+  if (!cleaned) return "XXXX";
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  let code = "";
+  if (words.length === 1) {
+    code = words[0].slice(0, 4).toUpperCase();
   } else {
-    initialState = isTop
-      ? { x: 0, y: target.y, scale: target.scale * 0.85, opacity: 0 }
-      : {
-          x: 0,
-          y: target.y,
-          scale: target.scale * 0.85,
-          opacity: 0,
-          rotate: target.rotate,
-        };
+    code = words.map((w) => w[0]).join("").slice(0, 4).toUpperCase();
+    if (code.length < 4) code = (code + words[0].slice(1)).slice(0, 4).toUpperCase();
   }
+  while (code.length < 4) code += "X";
+  return code;
+}
+
+function modelFor(trip: TripEntry, todayStr: string): TripModel {
+  const today = parseISODate(todayStr) ?? new Date();
+  const start = parseISODate(trip.start_date);
+  const end = parseISODate(trip.end_date) ?? start;
+  const code = makeTripCode(trip.location || "");
+
+  if (!start) {
+    return { status: "tbd", daysUntil: 0, code, dateLabel: "Dates TBD", dateMuted: true };
+  }
+
+  const daysUntil = Math.round((start.getTime() - today.getTime()) / MS_PER_DAY);
+  const endTime = (end ?? start).getTime();
+  const inProgress = today.getTime() >= start.getTime() && today.getTime() <= endTime;
+
+  const dateLabel =
+    end && end.getTime() !== start.getTime()
+      ? `${formatShortDate(start)} → ${formatShortDate(end)}`
+      : formatShortDate(start);
+
+  let status: Status;
+  if (inProgress) status = "now";
+  else if (daysUntil < 0) status = "past";
+  else status = "upcoming";
+
+  return { status, daysUntil, code, dateLabel, dateMuted: false };
+}
+
+/* ---------- Hero card (weather-app top element) ---------- */
+
+function HeroTripCard({
+  trip,
+  model,
+  onClick,
+}: {
+  trip: TripEntry;
+  model: TripModel;
+  onClick: () => void;
+}) {
+  const isPast = model.status === "past";
+  const isNow = model.status === "now";
+
+  let countNode: React.ReactNode;
+  if (model.status === "now") {
+    countNode = <span className="fl-now-pill" style={{ fontSize: 13, padding: "8px 14px" }}>On Now</span>;
+  } else if (model.status === "tbd") {
+    countNode = (
+      <>
+        <span className="fl-hero__countdown-num">—</span>
+        <span className="fl-hero__countdown-label">TBD</span>
+      </>
+    );
+  } else if (isPast) {
+    countNode = (
+      <>
+        <span className="fl-hero__countdown-num">{Math.abs(model.daysUntil)}</span>
+        <span className="fl-hero__countdown-label">Days ago</span>
+      </>
+    );
+  } else {
+    countNode = (
+      <>
+        <span className="fl-hero__countdown-num">{model.daysUntil}</span>
+        <span className="fl-hero__countdown-label">
+          {model.daysUntil === 1 ? "Day to go" : "Days to go"}
+        </span>
+      </>
+    );
+  }
+
+  const className = [
+    "fl-hero",
+    isPast ? "fl-hero--past" : "",
+    isNow ? "fl-hero--now" : "",
+  ].filter(Boolean).join(" ");
 
   return (
     <motion.button
-      ref={ref}
       type="button"
-      className={`deck-card ${isTop ? "deck-card--top" : "deck-card--peek"}`}
-      style={{
-        zIndex: 10 - slot,
-        ...(isTop && !reduceMotion ? { x, rotate: dragRotate } : {}),
-      }}
-      initial={false}
-      animate={reduceMotion ? { opacity: 1 } : animateState}
-      transition={{
-        type: "spring",
-        stiffness: 240,
-        damping: 26,
-        delay: staggerDelay,
-      }}
-      drag={isTop && !reduceMotion ? "x" : false}
-      dragConstraints={{ left: 0, right: 0 }}
-      dragElastic={0.65}
-      onDragEnd={isTop ? handleDragEnd : undefined}
-      onClick={
-        isTop
-          ? () => {
-              if (Math.abs(x.get()) > 4) return;
-              onSelect(trip.id);
-            }
-          : undefined
-      }
+      className={className}
+      onClick={onClick}
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.99 }}
+      transition={{ type: "spring", stiffness: 380, damping: 28 }}
     >
-      <TripCardFace trip={trip} todayStr={todayStr} />
+      <span className="fl-hero__accent-glow" aria-hidden="true" />
+      <div className="fl-hero__top">
+        <span aria-hidden="true">🧗</span>
+        <span className="fl-trip-card__code">{model.code}</span>
+        <span style={{ color: "var(--fl-fg-3)", letterSpacing: "0.14em" }}>
+          {isPast ? "Last trip" : isNow ? "Happening now" : "Next trip"}
+        </span>
+      </div>
+      <div className="fl-hero__countdown">{countNode}</div>
+      <h2 className="fl-hero__title">{trip.location || "Untitled trip"}</h2>
+      <div className={"fl-hero__dates" + (model.dateMuted ? " fl-trip-card__dates--muted" : "")}>
+        {model.dateLabel}
+      </div>
+      <span className="fl-hero__cta">
+        {isPast ? "Look back" : "Open trip"} →
+      </span>
     </motion.button>
-  );
-});
-
-function TripDeck({ trips, todayStr, onSelect }: { trips: TripEntry[]; todayStr: string; onSelect: (id: string) => void }) {
-  const reduceMotion = useReducedMotion();
-
-  const ordered = useMemo(() => {
-    return [...trips].sort((a, b) => {
-      const ad = a.start_date || a.end_date || "9999-12-31";
-      const bd = b.start_date || b.end_date || "9999-12-31";
-      return ad.localeCompare(bd);
-    });
-  }, [trips]);
-
-  const initialActive = useMemo(() => {
-    const i = ordered.findIndex((t) => !isPast(t, todayStr));
-    return i >= 0 ? i : Math.max(ordered.length - 1, 0);
-  }, [ordered, todayStr]);
-
-  const [active, setActive] = useState(initialActive);
-  const [dir, setDir] = useState(0);
-
-  const isFirstRender = useRef(true);
-  useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      isFirstRender.current = false;
-    });
-    return () => cancelAnimationFrame(id);
-  }, []);
-
-  const canGoPrev = active > 0;
-  const canGoNext = active < ordered.length - 1;
-
-  const commit = (direction: number) => {
-    setActive((i) => {
-      if (direction > 0 && i < ordered.length - 1) return i + 1;
-      if (direction < 0 && i > 0) return i - 1;
-      return i;
-    });
-    setDir(direction);
-  };
-
-  const visible = ordered.slice(active, active + 3);
-
-  return (
-    <>
-      <div className="deck-shell">
-        {visible.map((trip, slot) => (
-          <DeckLayer
-            key={trip.id}
-            trip={trip}
-            slot={slot}
-            isTop={slot === 0}
-            todayStr={todayStr}
-            onSelect={onSelect}
-            onCommit={commit}
-            canGoNext={canGoNext}
-            canGoPrev={canGoPrev}
-            reduceMotion={reduceMotion}
-            dir={dir}
-            staggerDelay={
-              isFirstRender.current && !reduceMotion
-                ? (2 - slot) * 0.09 + 0.15
-                : 0
-            }
-          />
-        ))}
-      </div>
-
-      <div className="deck-hint">
-        <button
-          type="button"
-          className="glass-surface deck-hint__nudge"
-          onClick={() => commit(-1)}
-          disabled={!canGoPrev}
-          aria-label="Previous trip"
-        >
-          ←
-        </button>
-        <div className="deck-hint__dots" aria-hidden="true">
-          {ordered.map((t, i) => (
-            <span
-              key={t.id}
-              className={`deck-hint__dot ${
-                i === active ? "deck-hint__dot--on" : ""
-              } ${isPast(t, todayStr) ? "deck-hint__dot--past" : ""}`}
-            />
-          ))}
-        </div>
-        <button
-          type="button"
-          className="glass-surface deck-hint__nudge"
-          onClick={() => commit(1)}
-          disabled={!canGoNext}
-          aria-label="Next trip"
-        >
-          →
-        </button>
-      </div>
-    </>
   );
 }
 
+/* ---------- Compact trip card (the rows underneath) ---------- */
+
+function TripCard({
+  trip,
+  model,
+  onClick,
+}: {
+  trip: TripEntry;
+  model: TripModel;
+  onClick: () => void;
+}) {
+  const isPast = model.status === "past";
+  const isNow = model.status === "now";
+
+  let countNode: React.ReactNode;
+  let labelNode: React.ReactNode;
+  if (model.status === "now") {
+    countNode = null;
+    labelNode = <span className="fl-now-pill">On Now</span>;
+  } else if (model.status === "tbd") {
+    countNode = <span className="fl-trip-card__count">—</span>;
+    labelNode = <span className="fl-trip-card__label">TBD</span>;
+  } else if (isPast) {
+    countNode = <span className="fl-trip-card__count">{Math.abs(model.daysUntil)}</span>;
+    labelNode = <span className="fl-trip-card__label">Days Ago</span>;
+  } else {
+    countNode = <span className="fl-trip-card__count">{model.daysUntil}</span>;
+    labelNode = <span className="fl-trip-card__label">{model.daysUntil === 1 ? "Day" : "Days"}</span>;
+  }
+
+  const className = [
+    "fl-trip-card",
+    isPast ? "fl-trip-card--past" : "",
+    isNow ? "fl-trip-card--now" : "",
+  ].filter(Boolean).join(" ");
+
+  return (
+    <motion.button
+      type="button"
+      className={className}
+      onClick={onClick}
+      whileHover={{ scale: 1.005 }}
+      whileTap={{ scale: 0.985 }}
+      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+    >
+      <div className="fl-trip-card__count-col">
+        {countNode}
+        {labelNode}
+      </div>
+      <div className="fl-trip-card__details">
+        <div className="fl-trip-card__meta">
+          <span className="fl-trip-card__icon" aria-hidden="true">🧗</span>
+          <span className="fl-trip-card__code">{model.code}</span>
+        </div>
+        <h3 className="fl-trip-card__title">{trip.location || "Untitled trip"}</h3>
+        <div className={"fl-trip-card__dates" + (model.dateMuted ? " fl-trip-card__dates--muted" : "")}>
+          {model.dateLabel}
+        </div>
+      </div>
+      <span className="fl-trip-card__accent" aria-hidden="true" />
+    </motion.button>
+  );
+}
+
+/* ---------- Screen ---------- */
+
 export default function TripListing() {
   const navigate = useNavigate();
+  const reduceMotion = useReducedMotion();
   const [trips, setTrips] = useState<TripEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    api.listTrips().then((t) => { setTrips(t); setLoaded(true); });
+    api.listTrips()
+      .then((t) => { setTrips(t); setLoaded(true); })
+      .catch(() => setLoaded(true));
   }, []);
+
+  const today = useMemo(todayISO, []);
+
+  const { hero, upcomingRest, pastTrips, current } = useMemo(() => {
+    const withModel = trips.map((t) => ({ trip: t, model: modelFor(t, today) }));
+    const current = withModel.find((x) => x.model.status === "now") ?? null;
+    const upcoming = withModel
+      .filter((x) => x.model.status === "upcoming" || x.model.status === "tbd")
+      .sort((a, b) => {
+        if (a.model.status === "tbd") return 1;
+        if (b.model.status === "tbd") return -1;
+        return a.model.daysUntil - b.model.daysUntil;
+      });
+    const past = withModel
+      .filter((x) => x.model.status === "past")
+      .sort((a, b) => a.model.daysUntil - b.model.daysUntil); // -1, -2, -5 → most recent first
+
+    // Hero = current trip, else next upcoming, else most-recent past.
+    const hero = current ?? upcoming[0] ?? past[0] ?? null;
+    const upcomingRest = current ? upcoming : upcoming.slice(1);
+    const pastTrips = hero && hero === past[0] ? past.slice(1) : past;
+    return { hero, upcomingRest, pastTrips, current };
+  }, [trips, today]);
 
   const onCreate = () => navigate("/trips/new");
   const onSelect = (id: string) => navigate(`/trips/${id}/board`);
 
-  const reduceMotion = useReducedMotion();
-  const todayStr = useMemo(todayISO, []);
-
-  const fade = reduceMotion
-    ? { initial: false as const, animate: {}, transition: {} }
-    : {
-        initial: { opacity: 0, y: -10 },
-        animate: { opacity: 1, y: 0 },
-        transition: { duration: 0.36, ease: EASE_OUT },
-      };
-
   if (!loaded) {
     return (
       <div className="app-shell">
-        <div className="center-screen">
+        <div className="content">
           <p className="muted">Loading…</p>
         </div>
       </div>
@@ -344,61 +278,102 @@ export default function TripListing() {
   const hasAnyTrip = trips.length > 0;
 
   return (
-    <div className="app-shell app-shell--landing">
+    <div className="app-shell">
       <div className="fade-overlay fade-overlay--top" aria-hidden="true" />
-      <div className="content content--landing">
-        <motion.div {...fade}>
-          <div className="brand-mark">
-            <span className="mark-glyph" aria-hidden="true">🧗</span>
-            Cragstronauts
-          </div>
-          <motion.div
-            className="brand-sub"
-            initial={reduceMotion ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.32, delay: 0.1, ease: EASE_OUT }}
-          >
-            Plan the climb. Pack the car.
-          </motion.div>
+      <div className="content">
+        <motion.div
+          className="fl-brand"
+          initial={reduceMotion ? false : { opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.32 }}
+        >
+          <span className="fl-brand__glyph">🧗</span>
+          Cragstronauts
         </motion.div>
+        <div className="fl-brand__sub">Plan the climb. Pack the car.</div>
 
         {!hasAnyTrip ? (
           <motion.button
             type="button"
-            className="deck-empty"
+            className="fl-empty"
             onClick={onCreate}
-            aria-label="Create your first trip"
-            initial={reduceMotion ? false : { opacity: 0, y: 24, rotate: -6 }}
-            animate={{ opacity: 1, y: 0, rotate: -2 }}
-            transition={{ duration: 0.5, delay: 0.18, ease: EASE_OUT }}
-            whileHover={reduceMotion ? undefined : { rotate: -2, y: -4 }}
-            whileTap={reduceMotion ? undefined : { scale: 0.98 }}
+            initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.36, delay: 0.1 }}
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.99 }}
           >
-            <div className="deck-empty__plus" aria-hidden="true">+</div>
-            <div className="deck-empty__title">No trips on the wall</div>
-            <div className="deck-empty__sub">
-              Tap to plan your first cragstronaut mission.
-            </div>
+            <div className="fl-empty__plus">+</div>
+            <div className="fl-empty__title">No trips on the wall yet</div>
+            <div className="fl-empty__sub">Tap to plan your first cragstronaut mission.</div>
           </motion.button>
         ) : (
-          <TripDeck
-            trips={trips}
-            todayStr={todayStr}
-            onSelect={onSelect}
-          />
+          <div className="fl-page">
+            {hero && (
+              <motion.div
+                initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+              >
+                <HeroTripCard
+                  trip={hero.trip}
+                  model={hero.model}
+                  onClick={() => onSelect(hero.trip.id)}
+                />
+              </motion.div>
+            )}
+
+            {upcomingRest.length > 0 && (
+              <>
+                <div className="fl-section-label">
+                  {current ? "Upcoming" : "Coming up next"}
+                </div>
+                {upcomingRest.map(({ trip, model }, i) => (
+                  <motion.div
+                    key={trip.id}
+                    initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.32, delay: 0.08 + i * 0.04 }}
+                  >
+                    <TripCard
+                      trip={trip}
+                      model={model}
+                      onClick={() => onSelect(trip.id)}
+                    />
+                  </motion.div>
+                ))}
+              </>
+            )}
+
+            {pastTrips.length > 0 && (
+              <>
+                <div className="fl-section-label">Past</div>
+                {pastTrips.map(({ trip, model }, i) => (
+                  <motion.div
+                    key={trip.id}
+                    initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.32, delay: 0.04 + i * 0.03 }}
+                  >
+                    <TripCard
+                      trip={trip}
+                      model={model}
+                      onClick={() => onSelect(trip.id)}
+                    />
+                  </motion.div>
+                ))}
+              </>
+            )}
+          </div>
         )}
       </div>
 
       {hasAnyTrip && (
         <motion.div
           className="bottom-cta bottom-cta--center"
-          initial={reduceMotion ? false : { opacity: 0, y: 48 }}
+          initial={reduceMotion ? false : { opacity: 0, y: 28 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={
-            reduceMotion
-              ? { duration: 0 }
-              : { type: "spring", stiffness: 300, damping: 28, delay: 0.45 }
-          }
+          transition={{ type: "spring", stiffness: 280, damping: 28, delay: 0.3 }}
         >
           <motion.button
             className="btn-3d"

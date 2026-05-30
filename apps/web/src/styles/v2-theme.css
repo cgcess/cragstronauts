@@ -881,6 +881,7 @@ button.nav-pill:hover { color: var(--fl-fg); }
   flex: 0 0 auto;
   width: 32px;
   height: 32px;
+  padding: 0;
   display: grid;
   place-items: center;
   border-radius: var(--fl-radius-pill);
@@ -1123,3 +1124,63 @@ button.nav-pill:hover { color: var(--fl-fg); }
     rgba(5, 7, 11, 0.96) 100%);
 }
 .alps-bg { filter: saturate(0.5) brightness(0.45); }
+
+/* ============================================================
+   Signup swipe deck — dark mode
+   styles.css paints the card, stamps, and tap buttons with a
+   literal `white` background + warm light-mode shadows. Those
+   predate the dark theme and aren't tokenised, so the rebind
+   above never reaches them — the card renders as a glaring
+   white panel with near-white (invisible) title text.
+   Re-skin onto the dark canvas. Affordance colours stay on the
+   v2 scheme: Yes = stone accent, No = danger red.
+   ============================================================ */
+
+.swipe-card {
+  background: var(--fl-surface-2);
+  border: 1px solid var(--fl-divider);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 2px 6px -2px rgba(0, 0, 0, 0.5),
+    0 24px 48px -16px rgba(0, 0, 0, 0.65);
+}
+
+/* Stamps: frosted-dark plate instead of frosted-white */
+.swipe-card .stamp {
+  background: rgba(8, 10, 14, 0.7);
+}
+
+/* Tap buttons beneath the deck */
+.swipe-actions .action-btn {
+  background: var(--fl-surface-2);
+  border: 1.5px solid var(--fl-divider);
+  color: var(--fl-fg-2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 10px 24px -10px rgba(0, 0, 0, 0.6);
+}
+.swipe-actions .action-btn:hover:not(:disabled) {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 4px 10px rgba(0, 0, 0, 0.45),
+    0 14px 28px -10px rgba(0, 0, 0, 0.7);
+}
+.swipe-actions .action-btn.no {
+  color: var(--fl-danger);
+  border-color: rgba(255, 107, 107, 0.4);
+}
+.swipe-actions .action-btn.no:hover:not(:disabled) {
+  background: var(--fl-danger);
+  color: #fff;
+  border-color: var(--fl-danger);
+}
+.swipe-actions .action-btn.yes {
+  color: var(--fl-accent);
+  border-color: var(--fl-accent-ring);
+}
+.swipe-actions .action-btn.yes:hover:not(:disabled) {
+  background: var(--fl-accent);
+  color: var(--fl-bg);
+  border-color: var(--fl-accent);
+}

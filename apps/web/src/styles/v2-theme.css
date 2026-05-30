@@ -881,6 +881,7 @@ button.nav-pill:hover { color: var(--fl-fg); }
   flex: 0 0 auto;
   width: 32px;
   height: 32px;
+  padding: 0;
   display: grid;
   place-items: center;
   border-radius: var(--fl-radius-pill);

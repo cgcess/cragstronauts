@@ -25,6 +25,9 @@ export const CreateTripBodySchema = z.object({
   accommodation_type: z.string().nullable(),
   accommodation_details: z.string().nullable(),
   notes: z.string().nullable(),
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
+  place_label: z.string().nullable().optional(),
   gear_categories: z.array(
     z.object({
       name: z.string(),

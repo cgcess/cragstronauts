@@ -52,6 +52,9 @@ export class TripDO extends DurableObject<Env> {
     accommodation_type: string | null;
     accommodation_details: string | null;
     notes: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    place_label?: string | null;
     gear_categories: {
       name: string;
       fields: { key: string; label: string; type: string }[];
@@ -66,6 +69,9 @@ export class TripDO extends DurableObject<Env> {
       accommodation_type: data.accommodation_type,
       accommodation_details: data.accommodation_details,
       notes: data.notes,
+      latitude: data.latitude != null ? String(data.latitude) : null,
+      longitude: data.longitude != null ? String(data.longitude) : null,
+      place_label: data.place_label ?? null,
     });
 
     for (const cat of data.gear_categories) {

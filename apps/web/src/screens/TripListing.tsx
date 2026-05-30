@@ -369,20 +369,18 @@ export default function TripListing() {
       </div>
 
       {hasAnyTrip && (
-        <motion.div
-          className="bottom-cta bottom-cta--center"
-          initial={reduceMotion ? false : { opacity: 0, y: 28 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 280, damping: 28, delay: 0.3 }}
+        <motion.button
+          type="button"
+          className="fab"
+          onClick={onCreate}
+          aria-label="Plan new trip"
+          initial={reduceMotion ? false : { opacity: 0, scale: 0.85, y: 12 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 320, damping: 26, delay: 0.25 }}
+          whileTap={reduceMotion ? undefined : { scale: 0.94 }}
         >
-          <motion.button
-            className="btn-3d"
-            onClick={onCreate}
-            whileTap={reduceMotion ? undefined : { y: 5 }}
-          >
-            Plan new trip →
-          </motion.button>
-        </motion.div>
+          +
+        </motion.button>
       )}
     </div>
   );

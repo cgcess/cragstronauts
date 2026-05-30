@@ -13,6 +13,7 @@ import NotFound from "./screens/NotFound";
 
 import "./styles.css";
 import "./styles/v2-theme.css";
+import "./styles/minimalist.css";
 
 // SVG-backdrop-filter capability probe.
 //

@@ -1,0 +1,474 @@
+/* ============================================================
+   Minimalist override layer.
+   Loaded AFTER styles.css and v2-theme.css. Replaces the
+   liquid-glass / dark-photo treatment with a clean light surface
+   system: solid cards, 1px borders, restrained shadows, flat
+   buttons, no backdrop-blur, no glossy gradients.
+   Drop the import in main.tsx to revert.
+   ============================================================ */
+
+:root {
+  /* Dark, warm — sleek, no glass.  Same structure as the light variant;
+     palette lifted enough that drop shadows actually register and cards
+     can stand off the page without a border. */
+  --min-canvas:        #1c1814;       /* page — warm dark gray, lifted so shadows show */
+  --min-canvas-2:      #15110e;       /* sunk well */
+  --min-surface:       #2a241e;       /* cards — clearly above canvas */
+  --min-surface-2:     #322c24;       /* hover / panel */
+  --min-ink:           #f0eadc;       /* primary text */
+  --min-ink-2:         #bdb6a8;       /* secondary */
+  --min-ink-3:         #8d867a;       /* tertiary / labels */
+  --min-line:          #3a3329;       /* hairline (used only for inputs/fab/nav) */
+  --min-line-strong:   #4a4239;
+  --min-accent:        #9bb792;       /* brand green, lifted for dark */
+  --min-accent-2:      #c2d2bb;
+  --min-accent-soft:   rgba(155, 183, 146, 0.16);
+  --min-accent-focus:  rgba(155, 183, 146, 0.40);
+  --min-danger:        #e36b56;
+  --min-primary-hover: #ddd6c5;
+  /* Small shadow — for nav pills, fab base, inputs. */
+  --min-shadow-sm:     0 1px 2px rgba(0, 0, 0, 0.55);
+  /* Card shadow — two stops: tight bottom edge + soft diffuse lift. */
+  --min-shadow:        0 6px 16px -4px rgba(0, 0, 0, 0.55),
+                       0 2px 4px rgba(0, 0, 0, 0.4);
+  /* Heroes / hovered cards / open dash cards. */
+  --min-shadow-lg:     0 14px 32px -8px rgba(0, 0, 0, 0.7),
+                       0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+/* ---------- Canvas & background photo ---------- */
+html, body, #root { background: var(--min-canvas) !important; color: var(--min-ink); }
+.alps-bg { display: none !important; }     /* drop the dark dimmed photo */
+.alps-bg::after { display: none !important; }
+.alps-bg-credit { display: none !important; }
+/* Re-tint v2's html background var if it leaks through */
+html { --fl-bg: var(--min-canvas); }
+
+/* ---------- Typography ---------- */
+.h1, .fl-detail-hero__title, .fl-hero__title { color: var(--min-ink) !important; }
+.h2 { color: var(--min-ink-2) !important; }
+.muted { color: var(--min-ink-3) !important; }
+label { color: var(--min-ink-2); font-size: 13px; font-weight: 500; }
+a { color: var(--min-accent); }
+
+/* Body text inherits ink */
+body, .content, .app-shell { color: var(--min-ink); }
+
+/* ---------- Buttons (flat) ---------- */
+button {
+  background: var(--min-ink);
+  color: var(--min-surface);
+  border: 1px solid var(--min-ink);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-weight: 500;
+  box-shadow: none;
+  transition: background 140ms ease-out, transform 100ms ease-out, color 140ms ease-out, border-color 140ms ease-out;
+}
+button:hover { background: var(--min-primary-hover); }
+button:active { transform: scale(0.98); }
+button:disabled { opacity: 0.55; }
+
+button.secondary {
+  background: var(--min-surface);
+  color: var(--min-ink);
+  border: 1px solid var(--min-line-strong);
+  box-shadow: var(--min-shadow);
+}
+button.secondary:hover { background: var(--min-surface-2); }
+
+button.ghost {
+  background: transparent;
+  color: var(--min-ink-2);
+  border: none;
+  padding: 6px 10px;
+  font-weight: 500;
+}
+button.ghost:hover { color: var(--min-ink); background: var(--min-surface-2); }
+
+button.danger {
+  background: var(--min-danger);
+  border-color: var(--min-danger);
+  color: #fff;
+}
+
+/* Flatten the 3D ornament into a clean primary CTA */
+button.btn-3d,
+button.btn-3d.btn-3d--earth,
+button.btn-3d.btn-3d--round {
+  position: relative;
+  background: var(--min-ink) !important;
+  color: var(--min-surface) !important;
+  border: 1px solid var(--min-ink) !important;
+  border-radius: 12px !important;
+  padding: 14px 22px !important;
+  font-family: inherit !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  box-shadow: var(--min-shadow) !important;
+  transition: background 140ms ease-out, transform 100ms ease-out !important;
+}
+button.btn-3d::before,
+button.btn-3d::after { content: none !important; box-shadow: none !important; }
+button.btn-3d:hover { background: var(--min-primary-hover) !important; transform: none !important; box-shadow: var(--min-shadow) !important; }
+button.btn-3d:active { transform: translateY(0) scale(0.98) !important; box-shadow: none !important; }
+
+/* ---------- Inputs ---------- */
+input, textarea, select {
+  background: var(--min-surface) !important;
+  color: var(--min-ink) !important;
+  border: 1px solid var(--min-line-strong) !important;
+  border-radius: 10px !important;
+  padding: 10px 12px !important;
+  font: inherit !important;
+  box-shadow: none !important;
+}
+input::placeholder, textarea::placeholder { color: var(--min-ink-3); }
+input:focus, textarea:focus, select:focus {
+  /* No glow — just shift the border to the accent so focus is still
+     legible without the halo. */
+  outline: none !important;
+  border-color: var(--min-accent) !important;
+}
+
+/* ---------- Topbar pills (kill the glass) ---------- */
+.topbar { background: transparent; }
+.glass-surface {
+  background: var(--min-surface) !important;
+  border: 1px solid var(--min-line) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: var(--min-shadow-sm) !important;
+  color: var(--min-ink) !important;
+}
+.glass-surface::before { content: none !important; display: none !important; }
+
+button.nav-pill {
+  color: var(--min-ink) !important;
+  background: var(--min-surface) !important;
+  border: 1px solid var(--min-line) !important;
+  padding: 8px 14px !important;
+  font-weight: 500 !important;
+  box-shadow: var(--min-shadow-sm) !important;
+}
+button.nav-pill:hover { background: var(--min-surface-2) !important; color: var(--min-ink) !important; transform: none !important; box-shadow: var(--min-shadow-sm) !important; }
+button.nav-pill:active { transform: scale(0.97) !important; box-shadow: none !important; }
+
+.nav-cap {
+  color: var(--min-ink) !important;
+  background: var(--min-surface) !important;
+  border: 1px solid var(--min-line) !important;
+  box-shadow: var(--min-shadow-sm) !important;
+}
+.nav-cap strong { color: var(--min-ink) !important; }
+
+/* ---------- Generic cards / list items / pills ---------- */
+.card {
+  background: var(--min-surface) !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  box-shadow: var(--min-shadow) !important;
+  color: var(--min-ink) !important;
+}
+.list-item {
+  background: transparent !important;
+  border-bottom: 1px solid var(--min-line) !important;
+  color: var(--min-ink);
+}
+.pill {
+  background: var(--min-canvas-2) !important;
+  color: var(--min-ink-2) !important;
+  border: 1px solid var(--min-line) !important;
+  border-radius: 999px !important;
+  padding: 2px 10px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+}
+.pill.accent {
+  background: var(--min-accent) !important;
+  color: #fff !important;
+  border-color: var(--min-accent) !important;
+}
+
+/* ---------- Dashboard cards ---------- */
+.dash-card {
+  background: var(--min-surface) !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  box-shadow: var(--min-shadow) !important;
+  color: var(--min-ink) !important;
+}
+.dash-card--open { box-shadow: var(--min-shadow-lg) !important; }
+.dash-card--urgent {
+  /* No ring, no glow — the tinted header + "action needed" chip carry
+     the urgency. Same lift as other cards. */
+  box-shadow: var(--min-shadow) !important;
+}
+.dash-card--urgent .dash-card__head { background: var(--min-accent-soft) !important; }
+.dash-card__head {
+  background: transparent !important;
+  color: var(--min-ink) !important;
+  padding: 14px 16px !important;
+  /* The head is a <button>; the global primary-button rule was
+     leaking a light border onto it. Strip border + match the card
+     corner so the head sits flush. */
+  border: 0 !important;
+  border-radius: inherit !important;
+}
+.dash-card__head:hover { background: var(--min-surface-2) !important; }
+.dash-card__title { color: var(--min-ink) !important; }
+.dash-card__summary { color: var(--min-ink-3) !important; }
+.dash-card__flag {
+  background: var(--min-accent) !important;
+  color: #fff !important;
+  border-radius: 4px !important;
+  padding: 2px 6px !important;
+  font-size: 10px !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  font-weight: 700 !important;
+}
+.dash-badge {
+  background: var(--min-canvas-2) !important;
+  border: 1px solid var(--min-line) !important;
+  color: var(--min-ink-2) !important;
+  font-weight: 500 !important;
+}
+.dash-chevron { color: var(--min-ink-3) !important; }
+.dash-danger {
+  background: rgba(227, 107, 86, 0.08) !important;
+  border: 1px dashed var(--min-danger) !important;
+}
+.dash-danger__title { color: var(--min-danger) !important; }
+
+/* Weather strip in dash */
+.wx-day {
+  background: var(--min-surface-2) !important;
+  border: 0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35) !important;
+  color: var(--min-ink) !important;
+}
+.wx-day__date { color: var(--min-ink-3) !important; }
+.wx-day__temp { color: var(--min-ink) !important; }
+.wx-day__precip { color: var(--min-accent) !important; }
+
+/* ---------- Trip listing (fl-trip-card + hero) ---------- */
+.fl-page { background: transparent !important; }
+.fl-brand, .fl-brand__sub, .fl-section-label { color: var(--min-ink-2) !important; }
+
+.fl-trip-card {
+  background: var(--min-surface) !important;
+  border: 0 !important;
+  box-shadow: var(--min-shadow) !important;
+  color: var(--min-ink) !important;
+}
+.fl-trip-card:hover {
+  background: var(--min-surface-2) !important;
+  box-shadow: var(--min-shadow-lg) !important;
+  transform: translateY(-1px);
+}
+.fl-trip-card--past { filter: none !important; opacity: 0.6; }
+.fl-trip-card__count { color: var(--min-ink) !important; -webkit-text-fill-color: var(--min-ink) !important; }
+.fl-trip-card__label,
+.fl-trip-card__meta,
+.fl-trip-card__details,
+.fl-trip-card__code { color: var(--min-ink-3) !important; }
+.fl-trip-card__icon { color: var(--min-ink-2) !important; }
+.fl-trip-card__accent { display: none !important; }
+
+.fl-hero {
+  background: var(--min-surface) !important;
+  border: 0 !important;
+  box-shadow: var(--min-shadow-lg) !important;
+  color: var(--min-ink) !important;
+}
+.fl-hero:hover { transform: translateY(-1px); }
+.fl-hero__top { color: var(--min-ink-3) !important; }
+.fl-hero__top .fl-trip-card__code { background: var(--min-canvas-2) !important; color: var(--min-ink-2) !important; }
+.fl-hero__title { color: var(--min-ink) !important; }
+.fl-hero__countdown-num {
+  /* drop the gradient text fill — flat ink */
+  color: var(--min-ink) !important;
+  background: none !important;
+  -webkit-text-fill-color: var(--min-ink) !important;
+  background-clip: border-box !important;
+  -webkit-background-clip: border-box !important;
+}
+.fl-hero__countdown-label { color: var(--min-ink-3) !important; }
+.fl-hero__accent-glow { display: none !important; }
+.fl-hero__cta { color: var(--min-ink-2) !important; }
+
+.fl-now-pill {
+  background: var(--min-canvas-2) !important;
+  color: var(--min-ink-2) !important;
+  border: 1px solid var(--min-line) !important;
+}
+
+.fl-empty,
+.fl-empty__title,
+.fl-empty__sub { color: var(--min-ink-2) !important; }
+.fl-empty__plus { color: var(--min-ink-3) !important; }
+
+/* ---------- Trip detail hero (TripDashboard top) ---------- */
+.fl-detail-hero {
+  background: var(--min-surface) !important;
+  border: 0 !important;
+  box-shadow: var(--min-shadow-lg) !important;
+  color: var(--min-ink) !important;
+}
+.fl-detail-hero__meta { color: var(--min-ink-3) !important; }
+.fl-detail-hero__title { color: var(--min-ink) !important; }
+.fl-detail-hero__count,
+.fl-detail-hero__count-label {
+  color: var(--min-ink) !important;
+  -webkit-text-fill-color: var(--min-ink) !important;
+  background: none !important;
+}
+.fl-detail-hero__edit {
+  background: var(--min-surface) !important;
+  border: 1px solid var(--min-line) !important;
+  color: var(--min-ink-2) !important;
+  box-shadow: var(--min-shadow) !important;
+}
+.fl-detail-hero__edit:hover { color: var(--min-ink) !important; background: var(--min-surface-2) !important; }
+
+/* Logistics row in hero */
+.fl-detail-hero__logistics,
+.fl-detail-hero__logistics-detail,
+.fl-detail-hero__logistics-text,
+.fl-detail-hero__logistics-label,
+.fl-detail-hero__logistics-icon,
+.fl-detail-hero__logistics-item,
+.fl-detail-hero__row { color: var(--min-ink) !important; }
+.fl-detail-hero__logistics-label { color: var(--min-ink-3) !important; }
+.fl-detail-hero__notes { color: var(--min-ink-2) !important; }
+
+/* Weather mini-widget right of countdown */
+.fl-weather__icon,
+.fl-weather__high,
+.fl-weather__low { color: var(--min-ink) !important; }
+.fl-weather__sub { color: var(--min-ink-3) !important; }
+.fl-weather__sep { color: var(--min-line-strong) !important; }
+
+/* Belay-style badges become subtle neutral chips */
+.fl-badges { gap: 6px !important; }
+.fl-badge {
+  background: var(--min-canvas-2) !important;
+  color: var(--min-ink-2) !important;
+  border: 1px solid var(--min-line) !important;
+  font-weight: 500 !important;
+}
+.fl-badge--lead {
+  background: var(--min-accent-soft) !important;
+  color: var(--min-accent) !important;
+  border-color: var(--min-accent) !important;
+}
+.fl-badge--grade,
+.fl-badge--anchor,
+.fl-badge--coffee {
+  background: var(--min-canvas-2) !important;
+  color: var(--min-ink-2) !important;
+  border-color: var(--min-line) !important;
+}
+.fl-roster-row {
+  background: var(--min-surface) !important;
+  border: 0 !important;
+  box-shadow: var(--min-shadow) !important;
+  color: var(--min-ink) !important;
+}
+
+/* ---------- Bottom sheet (forecast) ---------- */
+.sheet-scrim { background: rgba(0, 0, 0, 0.55) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+.sheet {
+  background: var(--min-surface) !important;
+  border: 0 !important;
+  box-shadow: 0 -10px 32px rgba(0, 0, 0, 0.6) !important;
+  color: var(--min-ink) !important;
+}
+.sheet__grabber { background: var(--min-line-strong) !important; }
+.sheet__title { color: var(--min-ink) !important; }
+
+/* ---------- Fade overlays (drop the dark wash) ---------- */
+.fade-overlay { display: none !important; }
+
+/* ---------- Tabbar (unused now but harmless to skin) ---------- */
+.tabbar {
+  background: var(--min-surface) !important;
+  border-top: 1px solid var(--min-line) !important;
+}
+.tabbar a { color: var(--min-ink-3) !important; }
+.tabbar a.active { color: var(--min-ink) !important; }
+.tabbar .tab-pill {
+  background: var(--min-canvas-2) !important;
+  box-shadow: none !important;
+}
+
+/* ---------- SignupSwipe stamps ---------- */
+.stamp {
+  background: var(--min-surface) !important;
+  color: var(--min-ink) !important;
+  border: 1px solid var(--min-line-strong) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* ---------- Calendar (react-day-picker) — keep but tone down ---------- */
+.rdp-range_middle .rdp-day_button {
+  background: var(--min-accent-soft) !important;
+  color: var(--min-ink) !important;
+}
+.rdp-range_start .rdp-day_button,
+.rdp-selected:not(.rdp-range_end):not(.rdp-range_middle) .rdp-day_button {
+  background: var(--min-accent) !important;
+  color: #fff !important;
+}
+.rdp-range_end .rdp-day_button {
+  background: var(--min-surface) !important;
+  color: var(--min-ink) !important;
+  box-shadow: inset 0 0 0 2px var(--min-accent) !important;
+}
+
+.step-tag { color: var(--min-accent) !important; background: var(--min-accent-soft) !important; }
+
+.error-banner {
+  background: rgba(227, 107, 86, 0.12) !important;
+  color: var(--min-danger) !important;
+  border: 1px solid var(--min-danger) !important;
+}
+
+/* ---------- FAB (replaces the oversized "Plan new trip" CTA) ----------
+   Small circular button pinned bottom-right. Tactile but quiet — sits
+   above content, sized for one-thumb reach, doesn't compete with the
+   trip cards. */
+.fab {
+  position: fixed;
+  right: 20px;
+  bottom: calc(22px + env(safe-area-inset-bottom));
+  z-index: 50;
+  width: 52px;
+  height: 52px;
+  padding: 0 !important;
+  border-radius: 999px !important;
+  background: var(--min-ink) !important;
+  color: var(--min-surface) !important;
+  border: 1px solid var(--min-line-strong) !important;
+  font-size: 26px;
+  font-weight: 400;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.55), 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+  cursor: pointer;
+  transition: background 140ms ease-out, transform 100ms ease-out;
+}
+.fab:hover {
+  background: var(--min-primary-hover) !important;
+}
+.fab:active {
+  transform: scale(0.94);
+}
+.fab:focus-visible {
+  outline: 2px solid var(--min-accent-focus);
+  outline-offset: 3px;
+}

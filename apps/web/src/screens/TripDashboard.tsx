@@ -2146,6 +2146,24 @@ function ExpenseForm({
   );
 }
 
+function SimplifyArrow({ from, to, amount, highlight }: { from: string; to: string; amount: string; highlight?: boolean }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 8,
+      padding: "6px 10px", borderRadius: 8,
+      background: highlight ? "rgba(var(--min-accent-rgb, 180,140,60), 0.1)" : "rgba(255,255,255,0.04)",
+    }}>
+      <span style={{ fontWeight: 600, minWidth: 36 }}>{from}</span>
+      <span style={{ flex: 1, display: "flex", alignItems: "center", gap: 4 }}>
+        <span style={{ flex: 1, height: 1, background: highlight ? "var(--min-accent)" : "rgba(255,255,255,0.15)" }} />
+        <span style={{ fontSize: 12 }}>{amount}</span>
+        <span style={{ fontSize: 12 }}>→</span>
+      </span>
+      <span style={{ fontWeight: 600, minWidth: 36, textAlign: "right" }}>{to}</span>
+    </div>
+  );
+}
+
 function ExpensesBody({
   tripId,
   expenses,
@@ -2166,6 +2184,7 @@ function ExpensesBody({
   const [settleTarget, setSettleTarget] = useState<Settlement | null>(null);
   const [settleAmount, setSettleAmount] = useState("");
   const [settleBusy, setSettleBusy] = useState(false);
+  const [simplifyInfoOpen, setSimplifyInfoOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const realExpenses = expenses.filter((e) => !e.is_settlement);
@@ -2294,9 +2313,14 @@ function ExpensesBody({
               </div>
             );
           })}
-          <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+          <button
+            type="button"
+            className="muted"
+            style={{ fontSize: 12, marginTop: 6, background: "none", border: "none", padding: 0, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 2 }}
+            onClick={() => setSimplifyInfoOpen(true)}
+          >
             Simplified to minimize payments
-          </div>
+          </button>
         </div>
       )}
 
@@ -2452,6 +2476,68 @@ function ExpensesBody({
             </div>
           </div>
         )}
+      </BottomSheet>
+
+      {/* Simplification explainer */}
+      <BottomSheet
+        open={simplifyInfoOpen}
+        onClose={() => setSimplifyInfoOpen(false)}
+        title="How it works"
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <p className="muted" style={{ margin: 0, lineHeight: 1.5 }}>
+            Say Colin paid €100 for himself and Juan, and Juan paid €100 for himself and Nico.
+            Each person&apos;s net works out to:
+          </p>
+
+          <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+            <div style={{ textAlign: "center", padding: "8px 12px", borderRadius: 8, background: "rgba(255,255,255,0.04)" }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>Colin</div>
+              <div className="muted" style={{ fontSize: 12 }}>gets €50</div>
+            </div>
+            <div style={{ textAlign: "center", padding: "8px 12px", borderRadius: 8, background: "rgba(255,255,255,0.04)" }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>Juan</div>
+              <div className="muted" style={{ fontSize: 12 }}>settled</div>
+            </div>
+            <div style={{ textAlign: "center", padding: "8px 12px", borderRadius: 8, background: "rgba(255,255,255,0.04)" }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>Nico</div>
+              <div className="muted" style={{ fontSize: 12 }}>owes €50</div>
+            </div>
+          </div>
+
+          {/* Diagram */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Before */}
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, opacity: 0.5 }}>WITHOUT SIMPLIFICATION</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <SimplifyArrow from="Juan" to="Colin" amount="€50" />
+                <SimplifyArrow from="Nico" to="Juan" amount="€50" />
+              </div>
+              <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                2 payments — Juan is in the middle for no reason
+              </div>
+            </div>
+
+            {/* Arrow */}
+            <div style={{ textAlign: "center", fontSize: 20, opacity: 0.4 }}>↓</div>
+
+            {/* After */}
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: "var(--min-accent)" }}>WITH SIMPLIFICATION</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <SimplifyArrow from="Nico" to="Colin" amount="€50" highlight />
+              </div>
+              <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                1 payment — Nico pays Colin directly, Juan doesn&apos;t need to do anything
+              </div>
+            </div>
+          </div>
+
+          <p className="muted" style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}>
+            Everyone ends up with the same amount — just fewer transfers.
+          </p>
+        </div>
       </BottomSheet>
     </div>
   );

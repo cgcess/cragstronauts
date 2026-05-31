@@ -374,3 +374,97 @@ input:focus, textarea:focus, select:focus {
   outline: 2px solid var(--min-accent-focus);
   outline-offset: 3px;
 }
+
+/* ---------- Dashboard tile grid (iOS-weather detail-tile pattern) ----------
+   Replaces the .dash-stack accordion with a 2-column grid of compact
+   tiles. The full content opens in a BottomSheet on tap. */
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+@media (max-width: 380px) {
+  /* On the narrowest phones, single column reads better. */
+  .dash-grid { grid-template-columns: 1fr; }
+}
+
+.dash-tile {
+  position: relative;
+  background: var(--min-surface) !important;
+  color: var(--min-ink) !important;
+  border: 0 !important;
+  border-radius: 16px !important;
+  box-shadow: var(--min-shadow) !important;
+  padding: 14px 14px 16px !important;
+  min-height: 120px;
+  display: flex !important;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  text-align: left;
+  font: inherit !important;
+  cursor: pointer;
+  transition: transform 140ms ease-out, box-shadow 160ms ease-out, background 160ms ease-out;
+}
+.dash-tile:hover  { background: var(--min-surface-2) !important; box-shadow: var(--min-shadow-lg) !important; }
+.dash-tile:active { transform: scale(0.97); }
+.dash-tile:focus-visible {
+  outline: 2px solid var(--min-accent-focus);
+  outline-offset: 2px;
+}
+
+/* Top row: icon + key metric */
+.dash-tile__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.dash-tile__icon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.dash-tile__badge {
+  display: inline-flex;
+}
+
+/* Title — small label under the icon row, weather-app caps style */
+.dash-tile__title {
+  margin-top: 2px;
+  font-family: var(--font-display, inherit);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--min-ink-3) !important;
+}
+
+/* Summary — the headline value, larger & legible */
+.dash-tile__summary {
+  margin-top: auto;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--min-ink) !important;
+  overflow-wrap: anywhere;
+}
+
+/* Tiny "action needed" pill, sized for the tile */
+.dash-tile__flag {
+  align-self: flex-start;
+  background: var(--min-accent) !important;
+  color: var(--min-surface) !important;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Urgent tile — subtle green-tinted backplate, no glow */
+.dash-tile--urgent {
+  background: linear-gradient(180deg, var(--min-accent-soft), var(--min-surface)) !important;
+}

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import type { DateRange } from "react-day-picker";
@@ -247,59 +247,50 @@ function useWeather(
 /* Card shell                                                          */
 /* ------------------------------------------------------------------ */
 
-function DashCard({
+/**
+ * Compact dashboard tile — sized to sit in a 2-column grid (iOS Weather
+ * detail-tile pattern). The full body is rendered separately in a
+ * bottom sheet, so the tile itself is just the at-a-glance summary +
+ * a tap target.
+ */
+function DashTile({
   icon,
   title,
   summary,
   badge,
   urgent,
-  expanded,
-  onToggle,
-  children,
+  onClick,
 }: {
   icon: string;
   title: string;
   summary?: React.ReactNode;
   badge?: React.ReactNode;
   urgent?: boolean;
-  expanded: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
+  onClick: () => void;
 }) {
   return (
-    <div
-      className={`dash-card${urgent ? " dash-card--urgent" : ""}${
-        expanded ? " dash-card--open" : ""
-      }`}
+    <motion.button
+      type="button"
+      className={`dash-tile${urgent ? " dash-tile--urgent" : ""}`}
+      onClick={onClick}
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.97 }}
+      transition={{ type: "spring", stiffness: 380, damping: 28 }}
     >
-      <button className="dash-card__head" onClick={onToggle}>
-        <span className="dash-card__icon">{icon}</span>
-        <span className="dash-card__titles">
-          <span className="dash-card__title">
-            {title}
-            {urgent && <span className="dash-card__flag">action needed</span>}
+      <span className="dash-tile__top">
+        <span className="dash-tile__icon" aria-hidden="true">{icon}</span>
+        {badge != null && (
+          <span className="dash-tile__badge">
+            <Tag variant="neutral" size="sm" mono>{badge}</Tag>
           </span>
-          {summary != null && <span className="dash-card__summary">{summary}</span>}
-        </span>
-        {badge != null && <Tag variant="neutral" size="sm" mono>{badge}</Tag>}
-        <span className={`dash-chevron${expanded ? " open" : ""}`}>▾</span>
-      </button>
-      {/* Clean reveal — content fades in, the card grows instantly.
-          No shared-layout morph (the animation the crew disliked). */}
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            className="dash-card__body"
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.16, ease: EASE_OUT }}
-          >
-            {children}
-          </motion.div>
         )}
-      </AnimatePresence>
-    </div>
+      </span>
+      <span className="dash-tile__title">{title}</span>
+      {urgent && <span className="dash-tile__flag">Action needed</span>}
+      {summary != null && (
+        <span className="dash-tile__summary">{summary}</span>
+      )}
+    </motion.button>
   );
 }
 
@@ -330,7 +321,6 @@ export default function TripDashboard() {
   const [editingHero, setEditingHero] = useState(false);
   const [weatherSheetOpen, setWeatherSheetOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const initExpanded = useRef(false);
 
   const shareTrip = async () => {
     const url = window.location.href;
@@ -537,14 +527,8 @@ export default function TripDashboard() {
 
   cards.sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
 
-  // Auto-expand the top card once data has loaded.
-  if (!initExpanded.current && cards.length) {
-    initExpanded.current = true;
-    if (expandedId === null) setExpandedId(cards[0].id);
-  }
-
-  const toggle = (id: string) =>
-    setExpandedId((cur) => (cur === id ? null : id));
+  // Tiles open into a bottom sheet; no auto-open on mount.
+  const selectedCard = cards.find((c) => c.id === expandedId) ?? null;
 
   return (
     <div className="app-shell">
@@ -756,20 +740,17 @@ export default function TripDashboard() {
         </div>
         )}
 
-        <div className="dash-stack">
+        <div className="dash-grid">
           {cards.map((c) => (
-            <DashCard
+            <DashTile
               key={c.id}
               icon={c.icon}
               title={c.title}
               summary={c.summary}
               badge={c.badge}
               urgent={c.urgent}
-              expanded={expandedId === c.id}
-              onToggle={() => toggle(c.id)}
-            >
-              {c.body}
-            </DashCard>
+              onClick={() => setExpandedId(c.id)}
+            />
           ))}
         </div>
       </div>
@@ -787,6 +768,14 @@ export default function TripDashboard() {
           isOrganizer={me.is_organizer}
           onChanged={reload}
         />
+      </BottomSheet>
+
+      <BottomSheet
+        open={selectedCard !== null}
+        onClose={() => setExpandedId(null)}
+        title={selectedCard?.title}
+      >
+        {selectedCard?.body}
       </BottomSheet>
     </div>
   );

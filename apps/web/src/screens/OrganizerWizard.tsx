@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router";
 import { api } from "../api";
 import DateRangePicker from "../components/DateRangePicker";
+import { Button } from "../components/ui";
 
 interface CategoryField {
   key: string;
@@ -198,9 +199,9 @@ export default function OrganizerWizard() {
           transition={{ duration: 0.32, ease: EASE_OUT }}
         >
           <div className="h1">{STEP_TITLES[step]}</div>
-          <button className="glass-surface nav-pill" onClick={() => navigate("/")}>
+          <Button variant="secondary" pill onClick={() => navigate("/")}>
             Cancel
-          </button>
+          </Button>
         </motion.div>
         <motion.p
           className="step-tag"
@@ -241,7 +242,7 @@ export default function OrganizerWizard() {
                   />
                   <button
                     type="button"
-                    className="secondary"
+                    className="th-btn th-btn--secondary"
                     onClick={geoSearch}
                     disabled={geoSearching || !location.trim()}
                   >
@@ -252,7 +253,7 @@ export default function OrganizerWizard() {
                 {placeLabel ? (
                   <div className="list-item" style={{ marginTop: 8 }}>
                     <span>📍 {placeLabel}</span>
-                    <button type="button" className="ghost" onClick={clearPin}>
+                    <button type="button" className="th-btn th-btn--tertiary" onClick={clearPin}>
                       Clear
                     </button>
                   </div>
@@ -270,7 +271,7 @@ export default function OrganizerWizard() {
                         <span>{labelForGeo(r)}</span>
                         <button
                           type="button"
-                          className="ghost"
+                          className="th-btn th-btn--tertiary"
                           onClick={() => pickPlace(r)}
                         >
                           Pin
@@ -328,7 +329,7 @@ export default function OrganizerWizard() {
               </motion.div>
               <motion.button
                 variants={item}
-                className="btn-3d"
+                className="th-btn th-btn--primary th-btn--full"
                 disabled={!location.trim() || !datesValid}
                 onClick={() => setStep(1)}
                 whileTap={reduceMotion ? undefined : { scale: 0.97 }}
@@ -364,7 +365,7 @@ export default function OrganizerWizard() {
                       }}
                     />
                     <button
-                      className="ghost"
+                      className="th-btn th-btn--tertiary"
                       onClick={() =>
                         setCategories(categories.filter((_, i) => i !== ci))
                       }
@@ -409,7 +410,8 @@ export default function OrganizerWizard() {
                           <option value="number">Number</option>
                         </select>
                         <button
-                          className="ghost"
+                          className="th-btn th-btn--tertiary th-btn--icon th-btn--sm"
+                          aria-label="Remove field"
                           onClick={() => {
                             const next = [...categories];
                             next[ci] = {
@@ -424,7 +426,7 @@ export default function OrganizerWizard() {
                       </div>
                     ))}
                     <button
-                      className="secondary"
+                      className="th-btn th-btn--secondary"
                       onClick={() => {
                         const next = [...categories];
                         next[ci] = {
@@ -444,7 +446,7 @@ export default function OrganizerWizard() {
               ))}
               <motion.button
                 variants={item}
-                className="secondary"
+                className="th-btn th-btn--secondary"
                 onClick={() =>
                   setCategories([...categories, { name: "", fields: [] }])
                 }
@@ -452,11 +454,11 @@ export default function OrganizerWizard() {
                 + Add category
               </motion.button>
               <motion.div variants={item} className="row" style={{ marginTop: 10 }}>
-                <button className="secondary" onClick={() => setStep(0)}>
+                <button className="th-btn th-btn--secondary" onClick={() => setStep(0)}>
                   Back
                 </button>
                 <motion.button
-                  className="btn-3d"
+                  className="th-btn th-btn--primary"
                   onClick={() => setStep(2)}
                   style={{ flex: 1 }}
                   whileTap={reduceMotion ? undefined : { scale: 0.97 }}
@@ -487,11 +489,11 @@ export default function OrganizerWizard() {
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOrganizerName(e.target.value)}
               />
               <motion.div variants={item} className="row">
-                <button className="secondary" onClick={() => setStep(1)}>
+                <button className="th-btn th-btn--secondary" onClick={() => setStep(1)}>
                   Back
                 </button>
                 <motion.button
-                  className="btn-3d"
+                  className="th-btn th-btn--primary"
                   disabled={!organizerName.trim() || submitting}
                   onClick={submit}
                   style={{ flex: 1 }}

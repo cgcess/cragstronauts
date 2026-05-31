@@ -7,3 +7,4 @@ __pycache__/
 claude_instructions.md
 .claude/
 .pnpm-store
+.DS_Store

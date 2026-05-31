@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router";
+import { Button } from "../components/ui";
 
 export default function NotFound() {
   const navigate = useNavigate();
@@ -12,9 +13,9 @@ export default function NotFound() {
         <p className="muted" style={{ marginBottom: 24 }}>
           This route doesn&apos;t lead anywhere. Maybe the trail washed out.
         </p>
-        <button onClick={() => navigate("/")}>
+        <Button variant="primary" onClick={() => navigate("/")}>
           Back to base camp
-        </button>
+        </Button>
       </div>
     </div>
   );

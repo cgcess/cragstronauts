@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import { api } from "../api";
 import type { z } from "zod";
 import type { TripIndexEntrySchema } from "@cragstronauts/contract";
+import { Tag } from "../components/ui";
 
 type TripEntry = z.infer<typeof TripIndexEntrySchema>;
 
@@ -100,7 +101,7 @@ function HeroTripCard({
 
   let countNode: React.ReactNode;
   if (model.status === "now") {
-    countNode = <span className="fl-now-pill" style={{ fontSize: 13, padding: "8px 14px" }}>On Now</span>;
+    countNode = <Tag variant="ember" dot>On Now</Tag>;
   } else if (model.status === "tbd") {
     countNode = (
       <>
@@ -144,7 +145,7 @@ function HeroTripCard({
       <span className="fl-hero__accent-glow" aria-hidden="true" />
       <div className="fl-hero__top">
         <span aria-hidden="true">🧗</span>
-        <span className="fl-trip-card__code">{model.code}</span>
+        <Tag variant="neutral" size="sm" mono>{model.code}</Tag>
         <span style={{ color: "var(--fl-fg-3)", letterSpacing: "0.14em" }}>
           {isPast ? "Last trip" : isNow ? "Happening now" : "Next trip"}
         </span>
@@ -179,7 +180,7 @@ function TripCard({
   let labelNode: React.ReactNode;
   if (model.status === "now") {
     countNode = null;
-    labelNode = <span className="fl-now-pill">On Now</span>;
+    labelNode = <Tag variant="ember" dot>On Now</Tag>;
   } else if (model.status === "tbd") {
     countNode = <span className="fl-trip-card__count">—</span>;
     labelNode = <span className="fl-trip-card__label">TBD</span>;
@@ -213,7 +214,7 @@ function TripCard({
       <div className="fl-trip-card__details">
         <div className="fl-trip-card__meta">
           <span className="fl-trip-card__icon" aria-hidden="true">🧗</span>
-          <span className="fl-trip-card__code">{model.code}</span>
+          <Tag variant="neutral" size="sm" mono>{model.code}</Tag>
         </div>
         <h3 className="fl-trip-card__title">{trip.location || "Untitled trip"}</h3>
         <div className={"fl-trip-card__dates" + (model.dateMuted ? " fl-trip-card__dates--muted" : "")}>

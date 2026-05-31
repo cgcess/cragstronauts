@@ -135,22 +135,6 @@ html { background: var(--fl-bg); }
   color: var(--fl-fg);
 }
 
-/* Pills */
-.pill {
-  background: var(--fl-surface-3);
-  color: var(--fl-fg-2);
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-.pill.accent {
-  background: var(--fl-accent-soft);
-  color: var(--fl-accent);
-  box-shadow: inset 0 0 0 1px var(--fl-accent-ring);
-}
-
 /* ----------  Inputs re-themed  ---------- */
 input, select, textarea {
   background: var(--fl-surface-3);
@@ -164,36 +148,9 @@ input:focus, select:focus, textarea:focus {
 label { color: var(--fl-fg-3); }
 
 /* ----------  Buttons re-themed  ---------- */
+/* Generic <button> default (kept for native/DayPicker buttons). The
+   secondary/btn-3d class rules are retired — see Trailhead <Button>. */
 button { background: var(--fl-surface-3); color: var(--fl-fg); }
-
-button.secondary {
-  background: var(--fl-surface-2);
-  color: var(--fl-fg-2);
-  border: 1px solid var(--fl-divider);
-}
-button.secondary:hover { background: var(--fl-surface-3); }
-
-/* Override 3D button to use accent stone color */
-button.btn-3d {
-  background: linear-gradient(180deg, #c5ad94 0%, #8c7660 100%);
-  color: var(--fl-bg);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.35),
-    0 5px 0 0 #6e5a48,
-    0 6px 0 0 #4a3a2e,
-    0 14px 28px -10px rgba(0, 0, 0, 0.65);
-}
-button.btn-3d.btn-3d--earth {
-  background: linear-gradient(180deg, var(--fl-surface-3) 0%, var(--fl-surface) 100%);
-  color: var(--fl-fg-2);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.5),
-    0 5px 0 0 #0a0d11,
-    0 6px 0 0 #05070b,
-    0 14px 28px -10px rgba(0, 0, 0, 0.65);
-}
 
 /* Floating glass nav pills + nav-cap on dark */
 .glass-surface {
@@ -209,8 +166,6 @@ button.btn-3d.btn-3d--earth {
 }
 .glass-surface::before { display: none; }
 
-button.nav-pill { color: var(--fl-fg-2); }
-button.nav-pill:hover { color: var(--fl-fg); }
 .nav-cap { color: var(--fl-fg-2); }
 .nav-cap strong { color: var(--fl-fg); }
 
@@ -335,19 +290,6 @@ button.nav-pill:hover { color: var(--fl-fg); }
   color: var(--fl-fg-3);
 }
 
-.fl-now-pill {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 10px; border-radius: 999px;
-  background: rgba(255, 181, 90, 0.16); color: var(--fl-now);
-  font-size: 11px; font-weight: 700;
-  letter-spacing: 0.12em; text-transform: uppercase;
-  box-shadow: 0 0 0 1px rgba(255,181,90,0.35), 0 0 18px rgba(255,181,90,0.25);
-}
-.fl-now-pill::before {
-  content: ""; width: 6px; height: 6px; border-radius: 50%;
-  background: var(--fl-now); box-shadow: 0 0 8px var(--fl-now);
-}
-
 .fl-trip-card__details {
   display: flex; flex-direction: column; gap: 6px;
   min-width: 0; padding-right: 10px;
@@ -356,14 +298,6 @@ button.nav-pill:hover { color: var(--fl-fg); }
   display: flex; align-items: center; gap: 8px; min-width: 0;
 }
 .fl-trip-card__icon { font-size: 14px; line-height: 1; color: var(--fl-fg-3); }
-.fl-trip-card__code {
-  display: inline-flex; align-items: center;
-  padding: 2px 8px;
-  font-family: var(--fl-font-mono);
-  font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
-  color: var(--fl-fg-2); background: var(--fl-surface-3);
-  border-radius: 999px;
-}
 .fl-trip-card__title {
   font-family: var(--fl-font-display);
   font-weight: 700;
@@ -411,10 +345,6 @@ button.nav-pill:hover { color: var(--fl-fg); }
   display: flex; align-items: center; gap: 10px;
   color: var(--fl-fg-3); font-size: 11px;
   letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700;
-}
-.fl-hero__top .fl-trip-card__code {
-  background: rgba(178,154,130,0.16);
-  color: var(--fl-accent);
 }
 .fl-hero__countdown {
   display: flex; align-items: baseline; gap: 12px;
@@ -975,39 +905,10 @@ button.nav-pill:hover { color: var(--fl-fg); }
 .fl-info-card__sub { color: var(--fl-fg-2); font-size: 14px; margin-top: 6px; }
 
 /* ---------- Belayer badges ---------- */
+/* Badges render via the Trailhead <Tag> component; keep the flex wrapper. */
 .fl-badges {
   display: flex; flex-wrap: wrap; gap: 6px;
   margin-top: 8px;
-}
-.fl-badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 10px;
-  border-radius: 999px;
-  font-size: 11px; font-weight: 600;
-  letter-spacing: 0.02em;
-  background: var(--fl-surface-3);
-  color: var(--fl-fg-2);
-  border: 1px solid var(--fl-divider);
-}
-.fl-badge--lead {
-  background: var(--fl-accent-soft);
-  color: var(--fl-accent);
-  border-color: var(--fl-accent-ring);
-}
-.fl-badge--grade {
-  background: rgba(110, 144, 105, 0.18);
-  color: #a8c79f;
-  border-color: rgba(110, 144, 105, 0.4);
-}
-.fl-badge--anchor {
-  background: rgba(255, 181, 90, 0.14);
-  color: var(--fl-now);
-  border-color: rgba(255, 181, 90, 0.35);
-}
-.fl-badge--coffee {
-  background: rgba(140, 100, 75, 0.22);
-  color: #d2a98a;
-  border-color: rgba(140, 100, 75, 0.45);
 }
 
 /* Roster row: stack name + badges vertically */
@@ -1064,11 +965,6 @@ button.nav-pill:hover { color: var(--fl-fg); }
   box-shadow: inset 0 0 0 1px var(--fl-accent-ring);
 }
 .dash-card__summary { color: var(--fl-fg-3); }
-.dash-badge {
-  color: var(--fl-fg-2);
-  background: var(--fl-surface-3);
-  border-color: var(--fl-divider);
-}
 .dash-chevron { color: var(--fl-fg-3); }
 
 /* Weather strip inside the dashboard's Weather card */

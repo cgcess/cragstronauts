@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { api } from "../api";
 import { useTripContext, type User } from "../context/TripContext";
 import { formatDateRange } from "../dateUtils";
+import { Button } from "../components/ui";
 
 export default function Landing() {
   const { tripId, trip, users, setUser, refresh } = useTripContext();
@@ -41,13 +42,14 @@ export default function Landing() {
     <div className="app-shell">
       <div className="fade-overlay fade-overlay--top" aria-hidden="true" />
       <div className="content">
-        <button
-          className="glass-surface nav-pill"
+        <Button
+          variant="secondary"
+          pill
           onClick={() => navigate("/", { replace: true })}
           style={{ marginBottom: 8, position: "relative", zIndex: 6 }}
         >
           ← Trips
-        </button>
+        </Button>
         <div className="h1">🧗 {trip.location}</div>
         {(trip.start_date || trip.end_date) && (
           <p className="muted">
@@ -57,22 +59,23 @@ export default function Landing() {
 
         {mode === "choose" && (
           <div className="col" style={{ marginTop: 20 }}>
-            <button className="btn-3d" onClick={() => setMode("new")}>
+            <Button variant="primary" fullWidth onClick={() => setMode("new")}>
               Join the trip →
-            </button>
+            </Button>
             {users.length > 0 && (
               <>
                 <p className="muted" style={{ marginTop: 16 }}>
                   Or pick yourself if you&apos;ve been here before:
                 </p>
                 {users.map((u) => (
-                  <button
+                  <Button
                     key={u.id}
-                    className="secondary"
+                    variant="secondary"
+                    fullWidth
                     onClick={() => pickExisting(u.id)}
                   >
                     {u.name} {u.is_organizer && "👑"}
-                  </button>
+                  </Button>
                 ))}
               </>
             )}
@@ -90,16 +93,17 @@ export default function Landing() {
             />
             {error && <div className="error-banner">{error}</div>}
             <div className="row">
-              <button className="secondary" onClick={() => setMode("choose")}>
+              <Button variant="secondary" onClick={() => setMode("choose")}>
                 Back
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
                 disabled={!name.trim() || busy}
                 onClick={joinNew}
                 style={{ flex: 1 }}
               >
                 {busy ? "Joining…" : "Let's go"}
-              </button>
+              </Button>
             </div>
           </div>
         )}

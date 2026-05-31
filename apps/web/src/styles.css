@@ -142,26 +142,8 @@ button {
 button:active {
   transform: scale(0.97);
 }
-/* btn-3d has its own translate-Y press animation — don't double-scale */
-button.btn-3d:active {
-  transform: translateY(5px);
-}
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 button:disabled:active { transform: none; }
-
-button.secondary {
-  background: white;
-  color: var(--brown-700);
-  border: 1px solid var(--stone-200);
-}
-button.danger { background: var(--danger); color: white; }
-button.ghost {
-  background: transparent;
-  color: var(--brown-600);
-  padding: 8px 10px;
-  font-weight: 500;
-}
-button.ghost:hover { color: var(--brown-900); }
 
 /* ----------  Shared liquid-glass surface  ----------
    Reusable frosted-glass chassis: gradient tint, backdrop blur,
@@ -202,122 +184,9 @@ button.ghost:hover { color: var(--brown-900); }
   pointer-events: none;
 }
 
-/* ----------  Liquid-glass nav pill  ---------- */
-button.nav-pill {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: -0.005em;
-  color: var(--brown-700);
-  padding: 10px 18px;
-  transition:
-    transform 160ms var(--ease-out),
-    box-shadow 160ms var(--ease-out),
-    color 160ms var(--ease-out);
-}
-button.nav-pill:hover {
-  color: var(--brown-900);
-  transform: translateY(-1px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.95),
-    inset 0 -1px 0 rgba(45, 22, 15, 0.08),
-    inset 0 0 22px rgba(255, 255, 255, 0.22),
-    0 10px 20px -8px rgba(45, 22, 15, 0.4),
-    0 3px 6px -2px rgba(45, 22, 15, 0.2);
-}
-button.nav-pill:active {
-  transform: scale(0.96);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    inset 0 0 14px rgba(255, 255, 255, 0.16),
-    0 3px 8px -3px rgba(45, 22, 15, 0.28);
-}
-
-/* ----------  3D button system (the headline component)  ----------
-   Anatomy: gradient face, top highlight, solid depth shadow underneath,
-   ambient glow. Press translates Y by the depth amount.
-*/
-
-button.btn-3d {
-  position: relative;
-  font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  padding: 18px 28px;
-  border-radius: 999px;
-  /* White text on dark green — classic polo/club contrast */
-  color: white;
-  background: linear-gradient(180deg, var(--green-500) 0%, var(--green-700) 100%);
-  box-shadow:
-    /* top highlight */
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    /* bottom inner shadow */
-    inset 0 -2px 4px rgba(15, 31, 24, 0.4),
-    /* depth (the "thickness" of the button) */
-    0 5px 0 0 var(--green-700),
-    0 6px 0 0 var(--green-900),
-    /* ambient drop */
-    0 14px 28px -10px rgba(15, 31, 24, 0.45);
-  transition:
-    transform 140ms var(--ease-out),
-    box-shadow 140ms var(--ease-out);
-  will-change: transform;
-}
-button.btn-3d:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    inset 0 -2px 4px rgba(15, 31, 24, 0.4),
-    0 6px 0 0 var(--green-700),
-    0 7px 0 0 var(--green-900),
-    0 18px 32px -10px rgba(15, 31, 24, 0.55);
-}
-button.btn-3d:active {
-  transform: translateY(5px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    inset 0 -1px 2px rgba(15, 31, 24, 0.3),
-    0 1px 0 0 var(--green-900),
-    0 2px 10px -2px rgba(15, 31, 24, 0.4);
-}
-
-/* Brown variant for secondary "tactile" affordances */
-button.btn-3d.btn-3d--earth {
-  background: linear-gradient(180deg, var(--brown-400) 0%, var(--brown-600) 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.45),
-    inset 0 -2px 4px rgba(45, 22, 15, 0.35),
-    0 5px 0 0 var(--brown-700),
-    0 6px 0 0 var(--brown-900),
-    0 14px 28px -10px rgba(90, 47, 35, 0.5);
-}
-
-/* Circular icon button — like the round white reference */
-button.btn-3d.btn-3d--round {
-  width: 64px;
-  height: 64px;
-  border-radius: 999px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(180deg, #ffffff 0%, #ede2c8 100%);
-  color: var(--green-500);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    inset 0 -3px 6px rgba(110, 86, 50, 0.18),
-    0 5px 0 0 var(--stone-200),
-    0 6px 0 0 var(--stone-300),
-    0 16px 28px -10px rgba(90, 47, 35, 0.35);
-}
-button.btn-3d.btn-3d--round:active {
-  transform: translateY(5px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    0 1px 0 0 var(--stone-300),
-    0 2px 8px -2px rgba(90, 47, 35, 0.25);
-}
+/* nav-pill / btn-3d button systems retired — replaced by the Trailhead
+   <Button> component (.th-btn). The .glass-surface utility above is kept
+   (still used by .nav-cap in TripDashboard). */
 
 /* ----------  Scroll-fade overlays  ----------
    Gentle white wash + light backdrop blur that softens the edge where
@@ -535,6 +404,29 @@ label {
 }
 .nav-cap strong { color: var(--fg); }
 
+/* Top-nav pills (← Trips / Switch) — mostly-solid frosted capsules so page
+   content never bleeds through, with a faint frost + top-edge highlight for
+   a touch of life. Scoped to .topbar so secondary buttons elsewhere keep
+   their quiet 4% fill. The two-class selector wins over .th-btn--secondary
+   on specificity, no !important needed. */
+.topbar .th-btn--secondary {
+  background: color-mix(in srgb, var(--surface-2) 90%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
+  border-color: var(--border-strong);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 2px 8px -3px rgba(0, 0, 0, 0.5);
+}
+.topbar .th-btn--secondary:hover {
+  background: color-mix(in srgb, var(--surface-2) 97%, transparent);
+  border-color: var(--text);
+  transform: translateY(-1px);
+}
+.topbar .th-btn--secondary:active {
+  background: var(--surface-2);
+  transform: translateY(1px);
+}
+
 /* Landing: brand at top, the trip-deck (shell + hint) vertically centered
    in the remaining space. Only scrolls when the viewport truly can't fit
    the natural layout. */
@@ -646,21 +538,6 @@ label {
 .row { display: flex; gap: 8px; align-items: center; }
 .row.between { justify-content: space-between; }
 .col { display: flex; flex-direction: column; gap: 10px; }
-
-.pill {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: var(--stone-100);
-  border: 1px solid var(--stone-200);
-  font-size: 12px;
-  color: var(--brown-600);
-}
-.pill.accent {
-  background: var(--green-100);
-  color: var(--green-700);
-  border-color: transparent;
-}
 
 .center-screen {
   display: flex;
@@ -783,30 +660,6 @@ label {
   text-transform: uppercase;
   color: var(--brown-500);
 }
-.deck-card__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--stone-100);
-  color: var(--brown-700);
-  border: 1px solid var(--stone-200);
-  white-space: nowrap;
-}
-.deck-card__chip--past {
-  background: rgba(138, 82, 63, 0.12);
-  color: var(--brown-600);
-  border-color: transparent;
-}
-.deck-card__chip--soon {
-  background: var(--green-100);
-  color: var(--green-700);
-  border-color: transparent;
-}
-
 .deck-card__title {
   font-family: var(--font-display);
   font-weight: 800;
@@ -1638,17 +1491,6 @@ label {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.dash-badge {
-  flex-shrink: 0;
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--brown-700);
-  background: var(--stone-100);
-  border: 1px solid var(--stone-200);
-  border-radius: 999px;
-  padding: 3px 9px;
 }
 .dash-chevron {
   flex-shrink: 0;

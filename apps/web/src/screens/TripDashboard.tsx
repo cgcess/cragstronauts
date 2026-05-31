@@ -10,6 +10,7 @@ import { formatDateRange } from "../dateUtils";
 import Linkify from "../components/Linkify";
 import DateRangePicker from "../components/DateRangePicker";
 import BottomSheet from "../components/BottomSheet";
+import { Button, Tag } from "../components/ui";
 
 type Car = z.infer<typeof CarSchema>;
 type Contribution = z.infer<typeof GearContributionSchema>;
@@ -278,7 +279,7 @@ function DashCard({
           </span>
           {summary != null && <span className="dash-card__summary">{summary}</span>}
         </span>
-        {badge != null && <span className="dash-badge">{badge}</span>}
+        {badge != null && <Tag variant="neutral" size="sm" mono>{badge}</Tag>}
         <span className={`dash-chevron${expanded ? " open" : ""}`}>▾</span>
       </button>
       {/* Clean reveal — content fades in, the card grows instantly.
@@ -501,22 +502,23 @@ export default function TripDashboard() {
     <div className="app-shell">
       <div className="topbar">
         <div className="row between">
-          <button className="glass-surface nav-pill" onClick={() => navigate("/")}>
+          <Button variant="secondary" pill onClick={() => navigate("/")}>
             ← Trips
-          </button>
+          </Button>
           <div className="glass-surface nav-cap">
             <strong>{me.name}</strong>
             {me.is_organizer && " 👑"}
           </div>
-          <button
-            className="glass-surface nav-pill"
+          <Button
+            variant="secondary"
+            pill
             onClick={() => {
               switchUser();
               navigate(`/trips/${tripId}`);
             }}
           >
             Switch
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -569,9 +571,7 @@ export default function TripDashboard() {
                   </span>
                 </>
               ) : dUntil === 0 ? (
-                <span className="fl-now-pill" style={{ fontSize: 13, padding: "8px 14px" }}>
-                  On Now
-                </span>
+                <Tag variant="ember" dot>On Now</Tag>
               ) : (
                 <>
                   <span className="fl-detail-hero__count">{Math.abs(dUntil)}</span>
@@ -918,7 +918,7 @@ function WeatherBody({
       {content}
       {isOrganizer && (
         <button
-          className="ghost"
+          className="th-btn th-btn--tertiary"
           style={{ alignSelf: "flex-start", padding: "4px 0" }}
           onClick={() => setEditingPin(true)}
         >
@@ -1056,7 +1056,7 @@ function PinLocationForm({
             style={{ flex: 1 }}
           />
           <button
-            className="secondary"
+            className="th-btn th-btn--secondary"
             onClick={search}
             disabled={searching || !query.trim()}
           >
@@ -1071,7 +1071,7 @@ function PinLocationForm({
             <div className="list-item" key={i}>
               <span>{labelFor(r)}</span>
               <button
-                className="ghost"
+                className="th-btn th-btn--tertiary"
                 disabled={saving}
                 onClick={() => savePin(r.latitude, r.longitude, labelFor(r))}
               >
@@ -1112,7 +1112,7 @@ function PinLocationForm({
       <div className="row" style={{ gap: 8 }}>
         {onCancel && (
           <button
-            className="secondary"
+            className="th-btn th-btn--secondary"
             onClick={onCancel}
             disabled={saving}
           >
@@ -1121,7 +1121,7 @@ function PinLocationForm({
         )}
         {pinned && (
           <button
-            className="secondary"
+            className="th-btn th-btn--secondary"
             style={{ color: "var(--danger)" }}
             onClick={clearPin}
             disabled={saving}
@@ -1130,6 +1130,7 @@ function PinLocationForm({
           </button>
         )}
         <button
+          className="th-btn th-btn--primary"
           onClick={saveManual}
           disabled={saving || !lat || !lon}
           style={{ flex: 1 }}
@@ -1268,10 +1269,11 @@ function HeroEdit({
         {error && <div className="error-banner">{error}</div>}
 
         <div className="row" style={{ gap: 8 }}>
-          <button className="secondary" onClick={onCancel} disabled={saving}>
+          <button className="th-btn th-btn--secondary" onClick={onCancel} disabled={saving}>
             Cancel
           </button>
           <button
+            className="th-btn th-btn--primary"
             onClick={save}
             disabled={!location.trim() || saving}
             style={{ flex: 1 }}
@@ -1299,7 +1301,7 @@ function DangerZone({
         Deleting the trip removes it for everyone, along with all cars and gear.
       </p>
       <button
-        className="secondary"
+        className="th-btn th-btn--secondary"
         style={{ color: "var(--danger)", borderColor: "var(--danger)" }}
         onClick={() => {
           if (
@@ -1358,8 +1360,8 @@ function RosterBody({
         {pill}
         {isOrganizer && !u.is_organizer && u.id !== currentUserId && (
           <button
-            className="ghost"
-            style={{ color: "var(--danger)", padding: "4px 6px" }}
+            className="th-btn th-btn--tertiary th-btn--icon th-btn--sm"
+            style={{ color: "var(--danger)" }}
             onClick={() => remove(u.id, u.name)}
             aria-label={`Remove ${u.name}`}
           >
@@ -1373,13 +1375,13 @@ function RosterBody({
   return (
     <>
       {error && <div className="error-banner">{error}</div>}
-      {joining.map((u) => renderRow(u, <span className="pill accent">Going</span>))}
+      {joining.map((u) => renderRow(u, <Tag variant="moss">Going</Tag>))}
       {out.length > 0 && (
         <>
           <div className="muted" style={{ marginTop: 8 }}>
             Not joining
           </div>
-          {out.map((u) => renderRow(u, <span className="pill">Out</span>))}
+          {out.map((u) => renderRow(u, <Tag variant="neutral">Out</Tag>))}
         </>
       )}
     </>
@@ -1445,7 +1447,7 @@ function CarsBody({
               </div>
               {c.driver_user_id === currentUserId && (
                 <button
-                  className="ghost"
+                  className="th-btn th-btn--tertiary"
                   onClick={async () => {
                     if (confirm("Remove your car from the trip?")) {
                       await api.deleteCar(tripId, c.id);
@@ -1469,8 +1471,9 @@ function CarsBody({
                   {p.name}
                   {p.user_id === currentUserId && (
                     <button
-                      className="ghost"
-                      style={{ padding: "0 4px", color: "var(--danger)" }}
+                      type="button"
+                      className="chip-x"
+                      aria-label="Leave this car"
                       onClick={async () => {
                         await api.carSignoff(tripId, c.id, currentUserId);
                         onChanged();
@@ -1506,7 +1509,7 @@ function CarsBody({
       })}
 
       {!myCar && !adding && (
-        <button className="secondary" onClick={() => setAdding(true)} style={{ marginTop: 12 }}>
+        <button className="th-btn th-btn--secondary" onClick={() => setAdding(true)} style={{ marginTop: 12 }}>
           + Offer a ride
         </button>
       )}
@@ -1528,10 +1531,10 @@ function CarsBody({
             placeholder="e.g. leaving Friday 5pm"
           />
           <div className="row" style={{ marginTop: 12 }}>
-            <button className="secondary" onClick={() => setAdding(false)}>
+            <button className="th-btn th-btn--secondary" onClick={() => setAdding(false)}>
               Cancel
             </button>
-            <button onClick={submitCar} style={{ flex: 1 }}>
+            <button className="th-btn th-btn--primary" onClick={submitCar} style={{ flex: 1 }}>
               Save car
             </button>
           </div>
@@ -1631,11 +1634,11 @@ function GearBody({
           <div className="row between">
             <div style={{ fontWeight: 600 }}>{cat.name}</div>
             <div className="row" style={{ gap: 6, alignItems: "center" }}>
-              <span className="pill">{byCat[cat.id].length}</span>
+              <Tag variant="neutral" size="sm" mono>{byCat[cat.id].length}</Tag>
               {isOrganizer && (
                 <button
-                  className="ghost"
-                  style={{ color: "var(--danger)", padding: "4px 6px" }}
+                  className="th-btn th-btn--tertiary th-btn--icon th-btn--sm"
+                  style={{ color: "var(--danger)" }}
                   onClick={() => removeCategory(cat.id, cat.name)}
                   aria-label={`Remove ${cat.name} category`}
                 >
@@ -1660,7 +1663,7 @@ function GearBody({
               </div>
               {g.user_id === currentUserId && (
                 <button
-                  className="ghost"
+                  className="th-btn th-btn--tertiary th-btn--icon th-btn--sm"
                   style={{ color: "var(--danger)" }}
                   onClick={async () => {
                     await api.deleteGear(tripId, g.id);
@@ -1692,7 +1695,7 @@ function GearBody({
               ))}
               <div className="row">
                 <button
-                  className="secondary"
+                  className="th-btn th-btn--secondary"
                   onClick={() => {
                     setAddingFor(null);
                     setValues({});
@@ -1700,14 +1703,14 @@ function GearBody({
                 >
                   Cancel
                 </button>
-                <button onClick={() => addContribution(cat)} style={{ flex: 1 }}>
+                <button className="th-btn th-btn--primary" onClick={() => addContribution(cat)} style={{ flex: 1 }}>
                   Save
                 </button>
               </div>
             </div>
           ) : (
             <button
-              className="secondary"
+              className="th-btn th-btn--secondary"
               onClick={() => {
                 setAddingFor(cat.id);
                 setValues({});
@@ -1732,7 +1735,7 @@ function GearBody({
             />
             <div className="row" style={{ marginTop: 10 }}>
               <button
-                className="secondary"
+                className="th-btn th-btn--secondary"
                 onClick={() => {
                   setAddingCategory(false);
                   setNewCategoryName("");
@@ -1741,6 +1744,7 @@ function GearBody({
                 Cancel
               </button>
               <button
+                className="th-btn th-btn--primary"
                 style={{ flex: 1 }}
                 disabled={!newCategoryName.trim()}
                 onClick={addCategory}
@@ -1751,7 +1755,7 @@ function GearBody({
           </div>
         ) : (
           <button
-            className="secondary"
+            className="th-btn th-btn--secondary"
             onClick={() => setAddingCategory(true)}
             style={{ marginTop: 10 }}
           >

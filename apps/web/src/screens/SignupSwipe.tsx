@@ -3,6 +3,7 @@ import { animate, motion, useMotionValue, useTransform, AnimatePresence } from "
 import { useNavigate, Navigate } from "react-router";
 import { api } from "../api";
 import { useTripContext, type Category } from "../context/TripContext";
+import { Button, Tag } from "../components/ui";
 
 interface Question {
   id: string;
@@ -154,12 +155,12 @@ export default function SignupSwipe() {
     <div className="app-shell">
       <div className="content content--swipe">
         <div className="row between">
-          <div className="pill">
+          <Tag variant="neutral" mono>
             {idx + 1} / {questions.length}
-          </div>
-          <button className="glass-surface nav-pill" onClick={onComplete}>
+          </Tag>
+          <Button variant="secondary" pill onClick={onComplete}>
             Skip
-          </button>
+          </Button>
         </div>
 
         {error && <div className="error-banner" style={{ marginTop: 12 }}>{error}</div>}
@@ -391,10 +392,10 @@ function DetailForm({ details, setDetails, onCancel, onSubmit, submitting }: Det
           ))}
         </div>
         <div className="row" style={{ marginTop: 12 }}>
-          <button className="secondary" onClick={onCancel}>
+          <button className="th-btn th-btn--secondary" onClick={onCancel}>
             Cancel
           </button>
-          <button onClick={onSubmit} disabled={submitting} style={{ flex: 1 }}>
+          <button className="th-btn th-btn--primary" onClick={onSubmit} disabled={submitting} style={{ flex: 1 }}>
             {submitting ? "Saving…" : "Save"}
           </button>
         </div>
@@ -435,10 +436,10 @@ function DetailForm({ details, setDetails, onCancel, onSubmit, submitting }: Det
           </div>
         </div>
         <div className="row" style={{ marginTop: 12 }}>
-          <button className="secondary" onClick={onCancel}>
+          <button className="th-btn th-btn--secondary" onClick={onCancel}>
             Cancel
           </button>
-          <button onClick={onSubmit} disabled={submitting} style={{ flex: 1 }}>
+          <button className="th-btn th-btn--primary" onClick={onSubmit} disabled={submitting} style={{ flex: 1 }}>
             {submitting ? "Saving…" : "Save"}
           </button>
         </div>

@@ -1,0 +1,119 @@
+/* ============================================================
+   CRAGSTRONAUTS · TRAILHEAD DESIGN TOKENS
+   Single source of truth for colour. Imported LAST in main.tsx
+   so the semantic + legacy-bridge tokens here win the cascade.
+
+   Layers:
+     1. --th-*   raw palette (namespaced, never used directly in screens)
+     2. semantic (--primary, --text, --surface…) — used by UI components
+     3. legacy bridge (--fl-*) — re-points the old theme so existing
+        screens re-skin to Trailhead with zero JSX churn
+   Default theme: DARK ("camp / night").
+   ============================================================ */
+
+:root {
+  /* ---------- 1. RAW PALETTE (--th-*) ---------- */
+
+  /* clay — primary accent (lighter warm brown) */
+  --th-clay-200: #E6C79B;
+  --th-clay-300: #DCA877;
+  --th-clay-400: #C68B53;
+  --th-clay-500: #B3753E;
+  --th-clay-600: #97602F;
+  --th-clay-700: #7A4C24;
+  --th-clay-800: #5E3A1C;
+
+  /* bark & stone — earth neutrals */
+  --th-bark-950: #221C16;
+  --th-bark-900: #2E2720;
+  --th-bark-800: #3A332A;
+  --th-bark-700: #4A4034;
+  --th-stone-600: #6B5F50;
+  --th-stone-500: #837561;
+  --th-stone-400: #9C8E78;
+  --th-stone-300: #B8AB94;
+  --th-stone-200: #D6CBB5;
+  --th-oat-100:  #E8DECB;
+  --th-canvas:   #F4ECDB;
+  --th-paper:    #FBF6EC;
+
+  /* nature semantics */
+  --th-moss-200: #C3CBA3; --th-moss-300: #97A06B; --th-moss-500: #5F6B45; --th-moss-700: #41492F;
+  --th-slate-200:#BCC7CF; --th-slate-300:#97A6B2; --th-slate-500:#607282; --th-slate-700:#41505C;
+  --th-ember-200:#F2CF9E; --th-ember-300:#E6A861; --th-ember-500:#CC7A33; --th-ember-700:#9E5A22;
+  --th-rust-200: #E0B3A6; --th-rust-300: #C9755E; --th-rust-500: #A8442B; --th-rust-700: #7E311E;
+
+  /* ---------- 2. SEMANTIC — DARK (camp) default ---------- */
+  --bg:            var(--th-bark-950);
+  --surface:       var(--th-bark-900);
+  --surface-2:     var(--th-bark-800);
+  --surface-3:     var(--th-bark-700);
+
+  --text:          #F1E8D8;
+  --text-muted:    var(--th-stone-400);
+  --text-faint:    var(--th-stone-500);
+
+  --border:        rgba(241, 232, 216, 0.12);
+  --border-strong: rgba(241, 232, 216, 0.26);
+
+  --primary:       var(--th-clay-400);
+  --primary-hover: var(--th-clay-300);
+  --primary-press: var(--th-clay-500);
+  --on-primary:    var(--th-bark-950);
+  --primary-soft:  rgba(198, 139, 83, 0.16);
+  --ring:          rgba(220, 168, 119, 0.5);
+
+  --danger:        var(--th-rust-500);
+  --danger-hover:  var(--th-rust-300);
+  --danger-press:  var(--th-rust-700);
+  --on-danger:     #FBF6EC;
+
+  /* shape & motion */
+  --r-btn:  14px;
+  --r-pill: 999px;
+  --r-card: 18px;
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.42);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+
+  /* ---------- 3. LEGACY BRIDGE (--fl-*) ---------- */
+  /* Existing screens read these; re-point them to Trailhead so the
+     whole app adopts the new palette without touching component CSS. */
+  --fl-bg:           var(--th-bark-950);
+  --fl-surface:      var(--th-bark-900);
+  --fl-surface-2:    var(--th-bark-800);
+  --fl-surface-3:    var(--th-bark-700);
+  --fl-glass:        rgba(46, 39, 32, 0.78);
+  --fl-glass-strong: rgba(34, 28, 22, 0.92);
+  --fl-divider:      rgba(241, 232, 216, 0.10);
+
+  --fl-fg:           #F1E8D8;
+  --fl-fg-2:         var(--th-stone-200);
+  --fl-fg-3:         var(--th-stone-400);
+  --fl-fg-mute:      var(--th-stone-500);
+
+  --fl-accent:       var(--th-clay-400);
+  --fl-accent-soft:  rgba(198, 139, 83, 0.18);
+  --fl-accent-ring:  rgba(220, 168, 119, 0.5);
+  --fl-past:         var(--th-stone-500);
+  --fl-now:          var(--th-ember-300);
+  --fl-danger:       var(--th-rust-500);
+
+  /* ---------- 3b. LEGACY BRIDGE (--min-* / minimalist layer) ---------- */
+  /* The minimalist override layer shipped a leftover green accent. Re-point
+     its tokens to Trailhead: a refined moss for secondary accents/links/
+     focus, rust for danger. (Primary buttons are clay via <Button>.) */
+  --min-canvas:        var(--th-bark-950);
+  --min-canvas-2:      #1a150f;
+  --min-surface:       var(--th-bark-900);
+  --min-surface-2:     var(--th-bark-800);
+  --min-ink:           #F1E8D8;
+  --min-ink-2:         var(--th-stone-200);
+  --min-ink-3:         var(--th-stone-400);
+  --min-line:          rgba(241, 232, 216, 0.08);
+  --min-line-strong:   var(--border-strong);
+  --min-accent:        var(--th-moss-300);
+  --min-accent-2:      var(--th-moss-200);
+  --min-accent-soft:   rgba(151, 160, 107, 0.16);
+  --min-accent-focus:  rgba(151, 160, 107, 0.40);
+  --min-danger:        var(--th-rust-500);
+}

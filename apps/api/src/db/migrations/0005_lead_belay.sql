@@ -1,0 +1,1 @@
+ALTER TABLE `user` ADD COLUMN `can_lead_belay` INTEGER NOT NULL DEFAULT 0;

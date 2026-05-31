@@ -9,7 +9,7 @@ interface Question {
   id: string;
   title: string;
   sub: string;
-  kind?: "gear" | "driving";
+  kind?: "gear" | "driving" | "lead-belay";
   category?: Category;
 }
 
@@ -20,6 +20,12 @@ function buildQuestions(categories: Category[]): Question[] {
       id: "joining",
       title: "Are you joining the trip?",
       sub: "Swipe right for yes, left for no.",
+    },
+    {
+      id: "lead-belay",
+      title: "Can you lead belay?",
+      sub: "Swipe right if you're comfortable catching lead falls.",
+      kind: "lead-belay",
     },
   ];
   for (const c of categories) {
@@ -96,6 +102,11 @@ export default function SignupSwipe() {
           total_seats: Number(extra?.seats || 1),
           notes: extra?.notes || null,
         });
+      }
+      if (qq.kind === "lead-belay") {
+        // Persist both yes and no — the default is "no", so an explicit
+        // false here covers the case where a previous answer was true.
+        await api.updateUser(tripId, userId, { can_lead_belay: yes });
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

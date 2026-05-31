@@ -19,6 +19,7 @@ export const user = table("user", {
   joining: column.integer().notNull().default(1),
   is_organizer: column.integer().notNull().default(0),
   signup_completed: column.integer().notNull().default(0),
+  can_lead_belay: column.integer().notNull().default(0),
 });
 
 export const gearCategory = table("gear_category", {

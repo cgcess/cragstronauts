@@ -6,6 +6,7 @@ export const UserSchema = z.object({
   joining: z.boolean(),
   is_organizer: z.boolean(),
   signup_completed: z.boolean(),
+  can_lead_belay: z.boolean(),
 });
 
 export const CreateUserBodySchema = z.object({
@@ -16,4 +17,5 @@ export const CreateUserBodySchema = z.object({
 export const UpdateUserBodySchema = z.object({
   name: z.string().optional(),
   joining: z.boolean().optional(),
+  can_lead_belay: z.boolean().optional(),
 });

@@ -187,7 +187,7 @@ export class TripDO extends DurableObject<Env> {
     const row = this.db.insertReturning(
       user,
       { name, joining: data.joining ? 1 : 0 },
-      ["id", "name", "joining", "is_organizer", "signup_completed"]
+      ["id", "name", "joining", "is_organizer", "signup_completed", "can_lead_belay"]
     );
     return formatUser(row);
   }
@@ -209,7 +209,7 @@ export class TripDO extends DurableObject<Env> {
 
   async updateUser(
     userId: number,
-    data: { name?: string; joining?: boolean }
+    data: { name?: string; joining?: boolean; can_lead_belay?: boolean }
   ): Promise<User> {
     const row = this.db.get(user, { where: eq("id", userId) });
     if (!row) throw new Error("User not found");
@@ -219,10 +219,16 @@ export class TripDO extends DurableObject<Env> {
     if (!newName) throw new Error("Name cannot be empty");
     const newJoining =
       data.joining !== undefined ? (data.joining ? 1 : 0) : row.joining;
+    const newLeadBelay =
+      data.can_lead_belay !== undefined
+        ? (data.can_lead_belay ? 1 : 0)
+        : row.can_lead_belay;
 
-    this.db.update(user, { name: newName, joining: newJoining }, {
-      where: eq("id", userId),
-    });
+    this.db.update(
+      user,
+      { name: newName, joining: newJoining, can_lead_belay: newLeadBelay },
+      { where: eq("id", userId) }
+    );
 
     const updated = this.db.get(user, { where: eq("id", userId) })!;
     return formatUser(updated);
@@ -708,6 +714,7 @@ function formatUser(r: {
   joining: number;
   is_organizer: number;
   signup_completed: number;
+  can_lead_belay?: number;
 }): User {
   return {
     id: r.id,
@@ -715,6 +722,7 @@ function formatUser(r: {
     joining: Boolean(r.joining),
     is_organizer: Boolean(r.is_organizer),
     signup_completed: Boolean(r.signup_completed),
+    can_lead_belay: Boolean(r.can_lead_belay),
   };
 }
 

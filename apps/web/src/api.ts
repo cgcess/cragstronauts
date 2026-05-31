@@ -69,8 +69,11 @@ export const api = {
   listUsers: (tripId: string) => req<User[]>("GET", `/api/trips/${tripId}/users`),
   createUser: (tripId: string, name: string) =>
     req<User>("POST", `/api/trips/${tripId}/users`, { name, joining: true }),
-  updateUser: (tripId: string, id: number, data: { name?: string; joining?: boolean }) =>
-    req<User>("PATCH", `/api/trips/${tripId}/users/${id}`, data),
+  updateUser: (
+    tripId: string,
+    id: number,
+    data: { name?: string; joining?: boolean; can_lead_belay?: boolean }
+  ) => req<User>("PATCH", `/api/trips/${tripId}/users/${id}`, data),
   deleteUser: (tripId: string, id: number) =>
     req<Ok>("DELETE", `/api/trips/${tripId}/users/${id}`),
   completeSignup: (tripId: string, id: number) =>

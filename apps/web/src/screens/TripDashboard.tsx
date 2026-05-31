@@ -2119,7 +2119,7 @@ function ExpensesBody({
               onClick={() => setSettling(true)}
               style={{ marginTop: 8 }}
             >
-              + Record a payment
+              + Settle debt
             </button>
           )}
           {settling && (
@@ -2204,7 +2204,7 @@ function ExpensesBody({
                     }
                   }}
                 >
-                  Record payment
+                  Settle debt
                 </button>
               </div>
             </div>

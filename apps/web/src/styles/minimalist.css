@@ -123,6 +123,67 @@ input:focus, textarea:focus, select:focus {
   border-bottom: 1px solid var(--min-line) !important;
   color: var(--min-ink);
 }
+
+/* ---------- Expenses: balance hero + per-person rows ---------- */
+.exp-hero {
+  text-align: center;
+  padding: 4px 0 18px;
+}
+.exp-hero__label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--min-ink-3);
+}
+.exp-hero__amount {
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin-top: 4px;
+}
+.exp-bal-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--min-line);
+}
+.exp-bal-row:last-child { border-bottom: 0; }
+.exp-bal-row__amt {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--min-ink);
+  flex-shrink: 0;
+}
+.exp-bal-row__name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  color: var(--min-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.exp-tag {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.exp-tag--owe {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 15%, transparent);
+}
+.exp-tag--owed {
+  color: var(--min-accent);
+  background: color-mix(in srgb, var(--min-accent) 18%, transparent);
+}
+
 /* ---------- Dashboard cards ---------- */
 .dash-card {
   background: var(--min-surface) !important;

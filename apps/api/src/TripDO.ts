@@ -22,7 +22,7 @@ import type {
   ExpenseSchema,
   SettlementSchema,
 } from "@cragstronauts/contract";
-import { computeBalances } from "./lib/balances";
+import { computeBalances, computeSimplifiedBalances } from "./lib/balances";
 
 type Trip = z.infer<typeof TripSchema>;
 type User = z.infer<typeof UserSchema>;
@@ -507,7 +507,7 @@ export class TripDO extends DurableObject<Env> {
       };
     });
 
-    const rawSettlements = computeBalances(expensesWithSplits);
+    const rawSettlements = computeSimplifiedBalances(expensesWithSplits);
 
     return rawSettlements.map((s) => {
       const from = this.db.get(user, { where: eq("id", s.from_user_id) });

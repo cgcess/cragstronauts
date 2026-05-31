@@ -2294,6 +2294,9 @@ function ExpensesBody({
               </div>
             );
           })}
+          <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+            Simplified to minimize payments
+          </div>
         </div>
       )}
 

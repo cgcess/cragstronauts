@@ -1826,47 +1826,42 @@ function formatCents(cents: number): string {
 
 type SplitMode = "equal" | "custom";
 
-function ExpensesBody({
-  tripId,
-  expenses,
-  balances,
+function ExpenseForm({
   users,
   currentUserId,
-  onChanged,
+  initial,
+  onSubmit,
+  onCancel,
 }: {
-  tripId: string;
-  expenses: Expense[];
-  balances: Settlement[];
   users: ReturnType<typeof useTripContext>["users"];
   currentUserId: number;
-  onChanged: () => Promise<void>;
+  initial?: Expense;
+  onSubmit: (data:
+    | { payer_user_id: number; amount_cents: number; description: string; split_mode: "equal"; split_user_ids: number[] }
+    | { payer_user_id: number; amount_cents: number; description: string; split_mode: "custom"; splits: { user_id: number; amount_cents: number }[] }
+  ) => Promise<void>;
+  onCancel: () => void;
 }) {
-  const [adding, setAdding] = useState(false);
-  const [settling, setSettling] = useState(false);
-  const [settleFrom, setSettleFrom] = useState<number | "">(currentUserId);
-  const [settleTo, setSettleTo] = useState<number | "">("");
-  const [settleAmount, setSettleAmount] = useState("");
-  const [amount, setAmount] = useState("");
-  const [description, setDescription] = useState("");
-  const [splitIds, setSplitIds] = useState<Set<number>>(new Set());
-  const [splitMode, setSplitMode] = useState<SplitMode>("equal");
-  const [customAmounts, setCustomAmounts] = useState<Record<number, string>>({});
-  const [error, setError] = useState<string | null>(null);
-
-  const realExpenses = expenses.filter((e) => !e.is_settlement);
-  const settlementExpenses = expenses.filter((e) => e.is_settlement);
-
   const joining = users.filter((u) => u.joining);
 
-  const startAdding = () => {
-    setAdding(true);
-    setAmount("");
-    setDescription("");
-    setSplitMode("equal");
-    setCustomAmounts({});
-    // Default: split among everyone who's joining
-    setSplitIds(new Set(joining.map((u) => u.id)));
-  };
+  // Determine initial split mode from existing expense
+  const initialIsCustom = initial?.splits.some((s) => s.amount_cents != null) ?? false;
+
+  const [payerId, setPayerId] = useState<number>(initial?.payer_user_id ?? currentUserId);
+  const [amount, setAmount] = useState(initial ? (initial.amount_cents / 100).toFixed(2) : "");
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [splitMode, setSplitMode] = useState<SplitMode>(initialIsCustom ? "custom" : "equal");
+  const [splitIds, setSplitIds] = useState<Set<number>>(
+    initial
+      ? new Set(initial.splits.map((s) => s.user_id))
+      : new Set(joining.map((u) => u.id))
+  );
+  const [customAmounts, setCustomAmounts] = useState<Record<number, string>>(
+    initial && initialIsCustom
+      ? Object.fromEntries(initial.splits.filter((s) => s.amount_cents != null).map((s) => [s.user_id, (s.amount_cents! / 100).toFixed(2)]))
+      : {}
+  );
+  const [error, setError] = useState<string | null>(null);
 
   const toggleSplit = (uid: number) => {
     setSplitIds((prev) => {
@@ -1910,28 +1905,186 @@ function ExpensesBody({
           setError(`Split amounts (€${(splitTotal / 100).toFixed(2)}) must equal the total (€${(cents / 100).toFixed(2)})`);
           return;
         }
-        await api.createExpense(tripId, {
-          payer_user_id: currentUserId,
+        await onSubmit({
+          payer_user_id: payerId,
           amount_cents: cents,
           description: description.trim(),
           split_mode: "custom",
           splits,
         });
       } else {
-        await api.createExpense(tripId, {
-          payer_user_id: currentUserId,
+        await onSubmit({
+          payer_user_id: payerId,
           amount_cents: cents,
           description: description.trim(),
           split_mode: "equal",
           split_user_ids: [...splitIds],
         });
       }
-      setAdding(false);
-      await onChanged();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
   };
+
+  return (
+    <div className="card" style={{ marginTop: 12 }}>
+      <div className="h2" style={{ marginTop: 0 }}>{initial ? "Edit expense" : "New expense"}</div>
+      {error && <div className="error-banner">{error}</div>}
+      {initial && (
+        <>
+          <label>Paid by</label>
+          <select
+            value={payerId}
+            onChange={(e) => setPayerId(Number(e.target.value))}
+          >
+            {joining.map((u) => (
+              <option key={u.id} value={u.id}>{u.name}{u.id === currentUserId ? " (you)" : ""}</option>
+            ))}
+          </select>
+        </>
+      )}
+      <label style={initial ? { marginTop: 10 } : undefined}>Amount (€)</label>
+      <input
+        type="number"
+        min="0.01"
+        step="0.01"
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)}
+        placeholder="0.00"
+        inputMode="decimal"
+      />
+      <label style={{ marginTop: 10 }}>Description</label>
+      <input
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="e.g. Groceries, Gas, Campsite fee"
+      />
+      <label style={{ marginTop: 10 }}>Split mode</label>
+      <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+        <button
+          type="button"
+          className={`th-btn th-btn--sm ${splitMode === "equal" ? "th-btn--primary" : "th-btn--secondary"}`}
+          onClick={() => setSplitMode("equal")}
+        >
+          Equal
+        </button>
+        <button
+          type="button"
+          className={`th-btn th-btn--sm ${splitMode === "custom" ? "th-btn--primary" : "th-btn--secondary"}`}
+          onClick={() => setSplitMode("custom")}
+        >
+          Custom
+        </button>
+      </div>
+
+      <label style={{ marginTop: 10 }}>Split among</label>
+      {splitMode === "equal" ? (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+          {joining.map((u) => (
+            <button
+              key={u.id}
+              type="button"
+              className={`th-btn th-btn--sm ${
+                splitIds.has(u.id) ? "th-btn--primary" : "th-btn--secondary"
+              }`}
+              onClick={() => toggleSplit(u.id)}
+            >
+              {u.name}
+              {u.id === currentUserId ? " (you)" : ""}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div style={{ marginTop: 4 }}>
+          {joining.map((u) => {
+            const included = splitIds.has(u.id);
+            return (
+              <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <button
+                  type="button"
+                  className={`th-btn th-btn--sm ${included ? "th-btn--primary" : "th-btn--secondary"}`}
+                  onClick={() => toggleSplit(u.id)}
+                  style={{ minWidth: 90, textAlign: "left" }}
+                >
+                  {u.name}{u.id === currentUserId ? " (you)" : ""}
+                </button>
+                {included && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, flex: 1 }}>
+                    <span style={{ fontSize: 14 }}>€</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={customAmounts[u.id] ?? ""}
+                      onChange={(e) =>
+                        setCustomAmounts((prev) => ({ ...prev, [u.id]: e.target.value }))
+                      }
+                      style={{ flex: 1 }}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {totalCents > 0 && (
+            <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+              {customRemaining === 0
+                ? "✓ Amounts match the total"
+                : customRemaining > 0
+                ? `€${(customRemaining / 100).toFixed(2)} remaining to assign`
+                : `€${(Math.abs(customRemaining) / 100).toFixed(2)} over the total`}
+            </div>
+          )}
+        </div>
+      )}
+      <div className="row" style={{ marginTop: 12 }}>
+        <button
+          className="th-btn th-btn--secondary"
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+        <button
+          className="th-btn th-btn--primary"
+          onClick={submit}
+          style={{ flex: 1 }}
+        >
+          {initial ? "Save changes" : "Add expense"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ExpensesBody({
+  tripId,
+  expenses,
+  balances,
+  users,
+  currentUserId,
+  onChanged,
+}: {
+  tripId: string;
+  expenses: Expense[];
+  balances: Settlement[];
+  users: ReturnType<typeof useTripContext>["users"];
+  currentUserId: number;
+  onChanged: () => Promise<void>;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [settling, setSettling] = useState(false);
+  const [settleFrom, setSettleFrom] = useState<number | "">(currentUserId);
+  const [settleTo, setSettleTo] = useState<number | "">("");
+  const [settleAmount, setSettleAmount] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const realExpenses = expenses.filter((e) => !e.is_settlement);
+  const settlementExpenses = expenses.filter((e) => e.is_settlement);
+
+  const joining = users.filter((u) => u.joining);
 
   return (
     <div>
@@ -2087,10 +2240,26 @@ function ExpensesBody({
       )}
 
       {/* Expense list */}
-      {realExpenses.length === 0 && !adding && (
+      {realExpenses.length === 0 && !adding && !editingId && (
         <p className="muted">No expenses yet. Add one to start splitting costs.</p>
       )}
       {realExpenses.map((exp) => {
+        if (editingId === exp.id) {
+          return (
+            <ExpenseForm
+              key={exp.id}
+              users={users}
+              currentUserId={currentUserId}
+              initial={exp}
+              onSubmit={async (data) => {
+                await api.updateExpense(tripId, exp.id, data);
+                setEditingId(null);
+                await onChanged();
+              }}
+              onCancel={() => setEditingId(null)}
+            />
+          );
+        }
         const isCustom = exp.splits.some((s) => s.amount_cents != null);
         return (
           <div className="list-item" key={exp.id} style={{ flexDirection: "column", alignItems: "stretch", gap: 4 }}>
@@ -2103,17 +2272,29 @@ function ExpensesBody({
                 </div>
               </div>
               {exp.payer_user_id === currentUserId && (
-                <button
-                  className="th-btn th-btn--tertiary th-btn--icon th-btn--sm"
-                  style={{ color: "var(--danger)" }}
-                  onClick={async () => {
-                    await api.deleteExpense(tripId, exp.id);
-                    await onChanged();
-                  }}
-                  aria-label="Delete expense"
-                >
-                  ✕
-                </button>
+                <div className="row" style={{ gap: 4 }}>
+                  <button
+                    className="th-btn th-btn--tertiary th-btn--icon th-btn--sm"
+                    onClick={() => {
+                      setEditingId(exp.id);
+                      setAdding(false);
+                    }}
+                    aria-label="Edit expense"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    className="th-btn th-btn--tertiary th-btn--icon th-btn--sm"
+                    style={{ color: "var(--danger)" }}
+                    onClick={async () => {
+                      await api.deleteExpense(tripId, exp.id);
+                      await onChanged();
+                    }}
+                    aria-label="Delete expense"
+                  >
+                    ✕
+                  </button>
+                </div>
               )}
             </div>
             {isCustom && (
@@ -2131,124 +2312,23 @@ function ExpensesBody({
 
       {/* Add expense form */}
       {adding ? (
-        <div className="card" style={{ marginTop: 12 }}>
-          <div className="h2" style={{ marginTop: 0 }}>New expense</div>
-          <label>Amount (€)</label>
-          <input
-            type="number"
-            min="0.01"
-            step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.00"
-            inputMode="decimal"
-          />
-          <label style={{ marginTop: 10 }}>Description</label>
-          <input
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="e.g. Groceries, Gas, Campsite fee"
-          />
-          <label style={{ marginTop: 10 }}>Split mode</label>
-          <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-            <button
-              type="button"
-              className={`th-btn th-btn--sm ${splitMode === "equal" ? "th-btn--primary" : "th-btn--secondary"}`}
-              onClick={() => setSplitMode("equal")}
-            >
-              Equal
-            </button>
-            <button
-              type="button"
-              className={`th-btn th-btn--sm ${splitMode === "custom" ? "th-btn--primary" : "th-btn--secondary"}`}
-              onClick={() => setSplitMode("custom")}
-            >
-              Custom
-            </button>
-          </div>
-
-          <label style={{ marginTop: 10 }}>Split among</label>
-          {splitMode === "equal" ? (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
-              {joining.map((u) => (
-                <button
-                  key={u.id}
-                  type="button"
-                  className={`th-btn th-btn--sm ${
-                    splitIds.has(u.id) ? "th-btn--primary" : "th-btn--secondary"
-                  }`}
-                  onClick={() => toggleSplit(u.id)}
-                >
-                  {u.name}
-                  {u.id === currentUserId ? " (you)" : ""}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div style={{ marginTop: 4 }}>
-              {joining.map((u) => {
-                const included = splitIds.has(u.id);
-                return (
-                  <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <button
-                      type="button"
-                      className={`th-btn th-btn--sm ${included ? "th-btn--primary" : "th-btn--secondary"}`}
-                      onClick={() => toggleSplit(u.id)}
-                      style={{ minWidth: 90, textAlign: "left" }}
-                    >
-                      {u.name}{u.id === currentUserId ? " (you)" : ""}
-                    </button>
-                    {included && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, flex: 1 }}>
-                        <span style={{ fontSize: 14 }}>€</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          inputMode="decimal"
-                          placeholder="0.00"
-                          value={customAmounts[u.id] ?? ""}
-                          onChange={(e) =>
-                            setCustomAmounts((prev) => ({ ...prev, [u.id]: e.target.value }))
-                          }
-                          style={{ flex: 1 }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              {totalCents > 0 && (
-                <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-                  {customRemaining === 0
-                    ? "✓ Amounts match the total"
-                    : customRemaining > 0
-                    ? `€${(customRemaining / 100).toFixed(2)} remaining to assign`
-                    : `€${(Math.abs(customRemaining) / 100).toFixed(2)} over the total`}
-                </div>
-              )}
-            </div>
-          )}
-          <div className="row" style={{ marginTop: 12 }}>
-            <button
-              className="th-btn th-btn--secondary"
-              onClick={() => setAdding(false)}
-            >
-              Cancel
-            </button>
-            <button
-              className="th-btn th-btn--primary"
-              onClick={submit}
-              style={{ flex: 1 }}
-            >
-              Add expense
-            </button>
-          </div>
-        </div>
+        <ExpenseForm
+          users={users}
+          currentUserId={currentUserId}
+          onSubmit={async (data) => {
+            await api.createExpense(tripId, data);
+            setAdding(false);
+            await onChanged();
+          }}
+          onCancel={() => setAdding(false)}
+        />
       ) : (
         <button
           className="th-btn th-btn--secondary"
-          onClick={startAdding}
+          onClick={() => {
+            setAdding(true);
+            setEditingId(null);
+          }}
           style={{ marginTop: 12 }}
         >
           + Add expense

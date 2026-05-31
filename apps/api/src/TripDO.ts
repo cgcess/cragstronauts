@@ -482,6 +482,79 @@ export class TripDO extends DurableObject<Env> {
     );
   }
 
+  async updateExpense(
+    expenseId: number,
+    data:
+      | {
+          payer_user_id: number;
+          amount_cents: number;
+          description: string;
+          split_mode: "equal";
+          split_user_ids: number[];
+          is_settlement?: boolean;
+        }
+      | {
+          payer_user_id: number;
+          amount_cents: number;
+          description: string;
+          split_mode: "custom";
+          splits: { user_id: number; amount_cents: number }[];
+          is_settlement?: boolean;
+        }
+  ): Promise<Expense> {
+    const existing = this.db.get(expense, { where: eq("id", expenseId) });
+    if (!existing) throw new Error("Expense not found");
+
+    const payer = this.db.get(user, { where: eq("id", data.payer_user_id) });
+    if (!payer) throw new Error("Payer not found");
+
+    if (data.amount_cents < 1) throw new Error("Amount must be positive");
+    if (!data.description.trim()) throw new Error("Description required");
+
+    // Normalize splits
+    let splitRows: { user_id: number; amount_cents: number | null }[];
+
+    if (data.split_mode === "custom") {
+      if (data.splits.length === 0) throw new Error("At least one split member required");
+      const total = data.splits.reduce((s, r) => s + r.amount_cents, 0);
+      if (total !== data.amount_cents) {
+        throw new Error(`Split amounts (${total}) must equal the expense total (${data.amount_cents})`);
+      }
+      splitRows = data.splits.map((s) => ({ user_id: s.user_id, amount_cents: s.amount_cents }));
+    } else {
+      if (data.split_user_ids.length === 0) throw new Error("At least one split member required");
+      splitRows = data.split_user_ids.map((uid) => ({ user_id: uid, amount_cents: null }));
+    }
+
+    const isSettlement = "is_settlement" in data && data.is_settlement ? 1 : 0;
+
+    // Update expense row
+    this.db.update(
+      expense,
+      {
+        payer_user_id: data.payer_user_id,
+        amount_cents: data.amount_cents,
+        description: data.description.trim(),
+        is_settlement: isSettlement,
+      },
+      { where: eq("id", expenseId) }
+    );
+
+    // Replace splits: delete old, insert new
+    this.db.raw("DELETE FROM expense_split WHERE expense_id = ?", [expenseId]);
+    for (const sr of splitRows) {
+      this.db.insert(expenseSplit, {
+        expense_id: expenseId,
+        user_id: sr.user_id,
+        amount_cents: sr.amount_cents,
+      });
+    }
+
+    return this.formatExpense(
+      this.db.get(expense, { where: eq("id", expenseId) })!
+    );
+  }
+
   async deleteExpense(expenseId: number): Promise<{ ok: boolean }> {
     const row = this.db.get(expense, { where: eq("id", expenseId) });
     if (!row) throw new Error("Expense not found");

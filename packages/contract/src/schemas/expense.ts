@@ -52,6 +52,9 @@ export const CreateExpenseBodyCompatSchema = z.union([
   }),
 ]);
 
+/** Update body — same shape as create (full replacement semantics). */
+export const UpdateExpenseBodySchema = CreateExpenseBodySchema;
+
 export const SettlementSchema = z.object({
   from_user_id: z.number(),
   from_name: z.string(),

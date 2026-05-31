@@ -116,6 +116,13 @@ export const api = {
       | { payer_user_id: number; amount_cents: number; description: string; split_mode: "equal"; split_user_ids: number[]; is_settlement?: boolean }
       | { payer_user_id: number; amount_cents: number; description: string; split_mode: "custom"; splits: { user_id: number; amount_cents: number }[]; is_settlement?: boolean }
   ) => req<Expense>("POST", `/api/trips/${tripId}/expenses`, data),
+  updateExpense: (
+    tripId: string,
+    id: number,
+    data:
+      | { payer_user_id: number; amount_cents: number; description: string; split_mode: "equal"; split_user_ids: number[]; is_settlement?: boolean }
+      | { payer_user_id: number; amount_cents: number; description: string; split_mode: "custom"; splits: { user_id: number; amount_cents: number }[]; is_settlement?: boolean }
+  ) => req<Expense>("PATCH", `/api/trips/${tripId}/expenses/${id}`, data),
   deleteExpense: (tripId: string, id: number) =>
     req<Ok>("DELETE", `/api/trips/${tripId}/expenses/${id}`),
   getBalances: (tripId: string) =>

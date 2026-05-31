@@ -1,6 +1,6 @@
 import { createRoute } from "@hono/zod-openapi";
 import { z } from "zod";
-import { ExpenseSchema, SettlementSchema, CreateExpenseBodySchema } from "../schemas/expense";
+import { ExpenseSchema, SettlementSchema, CreateExpenseBodySchema, UpdateExpenseBodySchema } from "../schemas/expense";
 import { ErrorSchema, OkSchema } from "../schemas/common";
 
 const TripParamsSchema = z.object({
@@ -62,6 +62,36 @@ export const deleteExpenseRoute = createRoute({
     200: {
       content: { "application/json": { schema: OkSchema } },
       description: "Expense removed",
+    },
+    404: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Not found",
+    },
+  },
+});
+
+export const updateExpenseRoute = createRoute({
+  method: "patch",
+  path: "/api/trips/{trip_id}/expenses/{expense_id}",
+  summary: "Update an expense",
+  request: {
+    params: ExpenseParamsSchema,
+    body: {
+      content: {
+        "application/json": {
+          schema: UpdateExpenseBodySchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: ExpenseSchema } },
+      description: "Expense updated",
+    },
+    400: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Validation error",
     },
     404: {
       content: { "application/json": { schema: ErrorSchema } },

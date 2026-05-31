@@ -4,6 +4,7 @@ import { getTripDO } from "../do";
 import {
   listExpensesRoute,
   createExpenseRoute,
+  updateExpenseRoute,
   deleteExpenseRoute,
   getBalancesRoute,
 } from "@cragstronauts/contract";
@@ -26,6 +27,21 @@ expenseRoutes.openapi(createExpenseRoute, async (c) => {
     return c.json(expense, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
+    return c.json({ detail: msg }, 400);
+  }
+});
+
+expenseRoutes.openapi(updateExpenseRoute, async (c) => {
+  const { trip_id: tripId, expense_id } = c.req.valid("param");
+  const body = c.req.valid("json");
+  const expenseId = Number(expense_id);
+  try {
+    const stub = getTripDO(c.env, tripId);
+    const updated = await stub.updateExpense(expenseId, body);
+    return c.json(updated, 200);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("not found")) return c.json({ detail: msg }, 404);
     return c.json({ detail: msg }, 400);
   }
 });

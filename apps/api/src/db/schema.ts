@@ -46,3 +46,17 @@ export const gearContribution = table("gear_contribution", {
   category_id: column.integer().notNull().references(ref(gearCategory, "id")),
   details: column.text().notNull(),
 });
+
+export const expense = table("expense", {
+  id: column.integer().notNull().primaryKey().autoIncrement(),
+  payer_user_id: column.integer().notNull().references(ref(user, "id")),
+  amount_cents: column.integer().notNull(),
+  description: column.text().notNull(),
+  created_at: column.text().notNull(),
+});
+
+export const expenseSplit = table("expense_split", {
+  id: column.integer().notNull().primaryKey().autoIncrement(),
+  expense_id: column.integer().notNull().references(ref(expense, "id")),
+  user_id: column.integer().notNull().references(ref(user, "id")),
+});

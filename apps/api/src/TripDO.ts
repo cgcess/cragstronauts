@@ -9,6 +9,8 @@ import {
   car,
   carSignup,
   gearContribution,
+  expense,
+  expenseSplit,
 } from "./db/schema";
 import type { z } from "zod";
 import type {
@@ -17,13 +19,18 @@ import type {
   GearCategorySchema,
   CarSchema,
   GearContributionSchema,
+  ExpenseSchema,
+  SettlementSchema,
 } from "@cragstronauts/contract";
+import { computeBalances } from "./lib/balances";
 
 type Trip = z.infer<typeof TripSchema>;
 type User = z.infer<typeof UserSchema>;
 type Category = z.infer<typeof GearCategorySchema>;
 type Car = z.infer<typeof CarSchema>;
 type Contribution = z.infer<typeof GearContributionSchema>;
+type Expense = z.infer<typeof ExpenseSchema>;
+type Settlement = z.infer<typeof SettlementSchema>;
 
 export class TripDO extends DurableObject<Env> {
   db: Database;
@@ -151,6 +158,8 @@ export class TripDO extends DurableObject<Env> {
 
   async destroy(): Promise<{ ok: boolean }> {
     // Wipe all tables — order matters for foreign keys
+    this.db.raw("DELETE FROM expense_split", []);
+    this.db.raw("DELETE FROM expense", []);
     this.db.raw("DELETE FROM gear_contribution", []);
     this.db.raw("DELETE FROM car_signup", []);
     this.db.raw("DELETE FROM car", []);
@@ -391,6 +400,82 @@ export class TripDO extends DurableObject<Env> {
     return { ok: true };
   }
 
+  // ---- Expenses ----
+
+  async listExpenses(): Promise<Expense[]> {
+    const rows = this.db.all(expense);
+    return rows.map((r) => this.formatExpense(r));
+  }
+
+  async createExpense(data: {
+    payer_user_id: number;
+    amount_cents: number;
+    description: string;
+    split_user_ids: number[];
+  }): Promise<Expense> {
+    const payer = this.db.get(user, { where: eq("id", data.payer_user_id) });
+    if (!payer) throw new Error("Payer not found");
+
+    if (data.amount_cents < 1) throw new Error("Amount must be positive");
+    if (!data.description.trim()) throw new Error("Description required");
+    if (data.split_user_ids.length === 0) throw new Error("At least one split member required");
+
+    const now = new Date().toISOString();
+    const row = this.db.insertReturning(
+      expense,
+      {
+        payer_user_id: data.payer_user_id,
+        amount_cents: data.amount_cents,
+        description: data.description.trim(),
+        created_at: now,
+      },
+      ["id"]
+    );
+
+    for (const uid of data.split_user_ids) {
+      this.db.insert(expenseSplit, { expense_id: row.id, user_id: uid });
+    }
+
+    return this.formatExpense(
+      this.db.get(expense, { where: eq("id", row.id) })!
+    );
+  }
+
+  async deleteExpense(expenseId: number): Promise<{ ok: boolean }> {
+    const row = this.db.get(expense, { where: eq("id", expenseId) });
+    if (!row) throw new Error("Expense not found");
+    this.db.raw("DELETE FROM expense_split WHERE expense_id = ?", [expenseId]);
+    this.db.delete(expense, { where: eq("id", expenseId) });
+    return { ok: true };
+  }
+
+  async getBalances(): Promise<Settlement[]> {
+    const rows = this.db.all(expense);
+    const expensesWithSplits = rows.map((r) => {
+      const splits = this.db.raw<{ user_id: number }>(
+        "SELECT user_id FROM expense_split WHERE expense_id = ?",
+        [r.id]
+      );
+      return {
+        payer_user_id: r.payer_user_id,
+        amount_cents: r.amount_cents,
+        splits,
+      };
+    });
+
+    const rawSettlements = computeBalances(expensesWithSplits);
+
+    return rawSettlements.map((s) => {
+      const from = this.db.get(user, { where: eq("id", s.from_user_id) });
+      const to = this.db.get(user, { where: eq("id", s.to_user_id) });
+      return {
+        ...s,
+        from_name: from?.name ?? "(unknown)",
+        to_name: to?.name ?? "(unknown)",
+      };
+    });
+  }
+
   // ---- Helpers ----
 
   private formatCar(r: {
@@ -417,6 +502,31 @@ export class TripDO extends DurableObject<Env> {
       total_seats: r.total_seats,
       notes: r.notes,
       passengers,
+    };
+  }
+
+  private formatExpense(r: {
+    id: number;
+    payer_user_id: number;
+    amount_cents: number;
+    description: string;
+    created_at: string;
+  }): Expense {
+    const payer = this.db.get(user, { where: eq("id", r.payer_user_id) });
+    const splits = this.db.raw<{ user_id: number; name: string }>(
+      `SELECT u.id as user_id, u.name as name
+       FROM expense_split es JOIN user u ON u.id = es.user_id
+       WHERE es.expense_id = ? ORDER BY es.id`,
+      [r.id]
+    );
+    return {
+      id: r.id,
+      payer_user_id: r.payer_user_id,
+      payer_name: payer?.name ?? "(unknown)",
+      amount_cents: r.amount_cents,
+      description: r.description,
+      created_at: r.created_at,
+      splits,
     };
   }
 

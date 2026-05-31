@@ -5,6 +5,7 @@ import { tripRoutes } from "./routes/trip";
 import { userRoutes } from "./routes/users";
 import { gearRoutes } from "./routes/gear";
 import { carRoutes } from "./routes/cars";
+import { expenseRoutes } from "./routes/expenses";
 
 export const createApp = () => {
   const app = new OpenAPIHono<{ Bindings: Env }>();
@@ -15,6 +16,7 @@ export const createApp = () => {
   app.route("/", userRoutes);
   app.route("/", gearRoutes);
   app.route("/", carRoutes);
+  app.route("/", expenseRoutes);
 
   return app;
 };

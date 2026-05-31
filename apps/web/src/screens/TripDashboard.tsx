@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from "react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import type { DateRange } from "react-day-picker";
 import type { z } from "zod";
-import type { CarSchema, GearContributionSchema } from "@cragstronauts/contract";
+import type { CarSchema, GearContributionSchema, ExpenseSchema, SettlementSchema } from "@cragstronauts/contract";
 import { api } from "../api";
 import { useTripContext, type Category } from "../context/TripContext";
 import { formatDateRange } from "../dateUtils";
@@ -14,6 +14,8 @@ import { Button, Tag } from "../components/ui";
 
 type Car = z.infer<typeof CarSchema>;
 type Contribution = z.infer<typeof GearContributionSchema>;
+type Expense = z.infer<typeof ExpenseSchema>;
+type Settlement = z.infer<typeof SettlementSchema>;
 
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
@@ -321,6 +323,8 @@ export default function TripDashboard() {
 
   const [cars, setCars] = useState<Car[]>([]);
   const [gear, setGear] = useState<Contribution[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [balances, setBalances] = useState<Settlement[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingHero, setEditingHero] = useState(false);
@@ -361,9 +365,16 @@ export default function TripDashboard() {
   const reload = async () => {
     setError(null);
     try {
-      const [c, g] = await Promise.all([api.listCars(tripId), api.listGear(tripId)]);
+      const [c, g, ex, bal] = await Promise.all([
+        api.listCars(tripId),
+        api.listGear(tripId),
+        api.listExpenses(tripId),
+        api.getBalances(tripId),
+      ]);
       setCars(c);
       setGear(g);
+      setExpenses(ex);
+      setBalances(bal);
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -482,6 +493,43 @@ export default function TripDashboard() {
         users={users}
         currentUserId={currentUserId}
         isOrganizer={me.is_organizer}
+        onChanged={reload}
+      />
+    ),
+  });
+
+  // Expenses
+  const myExpenses = expenses.filter((e) => e.payer_user_id === currentUserId);
+  const myBalance = balances.reduce((sum, b) => {
+    if (b.from_user_id === currentUserId) return sum - b.amount_cents;
+    if (b.to_user_id === currentUserId) return sum + b.amount_cents;
+    return sum;
+  }, 0);
+  const hasBalance = balances.some(
+    (b) => b.from_user_id === currentUserId || b.to_user_id === currentUserId
+  );
+  cards.push({
+    id: "expenses",
+    score: hasBalance ? 70 : 30,
+    icon: "💸",
+    title: "Expenses",
+    badge: expenses.length ? `${expenses.length}` : undefined,
+    urgent: myBalance < 0,
+    summary:
+      expenses.length === 0
+        ? "No expenses yet"
+        : myBalance === 0
+        ? "You're settled up"
+        : myBalance > 0
+        ? `You're owed ${formatCents(myBalance)}`
+        : `You owe ${formatCents(-myBalance)}`,
+    body: (
+      <ExpensesBody
+        tripId={tripId}
+        expenses={expenses}
+        balances={balances}
+        users={users}
+        currentUserId={currentUserId}
         onChanged={reload}
       />
     ),
@@ -1762,6 +1810,208 @@ function GearBody({
             + Add gear category
           </button>
         )
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Expenses                                                            */
+/* ------------------------------------------------------------------ */
+
+function formatCents(cents: number): string {
+  const abs = Math.abs(cents);
+  return `€${(abs / 100).toFixed(2)}`;
+}
+
+function ExpensesBody({
+  tripId,
+  expenses,
+  balances,
+  users,
+  currentUserId,
+  onChanged,
+}: {
+  tripId: string;
+  expenses: Expense[];
+  balances: Settlement[];
+  users: ReturnType<typeof useTripContext>["users"];
+  currentUserId: number;
+  onChanged: () => Promise<void>;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [splitIds, setSplitIds] = useState<Set<number>>(new Set());
+  const [error, setError] = useState<string | null>(null);
+
+  const joining = users.filter((u) => u.joining);
+
+  const startAdding = () => {
+    setAdding(true);
+    setAmount("");
+    setDescription("");
+    // Default: split among everyone who's joining
+    setSplitIds(new Set(joining.map((u) => u.id)));
+  };
+
+  const toggleSplit = (uid: number) => {
+    setSplitIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(uid)) next.delete(uid);
+      else next.add(uid);
+      return next;
+    });
+  };
+
+  const submit = async () => {
+    setError(null);
+    const cents = Math.round(parseFloat(amount) * 100);
+    if (!cents || cents < 1) {
+      setError("Enter a valid amount");
+      return;
+    }
+    if (!description.trim()) {
+      setError("Enter a description");
+      return;
+    }
+    if (splitIds.size === 0) {
+      setError("Select at least one person to split with");
+      return;
+    }
+    try {
+      await api.createExpense(tripId, {
+        payer_user_id: currentUserId,
+        amount_cents: cents,
+        description: description.trim(),
+        split_user_ids: [...splitIds],
+      });
+      setAdding(false);
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  return (
+    <div>
+      {error && <div className="error-banner">{error}</div>}
+
+      {/* Balances summary */}
+      {balances.length > 0 && (
+        <div className="card" style={{ marginBottom: 12 }}>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>Balances</div>
+          {balances.map((b, i) => (
+            <div className="list-item" key={i}>
+              <span>
+                {b.from_name}
+                {b.from_user_id === currentUserId && (
+                  <span className="muted"> (you)</span>
+                )}
+              </span>
+              <span>
+                → {formatCents(b.amount_cents)} →{" "}
+              </span>
+              <span>
+                {b.to_name}
+                {b.to_user_id === currentUserId && (
+                  <span className="muted"> (you)</span>
+                )}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Expense list */}
+      {expenses.length === 0 && !adding && (
+        <p className="muted">No expenses yet. Add one to start splitting costs.</p>
+      )}
+      {expenses.map((exp) => (
+        <div className="list-item" key={exp.id}>
+          <div>
+            <div style={{ fontWeight: 500 }}>{exp.description}</div>
+            <div className="muted" style={{ fontSize: 13 }}>
+              {exp.payer_name} paid {formatCents(exp.amount_cents)} · split{" "}
+              {exp.splits.length} way{exp.splits.length !== 1 ? "s" : ""}
+            </div>
+          </div>
+          {exp.payer_user_id === currentUserId && (
+            <button
+              className="th-btn th-btn--tertiary th-btn--icon th-btn--sm"
+              style={{ color: "var(--danger)" }}
+              onClick={async () => {
+                await api.deleteExpense(tripId, exp.id);
+                await onChanged();
+              }}
+              aria-label="Delete expense"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      ))}
+
+      {/* Add expense form */}
+      {adding ? (
+        <div className="card" style={{ marginTop: 12 }}>
+          <div className="h2" style={{ marginTop: 0 }}>New expense</div>
+          <label>Amount (€)</label>
+          <input
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0.00"
+            inputMode="decimal"
+          />
+          <label style={{ marginTop: 10 }}>Description</label>
+          <input
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="e.g. Groceries, Gas, Campsite fee"
+          />
+          <label style={{ marginTop: 10 }}>Split among</label>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+            {joining.map((u) => (
+              <button
+                key={u.id}
+                type="button"
+                className={`th-btn th-btn--sm ${
+                  splitIds.has(u.id) ? "th-btn--primary" : "th-btn--secondary"
+                }`}
+                onClick={() => toggleSplit(u.id)}
+              >
+                {u.name}
+                {u.id === currentUserId ? " (you)" : ""}
+              </button>
+            ))}
+          </div>
+          <div className="row" style={{ marginTop: 12 }}>
+            <button
+              className="th-btn th-btn--secondary"
+              onClick={() => setAdding(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="th-btn th-btn--primary"
+              onClick={submit}
+              style={{ flex: 1 }}
+            >
+              Add expense
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          className="th-btn th-btn--secondary"
+          onClick={startAdding}
+          style={{ marginTop: 12 }}
+        >
+          + Add expense
+        </button>
       )}
     </div>
   );

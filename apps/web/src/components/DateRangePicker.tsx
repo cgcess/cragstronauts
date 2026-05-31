@@ -150,7 +150,7 @@ export default function DateRangePicker({
               <div className="date-range-sheet__foot">
                 <button
                   type="button"
-                  className="secondary"
+                  className="th-btn th-btn--secondary"
                   onClick={handleClear}
                   disabled={!value?.from}
                 >
@@ -158,6 +158,7 @@ export default function DateRangePicker({
                 </button>
                 <button
                   type="button"
+                  className="th-btn th-btn--primary"
                   onClick={() => setOpen(false)}
                 >
                   Done

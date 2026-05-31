@@ -14,6 +14,9 @@ import NotFound from "./screens/NotFound";
 import "./styles.css";
 import "./styles/v2-theme.css";
 import "./styles/minimalist.css";
+// Trailhead design tokens — imported LAST so its semantic + legacy-bridge
+// variables win the cascade and re-skin the whole app to the new palette.
+import "./styles/tokens.css";
 
 // SVG-backdrop-filter capability probe.
 //

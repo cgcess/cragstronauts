@@ -1,0 +1,69 @@
+/* ============================================================
+   Trailhead Tag — one label component, nature-palette variants.
+   Tinted translucent fill + light text (dark-theme base).
+   ============================================================ */
+
+.th-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: var(--r-pill);
+  font-family: var(--fl-font-body, "Geist", system-ui, sans-serif);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.th-tag__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.85;
+  flex: none;
+}
+
+.th-tag--sm {
+  height: 24px;
+  font-size: 11.5px;
+  padding: 0 9px;
+  gap: 5px;
+}
+
+.th-tag--mono {
+  font-family: var(--fl-font-mono, "SF Mono", ui-monospace, Menlo, monospace);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+/* ---- variants (dark base) ---- */
+.th-tag--neutral {
+  background: rgba(241, 232, 216, 0.1);
+  color: var(--text);
+  border-color: var(--border);
+}
+.th-tag--clay {
+  background: rgba(220, 168, 119, 0.18);
+  color: var(--th-clay-300);
+}
+.th-tag--moss {
+  background: rgba(151, 160, 107, 0.2);
+  color: var(--th-moss-300);
+}
+.th-tag--slate {
+  background: rgba(151, 166, 178, 0.2);
+  color: var(--th-slate-300);
+}
+.th-tag--ember {
+  background: rgba(230, 168, 97, 0.2);
+  color: var(--th-ember-300);
+}
+.th-tag--rust {
+  background: rgba(201, 117, 94, 0.22);
+  color: var(--th-rust-300);
+}

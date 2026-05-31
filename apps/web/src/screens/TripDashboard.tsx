@@ -253,12 +253,15 @@ function useWeather(
  * bottom sheet, so the tile itself is just the at-a-glance summary +
  * a tap target.
  */
+type TileSize = "sm" | "md" | "tall" | "full";
+
 function DashTile({
   icon,
   title,
   summary,
   badge,
   urgent,
+  size = "md",
   onClick,
 }: {
   icon: string;
@@ -266,12 +269,13 @@ function DashTile({
   summary?: React.ReactNode;
   badge?: React.ReactNode;
   urgent?: boolean;
+  size?: TileSize;
   onClick: () => void;
 }) {
   return (
     <motion.button
       type="button"
-      className={`dash-tile${urgent ? " dash-tile--urgent" : ""}`}
+      className={`dash-tile dash-tile--${size}${urgent ? " dash-tile--urgent" : ""}`}
       onClick={onClick}
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.97 }}
@@ -420,6 +424,13 @@ export default function TripDashboard() {
   const cards: CardDef[] = [];
 
   // Cars — prominent if you have no ride.
+  const carsStatus = amInCar
+    ? myCar
+      ? "You're driving"
+      : `Riding with ${ridingIn?.driver_name}`
+    : cars.length === 0
+    ? "No rides yet"
+    : "You don't have a ride yet";
   cards.push({
     id: "cars",
     score: amInCar ? 35 : 110,
@@ -427,11 +438,26 @@ export default function TripDashboard() {
     title: "Rides",
     urgent: !amInCar,
     badge: cars.length ? `${seatsFilled}/${seatsTotal}` : undefined,
-    summary: amInCar
-      ? myCar
-        ? "You're driving"
-        : `Riding with ${ridingIn?.driver_name}`
-      : "You don't have a ride yet",
+    summary: (
+      <>
+        <span>{carsStatus}</span>
+        {cars.length > 0 && (
+          <span className="dash-tile__chips">
+            {cars.slice(0, 4).map((c) => {
+              const filled = c.passengers.length + 1;
+              return (
+                <span key={c.id} className="dash-tile__chip">
+                  🚗 {c.driver_name} {filled}/{c.total_seats}
+                </span>
+              );
+            })}
+            {cars.length > 4 && (
+              <span className="dash-tile__chip">+{cars.length - 4}</span>
+            )}
+          </span>
+        )}
+      </>
+    ),
     body: (
       <CarsBody
         tripId={tripId}
@@ -452,11 +478,31 @@ export default function TripDashboard() {
     urgent: gearUrgent,
     badge: categories.length ? `${coveredCats}/${categories.length}` : undefined,
     summary:
-      categories.length === 0
-        ? "No gear categories yet"
-        : myGear.length > 0
-        ? `You're bringing ${myGear.length}`
-        : "You haven't added gear",
+      categories.length === 0 ? (
+        "No gear set up"
+      ) : (
+        <span className="dash-tile__chips">
+          {categories.slice(0, 6).map((cat) => {
+            const covered = gear.some((g) => g.category_id === cat.id);
+            return (
+              <span
+                key={cat.id}
+                className={
+                  "dash-tile__chip" + (covered ? " is-on" : "")
+                }
+              >
+                <span className="dash-tile__dot" aria-hidden="true">
+                  {covered ? "●" : "○"}
+                </span>
+                {cat.name}
+              </span>
+            );
+          })}
+          {categories.length > 6 && (
+            <span className="dash-tile__chip">+{categories.length - 6}</span>
+          )}
+        </span>
+      ),
     body: (
       <GearBody
         tripId={tripId}
@@ -470,13 +516,26 @@ export default function TripDashboard() {
   });
 
   // Roster
+  const rosterVisible = joining.slice(0, 4);
+  const rosterMore = Math.max(0, joining.length - rosterVisible.length);
+  const rosterNames = rosterVisible
+    .map((u) => u.name + (u.is_organizer ? " 👑" : ""))
+    .join(", ");
   cards.push({
     id: "roster",
     score: 40,
     icon: "🧗",
     title: "Roster",
     badge: `${joining.length}`,
-    summary: `${joining.length} going`,
+    summary:
+      joining.length === 0 ? (
+        "No one joining yet"
+      ) : (
+        <>
+          {rosterNames}
+          {rosterMore > 0 ? ` +${rosterMore}` : ""}
+        </>
+      ),
     body: (
       <RosterBody
         tripId={tripId}
@@ -505,14 +564,29 @@ export default function TripDashboard() {
     title: "Expenses",
     badge: expenses.length ? `${expenses.length}` : undefined,
     urgent: myBalance < 0,
-    summary:
-      expenses.length === 0
-        ? "No expenses yet"
-        : myBalance === 0
-        ? "You're settled up"
-        : myBalance > 0
-        ? `You're owed ${formatCents(myBalance)}`
-        : `You owe ${formatCents(-myBalance)}`,
+    summary: (() => {
+      if (expenses.length === 0) return "No expenses yet";
+      const totalSpent = expenses.reduce(
+        (sum, e) => sum + e.amount_cents,
+        0
+      );
+      const statusLine =
+        myBalance === 0
+          ? "You're settled up"
+          : myBalance > 0
+          ? `You're owed ${formatCents(myBalance)}`
+          : `You owe ${formatCents(-myBalance)}`;
+      return (
+        <>
+          <span>{statusLine}</span>
+          <span className="dash-tile__sub">
+            {expenses.length}{" "}
+            {expenses.length === 1 ? "expense" : "expenses"} ·{" "}
+            {formatCents(totalSpent)} total
+          </span>
+        </>
+      );
+    })(),
     body: (
       <ExpensesBody
         tripId={tripId}
@@ -525,7 +599,42 @@ export default function TripDashboard() {
     ),
   });
 
-  cards.sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
+  // ---- Dynamic sizing + ordering ---------------------------------------
+  // Each card sizes itself by how much summary content it can show, and
+  // the grid packs them with grid-auto-flow: dense. Packing isn't
+  // guaranteed to be tight — gaps are an acceptable trade for the cards
+  // growing/shrinking with their data.
+  const contentCount: Record<string, number> = {
+    cars: cars.length,
+    gear: categories.length,
+    roster: joining.length,
+    expenses: expenses.length,
+  };
+
+  // Buckets: 0 → sm (square), 1–3 → md (wide), 4–7 → tall (2×2), 8+ → full strip.
+  function sizeFor(id: string): TileSize {
+    const n = contentCount[id] ?? 0;
+    if (n === 0) return "sm";
+    if (n <= 3) return "md";
+    if (n <= 7) return "tall";
+    return "full";
+  }
+
+  // Bigger tiles first, urgent items always before non-urgent. Dense
+  // flow lets the smaller tiles fill whatever gaps remain.
+  const sizeRank: Record<TileSize, number> = { full: 4, tall: 3, md: 2, sm: 1 };
+  cards.sort((a, b) => {
+    const aUrg = a.urgent ? 1 : 0;
+    const bUrg = b.urgent ? 1 : 0;
+    if (aUrg !== bUrg) return bUrg - aUrg;
+    const aS = sizeRank[sizeFor(a.id)];
+    const bS = sizeRank[sizeFor(b.id)];
+    if (aS !== bS) return bS - aS;
+    const aN = contentCount[a.id] ?? 0;
+    const bN = contentCount[b.id] ?? 0;
+    if (aN !== bN) return bN - aN;
+    return a.id.localeCompare(b.id);
+  });
 
   // Tiles open into a bottom sheet; no auto-open on mount.
   const selectedCard = cards.find((c) => c.id === expandedId) ?? null;
@@ -740,7 +849,7 @@ export default function TripDashboard() {
         </div>
         )}
 
-        <div className="dash-grid">
+        <div className="dash-bento">
           {cards.map((c) => (
             <DashTile
               key={c.id}
@@ -749,6 +858,7 @@ export default function TripDashboard() {
               summary={c.summary}
               badge={c.badge}
               urgent={c.urgent}
+              size={sizeFor(c.id)}
               onClick={() => setExpandedId(c.id)}
             />
           ))}

@@ -375,18 +375,36 @@ input:focus, textarea:focus, select:focus {
   outline-offset: 3px;
 }
 
-/* ---------- Dashboard tile grid (iOS-weather detail-tile pattern) ----------
-   Replaces the .dash-stack accordion with a 2-column grid of compact
-   tiles. The full content opens in a BottomSheet on tap. */
-.dash-grid {
+/* ---------- Dashboard bento grid ----------
+   Asymmetric 2-col (mobile) / 4-col (≥600px) layout of tiles with mixed
+   sizes. Order is fixed: Cars (lead 2×2), Gear (md), Roster (md),
+   Expenses (wide bottom strip).  Tap a tile → BottomSheet with the
+   full body. */
+.dash-bento {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, 1fr);
+  /* Tiles size by content (rows grow as needed) and the browser packs
+     them with dense flow. Gaps are acceptable — content drives layout. */
+  grid-auto-rows: minmax(118px, auto);
+  grid-auto-flow: dense;
   gap: 12px;
   margin-top: 16px;
 }
-@media (max-width: 380px) {
-  /* On the narrowest phones, single column reads better. */
-  .dash-grid { grid-template-columns: 1fr; }
+
+/* Mobile spans (2-col grid) */
+.dash-tile--sm   { grid-column: span 1; grid-row: span 1; }
+.dash-tile--md   { grid-column: span 1; grid-row: span 1; }
+.dash-tile--tall { grid-column: span 2; grid-row: span 2; }
+.dash-tile--full { grid-column: span 2; grid-row: span 1; }
+
+@media (min-width: 600px) {
+  /* Wide grid (4-col): md widens to 2×1, tall becomes a 2×2 feature,
+     full spans the entire row. sm stays as a quarter-row square. */
+  .dash-bento { grid-template-columns: repeat(4, 1fr); }
+  .dash-tile--sm   { grid-column: span 1; grid-row: span 1; }
+  .dash-tile--md   { grid-column: span 2; grid-row: span 1; }
+  .dash-tile--tall { grid-column: span 2; grid-row: span 2; }
+  .dash-tile--full { grid-column: span 4; grid-row: span 1; }
 }
 
 .dash-tile {
@@ -397,7 +415,6 @@ input:focus, textarea:focus, select:focus {
   border-radius: 16px !important;
   box-shadow: var(--min-shadow) !important;
   padding: 14px 14px 16px !important;
-  min-height: 120px;
   display: flex !important;
   flex-direction: column;
   align-items: stretch;
@@ -405,8 +422,22 @@ input:focus, textarea:focus, select:focus {
   text-align: left;
   font: inherit !important;
   cursor: pointer;
+  overflow: hidden;
   transition: transform 140ms ease-out, box-shadow 160ms ease-out, background 160ms ease-out;
 }
+
+/* Tall tile (2×2) — info-rich card, larger fonts and padding. */
+.dash-tile--tall { padding: 18px 18px 20px !important; gap: 8px; }
+.dash-tile--tall .dash-tile__icon { font-size: 30px; }
+.dash-tile--tall .dash-tile__title { font-size: 13px; }
+.dash-tile--tall .dash-tile__summary { font-size: 17px; line-height: 1.25; }
+
+/* Wide bottom-strip tile — horizontal arrangement so the summary
+   doesn't get lost in a tall row. */
+.dash-tile--full { flex-direction: row !important; align-items: center; gap: 14px; }
+.dash-tile--full .dash-tile__top { flex: 0 0 auto; flex-direction: column; align-items: flex-start; gap: 6px; }
+.dash-tile--full .dash-tile__title { margin-top: 0; }
+.dash-tile--full .dash-tile__summary { margin-top: 0; margin-left: auto; text-align: right; }
 .dash-tile:hover  { background: var(--min-surface-2) !important; box-shadow: var(--min-shadow-lg) !important; }
 .dash-tile:active { transform: scale(0.97); }
 .dash-tile:focus-visible {
@@ -441,14 +472,71 @@ input:focus, textarea:focus, select:focus {
   color: var(--min-ink-3) !important;
 }
 
-/* Summary — the headline value, larger & legible */
+/* Summary — the headline value, larger & legible. Flex column so
+   multi-line JSX summaries (status + chip list) stack cleanly. */
 .dash-tile__summary {
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   font-size: 15px;
   font-weight: 600;
   line-height: 1.25;
   color: var(--min-ink) !important;
   overflow-wrap: anywhere;
+}
+
+/* Chip lists inside a tile summary (gear categories, car list).
+   Bigger / heavier than the old 12px label-style so the actual info
+   pulls focus over the title/badge. */
+.dash-tile__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--min-ink) !important;
+}
+.dash-tile__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  color: var(--min-ink-2);
+}
+.dash-tile__chip.is-on {
+  color: var(--min-ink) !important;
+}
+.dash-tile__dot {
+  font-size: 11px;
+  line-height: 1;
+  color: var(--min-ink-3);
+}
+.dash-tile__chip.is-on .dash-tile__dot {
+  color: var(--min-accent) !important;
+}
+
+/* On the tall (2×2) info-rich tile, chips become small "data pills" —
+   each one reads as its own datum. iOS-Weather detail-tile vibe. */
+.dash-tile--tall .dash-tile__chips {
+  gap: 8px;
+  font-size: 14px;
+}
+.dash-tile--tall .dash-tile__chip {
+  background: var(--min-surface-2);
+  border-radius: 10px;
+  padding: 6px 10px;
+  color: var(--min-ink) !important;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+/* Secondary sub-line inside a tile summary (e.g. expense count). */
+.dash-tile__sub {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--min-ink-3) !important;
 }
 
 /* Tiny "action needed" pill, sized for the tile */

@@ -10,7 +10,7 @@ export interface Settlement {
   amount_cents: number;
 }
 
-export function computeBalances(expenses: Expense[], settlements: Settlement[] = []): Settlement[] {
+export function computeBalances(expenses: Expense[]): Settlement[] {
   // Net balance per ordered pair (a, b) where a < b.
   // Positive means a owes b, negative means b owes a.
   const nets = new Map<string, number>();
@@ -36,20 +36,6 @@ export function computeBalances(expenses: Expense[], settlements: Settlement[] =
       const delta = s.user_id < exp.payer_user_id ? share : -share;
       nets.set(key, prev + delta);
     }
-  }
-
-  // Apply settlements: each settlement reduces the net debt from→to.
-  for (const s of settlements) {
-    const [lo, hi] =
-      s.from_user_id < s.to_user_id
-        ? [s.from_user_id, s.to_user_id]
-        : [s.to_user_id, s.from_user_id];
-    const key = `${lo}:${hi}`;
-    const prev = nets.get(key) ?? 0;
-    // from_user_id paid to_user_id, so reduce what from owes to.
-    // Convention: positive = lo owes hi
-    const delta = s.from_user_id < s.to_user_id ? -s.amount_cents : s.amount_cents;
-    nets.set(key, prev + delta);
   }
 
   const result: Settlement[] = [];

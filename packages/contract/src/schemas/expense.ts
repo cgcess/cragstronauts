@@ -13,6 +13,7 @@ export const ExpenseSchema = z.object({
   amount_cents: z.number(),
   description: z.string(),
   created_at: z.string(),
+  is_settlement: z.boolean(),
   splits: z.array(ExpenseSplitMemberSchema),
 });
 
@@ -23,6 +24,7 @@ export const CreateExpenseBodySchema = z.discriminatedUnion("split_mode", [
     description: z.string().min(1),
     split_mode: z.literal("equal"),
     split_user_ids: z.array(z.number()).min(1),
+    is_settlement: z.boolean().optional(),
   }),
   z.object({
     payer_user_id: z.number(),
@@ -35,6 +37,7 @@ export const CreateExpenseBodySchema = z.discriminatedUnion("split_mode", [
         amount_cents: z.number().int().min(0),
       })
     ).min(1),
+    is_settlement: z.boolean().optional(),
   }),
 ]);
 
@@ -57,18 +60,4 @@ export const SettlementSchema = z.object({
   amount_cents: z.number(),
 });
 
-export const SettlementRecordSchema = z.object({
-  id: z.number(),
-  from_user_id: z.number(),
-  from_name: z.string(),
-  to_user_id: z.number(),
-  to_name: z.string(),
-  amount_cents: z.number(),
-  created_at: z.string(),
-});
 
-export const CreateSettlementBodySchema = z.object({
-  from_user_id: z.number(),
-  to_user_id: z.number(),
-  amount_cents: z.number().int().min(1),
-});

@@ -1,12 +1,6 @@
 import { createRoute } from "@hono/zod-openapi";
 import { z } from "zod";
-import {
-  ExpenseSchema,
-  SettlementSchema,
-  SettlementRecordSchema,
-  CreateExpenseBodySchema,
-  CreateSettlementBodySchema,
-} from "../schemas/expense";
+import { ExpenseSchema, SettlementSchema, CreateExpenseBodySchema } from "../schemas/expense";
 import { ErrorSchema, OkSchema } from "../schemas/common";
 
 const TripParamsSchema = z.object({
@@ -18,10 +12,7 @@ const ExpenseParamsSchema = z.object({
   expense_id: z.string(),
 });
 
-const SettlementParamsSchema = z.object({
-  trip_id: z.string(),
-  settlement_id: z.string(),
-});
+
 
 export const listExpensesRoute = createRoute({
   method: "get",
@@ -92,56 +83,4 @@ export const getBalancesRoute = createRoute({
   },
 });
 
-export const listSettlementsRoute = createRoute({
-  method: "get",
-  path: "/api/trips/{trip_id}/settlements",
-  summary: "List settlement payments",
-  request: { params: TripParamsSchema },
-  responses: {
-    200: {
-      content: { "application/json": { schema: z.array(SettlementRecordSchema) } },
-      description: "List of settlements",
-    },
-  },
-});
 
-export const createSettlementRoute = createRoute({
-  method: "post",
-  path: "/api/trips/{trip_id}/settlements",
-  summary: "Record a settlement payment",
-  request: {
-    params: TripParamsSchema,
-    body: {
-      content: {
-        "application/json": { schema: CreateSettlementBodySchema },
-      },
-    },
-  },
-  responses: {
-    200: {
-      content: { "application/json": { schema: SettlementRecordSchema } },
-      description: "Settlement created",
-    },
-    400: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Validation error",
-    },
-  },
-});
-
-export const deleteSettlementRoute = createRoute({
-  method: "delete",
-  path: "/api/trips/{trip_id}/settlements/{settlement_id}",
-  summary: "Delete a settlement payment",
-  request: { params: SettlementParamsSchema },
-  responses: {
-    200: {
-      content: { "application/json": { schema: OkSchema } },
-      description: "Settlement removed",
-    },
-    404: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Not found",
-    },
-  },
-});

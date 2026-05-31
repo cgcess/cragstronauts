@@ -11,7 +11,6 @@ import {
   gearContribution,
   expense,
   expenseSplit,
-  settlement,
 } from "./db/schema";
 import type { z } from "zod";
 import type {
@@ -22,7 +21,6 @@ import type {
   GearContributionSchema,
   ExpenseSchema,
   SettlementSchema,
-  SettlementRecordSchema,
 } from "@cragstronauts/contract";
 import { computeBalances } from "./lib/balances";
 
@@ -33,7 +31,6 @@ type Car = z.infer<typeof CarSchema>;
 type Contribution = z.infer<typeof GearContributionSchema>;
 type Expense = z.infer<typeof ExpenseSchema>;
 type Settlement = z.infer<typeof SettlementSchema>;
-type SettlementRecord = z.infer<typeof SettlementRecordSchema>;
 
 export class TripDO extends DurableObject<Env> {
   db: Database;
@@ -161,7 +158,6 @@ export class TripDO extends DurableObject<Env> {
 
   async destroy(): Promise<{ ok: boolean }> {
     // Wipe all tables — order matters for foreign keys
-    this.db.raw("DELETE FROM settlement", []);
     this.db.raw("DELETE FROM expense_split", []);
     this.db.raw("DELETE FROM expense", []);
     this.db.raw("DELETE FROM gear_contribution", []);
@@ -418,6 +414,7 @@ export class TripDO extends DurableObject<Env> {
         description: string;
         split_mode: "equal";
         split_user_ids: number[];
+        is_settlement?: boolean;
       }
     | {
         payer_user_id: number;
@@ -425,6 +422,7 @@ export class TripDO extends DurableObject<Env> {
         description: string;
         split_mode: "custom";
         splits: { user_id: number; amount_cents: number }[];
+        is_settlement?: boolean;
       }
     | {
         // Legacy format (no split_mode)
@@ -458,6 +456,7 @@ export class TripDO extends DurableObject<Env> {
     }
 
     const now = new Date().toISOString();
+    const isSettlement = "is_settlement" in data && data.is_settlement ? 1 : 0;
     const row = this.db.insertReturning(
       expense,
       {
@@ -465,6 +464,7 @@ export class TripDO extends DurableObject<Env> {
         amount_cents: data.amount_cents,
         description: data.description.trim(),
         created_at: now,
+        is_settlement: isSettlement,
       },
       ["id"]
     );
@@ -507,14 +507,7 @@ export class TripDO extends DurableObject<Env> {
       };
     });
 
-    const settlementRows = this.db.all(settlement);
-    const settlementsForCalc = settlementRows.map((s) => ({
-      from_user_id: s.from_user_id,
-      to_user_id: s.to_user_id,
-      amount_cents: s.amount_cents,
-    }));
-
-    const rawSettlements = computeBalances(expensesWithSplits, settlementsForCalc);
+    const rawSettlements = computeBalances(expensesWithSplits);
 
     return rawSettlements.map((s) => {
       const from = this.db.get(user, { where: eq("id", s.from_user_id) });
@@ -527,48 +520,7 @@ export class TripDO extends DurableObject<Env> {
     });
   }
 
-  // ---- Settlements ----
 
-  async listSettlements(): Promise<SettlementRecord[]> {
-    const rows = this.db.all(settlement);
-    return rows.map((r) => this.formatSettlement(r));
-  }
-
-  async createSettlement(data: {
-    from_user_id: number;
-    to_user_id: number;
-    amount_cents: number;
-  }): Promise<SettlementRecord> {
-    const from = this.db.get(user, { where: eq("id", data.from_user_id) });
-    if (!from) throw new Error("From user not found");
-    const to = this.db.get(user, { where: eq("id", data.to_user_id) });
-    if (!to) throw new Error("To user not found");
-    if (data.from_user_id === data.to_user_id) throw new Error("Cannot settle with yourself");
-    if (data.amount_cents < 1) throw new Error("Amount must be positive");
-
-    const now = new Date().toISOString();
-    const row = this.db.insertReturning(
-      settlement,
-      {
-        from_user_id: data.from_user_id,
-        to_user_id: data.to_user_id,
-        amount_cents: data.amount_cents,
-        created_at: now,
-      },
-      ["id"]
-    );
-
-    return this.formatSettlement(
-      this.db.get(settlement, { where: eq("id", row.id) })!
-    );
-  }
-
-  async deleteSettlement(settlementId: number): Promise<{ ok: boolean }> {
-    const row = this.db.get(settlement, { where: eq("id", settlementId) });
-    if (!row) throw new Error("Settlement not found");
-    this.db.delete(settlement, { where: eq("id", settlementId) });
-    return { ok: true };
-  }
 
   // ---- Helpers ----
 
@@ -599,32 +551,13 @@ export class TripDO extends DurableObject<Env> {
     };
   }
 
-  private formatSettlement(r: {
-    id: number;
-    from_user_id: number;
-    to_user_id: number;
-    amount_cents: number;
-    created_at: string;
-  }): SettlementRecord {
-    const from = this.db.get(user, { where: eq("id", r.from_user_id) });
-    const to = this.db.get(user, { where: eq("id", r.to_user_id) });
-    return {
-      id: r.id,
-      from_user_id: r.from_user_id,
-      from_name: from?.name ?? "(unknown)",
-      to_user_id: r.to_user_id,
-      to_name: to?.name ?? "(unknown)",
-      amount_cents: r.amount_cents,
-      created_at: r.created_at,
-    };
-  }
-
   private formatExpense(r: {
     id: number;
     payer_user_id: number;
     amount_cents: number;
     description: string;
     created_at: string;
+    is_settlement: number;
   }): Expense {
     const payer = this.db.get(user, { where: eq("id", r.payer_user_id) });
     const splits = this.db.raw<{ user_id: number; name: string; amount_cents: number | null }>(
@@ -640,6 +573,7 @@ export class TripDO extends DurableObject<Env> {
       amount_cents: r.amount_cents,
       description: r.description,
       created_at: r.created_at,
+      is_settlement: Boolean(r.is_settlement),
       splits: splits.map((s) => ({
         user_id: s.user_id,
         name: s.name,

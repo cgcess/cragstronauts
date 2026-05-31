@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from "react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import type { DateRange } from "react-day-picker";
 import type { z } from "zod";
-import type { CarSchema, GearContributionSchema, ExpenseSchema, SettlementSchema, SettlementRecordSchema } from "@cragstronauts/contract";
+import type { CarSchema, GearContributionSchema, ExpenseSchema, SettlementSchema } from "@cragstronauts/contract";
 import { api } from "../api";
 import { useTripContext, type Category } from "../context/TripContext";
 import { formatDateRange } from "../dateUtils";
@@ -16,7 +16,6 @@ type Car = z.infer<typeof CarSchema>;
 type Contribution = z.infer<typeof GearContributionSchema>;
 type Expense = z.infer<typeof ExpenseSchema>;
 type Settlement = z.infer<typeof SettlementSchema>;
-type SettlementRecord = z.infer<typeof SettlementRecordSchema>;
 
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
@@ -326,7 +325,6 @@ export default function TripDashboard() {
   const [gear, setGear] = useState<Contribution[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [balances, setBalances] = useState<Settlement[]>([]);
-  const [settlementRecords, setSettlementRecords] = useState<SettlementRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingHero, setEditingHero] = useState(false);
@@ -367,18 +365,16 @@ export default function TripDashboard() {
   const reload = async () => {
     setError(null);
     try {
-      const [c, g, ex, bal, sett] = await Promise.all([
+      const [c, g, ex, bal] = await Promise.all([
         api.listCars(tripId),
         api.listGear(tripId),
         api.listExpenses(tripId),
         api.getBalances(tripId),
-        api.listSettlements(tripId),
       ]);
       setCars(c);
       setGear(g);
       setExpenses(ex);
       setBalances(bal);
-      setSettlementRecords(sett);
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -532,7 +528,6 @@ export default function TripDashboard() {
         tripId={tripId}
         expenses={expenses}
         balances={balances}
-        settlementRecords={settlementRecords}
         users={users}
         currentUserId={currentUserId}
         onChanged={reload}
@@ -1835,7 +1830,6 @@ function ExpensesBody({
   tripId,
   expenses,
   balances,
-  settlementRecords,
   users,
   currentUserId,
   onChanged,
@@ -1843,7 +1837,6 @@ function ExpensesBody({
   tripId: string;
   expenses: Expense[];
   balances: Settlement[];
-  settlementRecords: SettlementRecord[];
   users: ReturnType<typeof useTripContext>["users"];
   currentUserId: number;
   onChanged: () => Promise<void>;
@@ -1859,6 +1852,9 @@ function ExpensesBody({
   const [splitMode, setSplitMode] = useState<SplitMode>("equal");
   const [customAmounts, setCustomAmounts] = useState<Record<number, string>>({});
   const [error, setError] = useState<string | null>(null);
+
+  const realExpenses = expenses.filter((e) => !e.is_settlement);
+  const settlementExpenses = expenses.filter((e) => e.is_settlement);
 
   const joining = users.filter((u) => u.joining);
 
@@ -2035,10 +2031,17 @@ function ExpensesBody({
                       return;
                     }
                     try {
-                      await api.createSettlement(tripId, {
-                        from_user_id: settleFrom as number,
-                        to_user_id: settleTo as number,
+                      const fromId = settleFrom as number;
+                      const toId = settleTo as number;
+                      const fromUser = joining.find((u) => u.id === fromId);
+                      const toUser = joining.find((u) => u.id === toId);
+                      await api.createExpense(tripId, {
+                        payer_user_id: fromId,
                         amount_cents: cents,
+                        description: `${fromUser?.name ?? "?"} → ${toUser?.name ?? "?"}`,
+                        split_mode: "custom",
+                        splits: [{ user_id: toId, amount_cents: cents }],
+                        is_settlement: true,
                       });
                       setSettling(false);
                       setSettleAmount("");
@@ -2057,21 +2060,21 @@ function ExpensesBody({
       )}
 
       {/* Settlement records */}
-      {settlementRecords.length > 0 && (
+      {settlementExpenses.length > 0 && (
         <div className="card" style={{ marginBottom: 12 }}>
           <div style={{ fontWeight: 600, marginBottom: 8 }}>Payments</div>
-          {settlementRecords.map((s) => (
+          {settlementExpenses.map((s) => (
             <div className="list-item" key={s.id}>
               <div>
                 <div style={{ fontSize: 14 }}>
-                  {s.from_name} paid {formatCents(s.amount_cents)} to {s.to_name}
+                  {s.payer_name} paid {formatCents(s.amount_cents)} to {s.splits[0]?.name ?? "?"}
                 </div>
               </div>
               <button
                 className="th-btn th-btn--tertiary th-btn--icon th-btn--sm"
                 style={{ color: "var(--danger)" }}
                 onClick={async () => {
-                  await api.deleteSettlement(tripId, s.id);
+                  await api.deleteExpense(tripId, s.id);
                   await onChanged();
                 }}
                 aria-label="Delete payment"
@@ -2084,10 +2087,10 @@ function ExpensesBody({
       )}
 
       {/* Expense list */}
-      {expenses.length === 0 && !adding && (
+      {realExpenses.length === 0 && !adding && (
         <p className="muted">No expenses yet. Add one to start splitting costs.</p>
       )}
-      {expenses.map((exp) => {
+      {realExpenses.map((exp) => {
         const isCustom = exp.splits.some((s) => s.amount_cents != null);
         return (
           <div className="list-item" key={exp.id} style={{ flexDirection: "column", alignItems: "stretch", gap: 4 }}>

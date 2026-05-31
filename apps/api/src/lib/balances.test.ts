@@ -185,82 +185,62 @@ describe("computeBalances", () => {
     expect(result).toContainEqual({ from_user_id: 2, to_user_id: 1, amount_cents: 5000 });
   });
 
-  // ---- Settlements reduce balances ----
+  // ---- Settlements as expenses ----
+  // A settlement "Bob pays Alice €4" is modeled as:
+  //   payer: Bob, amount: 400, splits: [{ user_id: Alice, amount_cents: 400 }]
+  // The math naturally reduces Bob’s debt to Alice.
 
-  it("reduces a balance by a partial settlement", () => {
-    // Bob owes Alice €10, Bob settles €4 → Bob still owes €6
-    const result = computeBalances(
-      [
-        {
-          payer_user_id: 1,
-          amount_cents: 2000,
-          splits: [{ user_id: 1 }, { user_id: 2 }],
-        },
-      ],
-      [{ from_user_id: 2, to_user_id: 1, amount_cents: 400 }]
-    );
+  it("reduces a balance when a settlement expense is added", () => {
+    // Bob owes Alice €10 from an equal split, then settles €4
+    const result = computeBalances([
+      {
+        payer_user_id: 1,
+        amount_cents: 2000,
+        splits: [{ user_id: 1 }, { user_id: 2 }],
+      },
+      // Settlement: Bob paid €4, Alice’s share is €4
+      {
+        payer_user_id: 2,
+        amount_cents: 400,
+        splits: [{ user_id: 1, amount_cents: 400 }],
+      },
+    ]);
     expect(result).toEqual([
       { from_user_id: 2, to_user_id: 1, amount_cents: 600 },
     ]);
   });
 
   it("removes a balance entirely when settlement equals debt", () => {
-    const result = computeBalances(
-      [
-        {
-          payer_user_id: 1,
-          amount_cents: 2000,
-          splits: [{ user_id: 1 }, { user_id: 2 }],
-        },
-      ],
-      [{ from_user_id: 2, to_user_id: 1, amount_cents: 1000 }]
-    );
+    const result = computeBalances([
+      {
+        payer_user_id: 1,
+        amount_cents: 2000,
+        splits: [{ user_id: 1 }, { user_id: 2 }],
+      },
+      // Bob settles the full €10
+      {
+        payer_user_id: 2,
+        amount_cents: 1000,
+        splits: [{ user_id: 1, amount_cents: 1000 }],
+      },
+    ]);
     expect(result).toEqual([]);
   });
 
-  it("flips direction when settlement exceeds debt (overpayment)", () => {
-    // Bob owes Alice €10, Bob settles €15 → Alice now owes Bob €5
-    const result = computeBalances(
-      [
-        {
-          payer_user_id: 1,
-          amount_cents: 2000,
-          splits: [{ user_id: 1 }, { user_id: 2 }],
-        },
-      ],
-      [{ from_user_id: 2, to_user_id: 1, amount_cents: 1500 }]
-    );
-    expect(result).toEqual([
-      { from_user_id: 1, to_user_id: 2, amount_cents: 500 },
+  it("flips direction when settlement exceeds debt", () => {
+    const result = computeBalances([
+      {
+        payer_user_id: 1,
+        amount_cents: 2000,
+        splits: [{ user_id: 1 }, { user_id: 2 }],
+      },
+      // Bob overpays: settles €15 when he only owed €10
+      {
+        payer_user_id: 2,
+        amount_cents: 1500,
+        splits: [{ user_id: 1, amount_cents: 1500 }],
+      },
     ]);
-  });
-
-  it("handles multiple settlements between the same pair", () => {
-    const result = computeBalances(
-      [
-        {
-          payer_user_id: 1,
-          amount_cents: 2000,
-          splits: [{ user_id: 1 }, { user_id: 2 }],
-        },
-      ],
-      [
-        { from_user_id: 2, to_user_id: 1, amount_cents: 300 },
-        { from_user_id: 2, to_user_id: 1, amount_cents: 200 },
-      ]
-    );
-    // Bob owed 1000, settled 500 total → owes 500
-    expect(result).toEqual([
-      { from_user_id: 2, to_user_id: 1, amount_cents: 500 },
-    ]);
-  });
-
-  it("works with no expenses but settlements present", () => {
-    const result = computeBalances(
-      [],
-      [{ from_user_id: 2, to_user_id: 1, amount_cents: 500 }]
-    );
-    // Settlement with no debt means the receiver now "owes" the settler
     expect(result).toEqual([
       { from_user_id: 1, to_user_id: 2, amount_cents: 500 },
     ]);

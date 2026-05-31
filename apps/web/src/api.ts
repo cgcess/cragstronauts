@@ -12,6 +12,7 @@ import type {
   GearContributionSchema,
   ExpenseSchema,
   SettlementSchema,
+  SettlementRecordSchema,
 } from "@cragstronauts/contract";
 
 type Trip = z.infer<typeof TripSchema>;
@@ -23,6 +24,7 @@ type Category = z.infer<typeof GearCategorySchema>;
 type Contribution = z.infer<typeof GearContributionSchema>;
 type Expense = z.infer<typeof ExpenseSchema>;
 type Settlement = z.infer<typeof SettlementSchema>;
+type SettlementRecord = z.infer<typeof SettlementRecordSchema>;
 type Ok = { ok: boolean };
 
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -120,4 +122,12 @@ export const api = {
     req<Ok>("DELETE", `/api/trips/${tripId}/expenses/${id}`),
   getBalances: (tripId: string) =>
     req<Settlement[]>("GET", `/api/trips/${tripId}/balances`),
+
+  // Settlements
+  listSettlements: (tripId: string) =>
+    req<SettlementRecord[]>("GET", `/api/trips/${tripId}/settlements`),
+  createSettlement: (tripId: string, data: { from_user_id: number; to_user_id: number; amount_cents: number }) =>
+    req<SettlementRecord>("POST", `/api/trips/${tripId}/settlements`, data),
+  deleteSettlement: (tripId: string, id: number) =>
+    req<Ok>("DELETE", `/api/trips/${tripId}/settlements/${id}`),
 };

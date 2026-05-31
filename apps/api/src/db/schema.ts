@@ -61,3 +61,11 @@ export const expenseSplit = table("expense_split", {
   user_id: column.integer().notNull().references(ref(user, "id")),
   amount_cents: column.integer(),
 });
+
+export const settlement = table("settlement", {
+  id: column.integer().notNull().primaryKey().autoIncrement(),
+  from_user_id: column.integer().notNull().references(ref(user, "id")),
+  to_user_id: column.integer().notNull().references(ref(user, "id")),
+  amount_cents: column.integer().notNull(),
+  created_at: column.text().notNull(),
+});

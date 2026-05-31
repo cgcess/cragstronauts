@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from "react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import type { DateRange } from "react-day-picker";
 import type { z } from "zod";
-import type { CarSchema, GearContributionSchema, ExpenseSchema, SettlementSchema } from "@cragstronauts/contract";
+import type { CarSchema, GearContributionSchema, ExpenseSchema, SettlementSchema, SettlementRecordSchema } from "@cragstronauts/contract";
 import { api } from "../api";
 import { useTripContext, type Category } from "../context/TripContext";
 import { formatDateRange } from "../dateUtils";
@@ -16,6 +16,7 @@ type Car = z.infer<typeof CarSchema>;
 type Contribution = z.infer<typeof GearContributionSchema>;
 type Expense = z.infer<typeof ExpenseSchema>;
 type Settlement = z.infer<typeof SettlementSchema>;
+type SettlementRecord = z.infer<typeof SettlementRecordSchema>;
 
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
@@ -325,6 +326,7 @@ export default function TripDashboard() {
   const [gear, setGear] = useState<Contribution[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [balances, setBalances] = useState<Settlement[]>([]);
+  const [settlementRecords, setSettlementRecords] = useState<SettlementRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingHero, setEditingHero] = useState(false);
@@ -365,16 +367,18 @@ export default function TripDashboard() {
   const reload = async () => {
     setError(null);
     try {
-      const [c, g, ex, bal] = await Promise.all([
+      const [c, g, ex, bal, sett] = await Promise.all([
         api.listCars(tripId),
         api.listGear(tripId),
         api.listExpenses(tripId),
         api.getBalances(tripId),
+        api.listSettlements(tripId),
       ]);
       setCars(c);
       setGear(g);
       setExpenses(ex);
       setBalances(bal);
+      setSettlementRecords(sett);
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -528,6 +532,7 @@ export default function TripDashboard() {
         tripId={tripId}
         expenses={expenses}
         balances={balances}
+        settlementRecords={settlementRecords}
         users={users}
         currentUserId={currentUserId}
         onChanged={reload}
@@ -1830,6 +1835,7 @@ function ExpensesBody({
   tripId,
   expenses,
   balances,
+  settlementRecords,
   users,
   currentUserId,
   onChanged,
@@ -1837,11 +1843,16 @@ function ExpensesBody({
   tripId: string;
   expenses: Expense[];
   balances: Settlement[];
+  settlementRecords: SettlementRecord[];
   users: ReturnType<typeof useTripContext>["users"];
   currentUserId: number;
   onChanged: () => Promise<void>;
 }) {
   const [adding, setAdding] = useState(false);
+  const [settling, setSettling] = useState(false);
+  const [settleFrom, setSettleFrom] = useState<number | "">(currentUserId);
+  const [settleTo, setSettleTo] = useState<number | "">("");
+  const [settleAmount, setSettleAmount] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [splitIds, setSplitIds] = useState<Set<number>>(new Set());
@@ -1951,6 +1962,122 @@ function ExpensesBody({
                   <span className="muted"> (you)</span>
                 )}
               </span>
+            </div>
+          ))}
+          {!settling && (
+            <button
+              className="th-btn th-btn--secondary"
+              onClick={() => setSettling(true)}
+              style={{ marginTop: 8 }}
+            >
+              + Record a payment
+            </button>
+          )}
+          {settling && (
+            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+              <div className="row" style={{ gap: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <label>From</label>
+                  <select
+                    value={settleFrom}
+                    onChange={(e) => setSettleFrom(e.target.value ? Number(e.target.value) : "")}
+                  >
+                    <option value="">Select…</option>
+                    {joining.map((u) => (
+                      <option key={u.id} value={u.id}>{u.name}{u.id === currentUserId ? " (you)" : ""}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label>To</label>
+                  <select
+                    value={settleTo}
+                    onChange={(e) => setSettleTo(e.target.value ? Number(e.target.value) : "")}
+                  >
+                    <option value="">Select…</option>
+                    {joining.filter((u) => u.id !== settleFrom).map((u) => (
+                      <option key={u.id} value={u.id}>{u.name}{u.id === currentUserId ? " (you)" : ""}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label>Amount (€)</label>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={settleAmount}
+                  onChange={(e) => setSettleAmount(e.target.value)}
+                  placeholder="0.00"
+                  inputMode="decimal"
+                />
+              </div>
+              <div className="row" style={{ gap: 8 }}>
+                <button
+                  className="th-btn th-btn--secondary"
+                  onClick={() => {
+                    setSettling(false);
+                    setSettleAmount("");
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="th-btn th-btn--primary"
+                  style={{ flex: 1 }}
+                  disabled={!settleFrom || !settleTo || !settleAmount}
+                  onClick={async () => {
+                    setError(null);
+                    const cents = Math.round(parseFloat(settleAmount) * 100);
+                    if (!cents || cents < 1) {
+                      setError("Enter a valid amount");
+                      return;
+                    }
+                    try {
+                      await api.createSettlement(tripId, {
+                        from_user_id: settleFrom as number,
+                        to_user_id: settleTo as number,
+                        amount_cents: cents,
+                      });
+                      setSettling(false);
+                      setSettleAmount("");
+                      await onChanged();
+                    } catch (e) {
+                      setError(e instanceof Error ? e.message : String(e));
+                    }
+                  }}
+                >
+                  Record payment
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Settlement records */}
+      {settlementRecords.length > 0 && (
+        <div className="card" style={{ marginBottom: 12 }}>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>Payments</div>
+          {settlementRecords.map((s) => (
+            <div className="list-item" key={s.id}>
+              <div>
+                <div style={{ fontSize: 14 }}>
+                  {s.from_name} paid {formatCents(s.amount_cents)} to {s.to_name}
+                </div>
+              </div>
+              <button
+                className="th-btn th-btn--tertiary th-btn--icon th-btn--sm"
+                style={{ color: "var(--danger)" }}
+                onClick={async () => {
+                  await api.deleteSettlement(tripId, s.id);
+                  await onChanged();
+                }}
+                aria-label="Delete payment"
+              >
+                ✕
+              </button>
             </div>
           ))}
         </div>

@@ -184,4 +184,85 @@ describe("computeBalances", () => {
     expect(result).toHaveLength(1);
     expect(result).toContainEqual({ from_user_id: 2, to_user_id: 1, amount_cents: 5000 });
   });
+
+  // ---- Settlements reduce balances ----
+
+  it("reduces a balance by a partial settlement", () => {
+    // Bob owes Alice €10, Bob settles €4 → Bob still owes €6
+    const result = computeBalances(
+      [
+        {
+          payer_user_id: 1,
+          amount_cents: 2000,
+          splits: [{ user_id: 1 }, { user_id: 2 }],
+        },
+      ],
+      [{ from_user_id: 2, to_user_id: 1, amount_cents: 400 }]
+    );
+    expect(result).toEqual([
+      { from_user_id: 2, to_user_id: 1, amount_cents: 600 },
+    ]);
+  });
+
+  it("removes a balance entirely when settlement equals debt", () => {
+    const result = computeBalances(
+      [
+        {
+          payer_user_id: 1,
+          amount_cents: 2000,
+          splits: [{ user_id: 1 }, { user_id: 2 }],
+        },
+      ],
+      [{ from_user_id: 2, to_user_id: 1, amount_cents: 1000 }]
+    );
+    expect(result).toEqual([]);
+  });
+
+  it("flips direction when settlement exceeds debt (overpayment)", () => {
+    // Bob owes Alice €10, Bob settles €15 → Alice now owes Bob €5
+    const result = computeBalances(
+      [
+        {
+          payer_user_id: 1,
+          amount_cents: 2000,
+          splits: [{ user_id: 1 }, { user_id: 2 }],
+        },
+      ],
+      [{ from_user_id: 2, to_user_id: 1, amount_cents: 1500 }]
+    );
+    expect(result).toEqual([
+      { from_user_id: 1, to_user_id: 2, amount_cents: 500 },
+    ]);
+  });
+
+  it("handles multiple settlements between the same pair", () => {
+    const result = computeBalances(
+      [
+        {
+          payer_user_id: 1,
+          amount_cents: 2000,
+          splits: [{ user_id: 1 }, { user_id: 2 }],
+        },
+      ],
+      [
+        { from_user_id: 2, to_user_id: 1, amount_cents: 300 },
+        { from_user_id: 2, to_user_id: 1, amount_cents: 200 },
+      ]
+    );
+    // Bob owed 1000, settled 500 total → owes 500
+    expect(result).toEqual([
+      { from_user_id: 2, to_user_id: 1, amount_cents: 500 },
+    ]);
+  });
+
+  it("works with no expenses but settlements present", () => {
+    const result = computeBalances(
+      [],
+      [{ from_user_id: 2, to_user_id: 1, amount_cents: 500 }]
+    );
+    // Settlement with no debt means the receiver now "owes" the settler
+    expect(result).toEqual([
+      { from_user_id: 1, to_user_id: 2, amount_cents: 500 },
+    ]);
+  });
 });

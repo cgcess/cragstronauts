@@ -6,6 +6,9 @@ import {
   createExpenseRoute,
   deleteExpenseRoute,
   getBalancesRoute,
+  listSettlementsRoute,
+  createSettlementRoute,
+  deleteSettlementRoute,
 } from "@cragstronauts/contract";
 
 export const expenseRoutes = new OpenAPIHono<{ Bindings: Env }>();
@@ -48,4 +51,37 @@ expenseRoutes.openapi(getBalancesRoute, async (c) => {
   const stub = getTripDO(c.env, tripId);
   const balances = await stub.getBalances();
   return c.json([...balances], 200);
+});
+
+expenseRoutes.openapi(listSettlementsRoute, async (c) => {
+  const { trip_id: tripId } = c.req.valid("param");
+  const stub = getTripDO(c.env, tripId);
+  const settlements = await stub.listSettlements();
+  return c.json([...settlements], 200);
+});
+
+expenseRoutes.openapi(createSettlementRoute, async (c) => {
+  const { trip_id: tripId } = c.req.valid("param");
+  const body = c.req.valid("json");
+  try {
+    const stub = getTripDO(c.env, tripId);
+    const s = await stub.createSettlement(body);
+    return c.json(s, 200);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return c.json({ detail: msg }, 400);
+  }
+});
+
+expenseRoutes.openapi(deleteSettlementRoute, async (c) => {
+  const { trip_id: tripId, settlement_id } = c.req.valid("param");
+  const settlementId = Number(settlement_id);
+  try {
+    const stub = getTripDO(c.env, tripId);
+    const result = await stub.deleteSettlement(settlementId);
+    return c.json(result, 200);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return c.json({ detail: msg }, 404);
+  }
 });

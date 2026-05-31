@@ -56,3 +56,19 @@ export const SettlementSchema = z.object({
   to_name: z.string(),
   amount_cents: z.number(),
 });
+
+export const SettlementRecordSchema = z.object({
+  id: z.number(),
+  from_user_id: z.number(),
+  from_name: z.string(),
+  to_user_id: z.number(),
+  to_name: z.string(),
+  amount_cents: z.number(),
+  created_at: z.string(),
+});
+
+export const CreateSettlementBodySchema = z.object({
+  from_user_id: z.number(),
+  to_user_id: z.number(),
+  amount_cents: z.number().int().min(1),
+});

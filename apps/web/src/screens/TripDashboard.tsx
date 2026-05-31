@@ -2163,173 +2163,150 @@ function ExpensesBody({
 }) {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [settling, setSettling] = useState(false);
-  const [settleFrom, setSettleFrom] = useState<number | "">(currentUserId);
-  const [settleTo, setSettleTo] = useState<number | "">("");
+  const [settleTarget, setSettleTarget] = useState<Settlement | null>(null);
   const [settleAmount, setSettleAmount] = useState("");
+  const [settleBusy, setSettleBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const realExpenses = expenses.filter((e) => !e.is_settlement);
   const settlementExpenses = expenses.filter((e) => e.is_settlement);
 
-  const joining = users.filter((u) => u.joining);
+  // Only the balances that involve me — what I owe or am owed.
+  const myBalances = balances.filter(
+    (b) => b.from_user_id === currentUserId || b.to_user_id === currentUserId
+  );
+  // Net position across those balances. + = owed to me, − = I owe.
+  const net = myBalances.reduce(
+    (sum, b) => (b.to_user_id === currentUserId ? sum + b.amount_cents : sum - b.amount_cents),
+    0
+  );
+
+  const heroLabel =
+    expenses.length === 0
+      ? "No expenses yet"
+      : net > 0
+      ? "You're owed"
+      : net < 0
+      ? "You owe"
+      : "You're all settled up";
+  const heroAmount = expenses.length === 0 || net === 0 ? null : formatCents(net);
+  const heroColor = net > 0 ? "var(--min-accent)" : net < 0 ? "var(--danger)" : "var(--min-ink)";
+
+  const openSettle = (b: Settlement) => {
+    setError(null);
+    setSettleTarget(b);
+    setSettleAmount((b.amount_cents / 100).toFixed(2));
+  };
+  const closeSettle = () => {
+    setSettleTarget(null);
+    setSettleAmount("");
+  };
+  const confirmSettle = async () => {
+    if (!settleTarget) return;
+    setError(null);
+    const cents = Math.round(parseFloat(settleAmount) * 100);
+    if (!cents || cents < 1) {
+      setError("Enter a valid amount");
+      return;
+    }
+    if (cents > settleTarget.amount_cents) {
+      setError(`You only owe ${formatCents(settleTarget.amount_cents)}`);
+      return;
+    }
+    setSettleBusy(true);
+    try {
+      await api.createExpense(tripId, {
+        payer_user_id: settleTarget.from_user_id,
+        amount_cents: cents,
+        description: `${settleTarget.from_name} → ${settleTarget.to_name}`,
+        split_mode: "custom",
+        splits: [{ user_id: settleTarget.to_user_id, amount_cents: cents }],
+        is_settlement: true,
+      });
+      closeSettle();
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSettleBusy(false);
+    }
+  };
 
   return (
     <div>
-      {error && <div className="error-banner">{error}</div>}
+      {error && !settleTarget && <div className="error-banner">{error}</div>}
 
-      {/* Balances summary */}
-      {balances.length > 0 && (
-        <div className="card" style={{ marginBottom: 12 }}>
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>Balances</div>
-          {balances.map((b, i) => (
-            <div className="list-item" key={i}>
-              <span>
-                {b.from_name}
-                {b.from_user_id === currentUserId && (
-                  <span className="muted"> (you)</span>
-                )}
-              </span>
-              <span>
-                → {formatCents(b.amount_cents)} →{" "}
-              </span>
-              <span>
-                {b.to_name}
-                {b.to_user_id === currentUserId && (
-                  <span className="muted"> (you)</span>
-                )}
-              </span>
-            </div>
-          ))}
-          {!settling && (
-            <button
-              className="th-btn th-btn--secondary"
-              onClick={() => setSettling(true)}
-              style={{ marginTop: 8 }}
-            >
-              + Settle debt
-            </button>
-          )}
-          {settling && (
-            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
-              <div className="row" style={{ gap: 8 }}>
-                <div style={{ flex: 1 }}>
-                  <label>From</label>
-                  <select
-                    value={settleFrom}
-                    onChange={(e) => setSettleFrom(e.target.value ? Number(e.target.value) : "")}
+      {/* Net balance hero */}
+      <div className="exp-hero">
+        <div className="exp-hero__label">{heroLabel}</div>
+        {heroAmount && (
+          <div className="exp-hero__amount" style={{ color: heroColor }}>
+            {heroAmount}
+          </div>
+        )}
+      </div>
+
+      {/* Add expense — primary action right under the balance */}
+      {adding ? (
+        <ExpenseForm
+          users={users}
+          currentUserId={currentUserId}
+          onSubmit={async (data) => {
+            await api.createExpense(tripId, data);
+            setAdding(false);
+            await onChanged();
+          }}
+          onCancel={() => setAdding(false)}
+        />
+      ) : (
+        <button
+          className="th-btn th-btn--secondary th-btn--full"
+          onClick={() => {
+            setAdding(true);
+            setEditingId(null);
+          }}
+        >
+          + Add expense
+        </button>
+      )}
+
+      {/* My balances — only what I owe or am owed */}
+      {myBalances.length > 0 && (
+        <div className="card" style={{ marginTop: 12 }}>
+          {myBalances.map((b, i) => {
+            const owedToMe = b.to_user_id === currentUserId;
+            const other = owedToMe ? b.from_name : b.to_name;
+            return (
+              <div className="exp-bal-row" key={i}>
+                <span className="exp-bal-row__amt">{formatCents(b.amount_cents)}</span>
+                <span className={`exp-tag ${owedToMe ? "exp-tag--owed" : "exp-tag--owe"}`}>
+                  {owedToMe ? "you're owed" : "you owe"}
+                </span>
+                <span className="exp-bal-row__name">{other}</span>
+                {!owedToMe && (
+                  <button
+                    className="th-btn th-btn--primary th-btn--sm"
+                    onClick={() => openSettle(b)}
                   >
-                    <option value="">Select…</option>
-                    {joining.map((u) => (
-                      <option key={u.id} value={u.id}>{u.name}{u.id === currentUserId ? " (you)" : ""}</option>
-                    ))}
-                  </select>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label>To</label>
-                  <select
-                    value={settleTo}
-                    onChange={(e) => setSettleTo(e.target.value ? Number(e.target.value) : "")}
-                  >
-                    <option value="">Select…</option>
-                    {joining.filter((u) => u.id !== settleFrom).map((u) => (
-                      <option key={u.id} value={u.id}>{u.name}{u.id === currentUserId ? " (you)" : ""}</option>
-                    ))}
-                  </select>
-                </div>
+                    Settle
+                  </button>
+                )}
               </div>
-              <div>
-                <label>Amount (€)</label>
-                <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={settleAmount}
-                  onChange={(e) => setSettleAmount(e.target.value)}
-                  placeholder="0.00"
-                  inputMode="decimal"
-                />
-              </div>
-              <div className="row" style={{ gap: 8 }}>
-                <button
-                  className="th-btn th-btn--secondary"
-                  onClick={() => {
-                    setSettling(false);
-                    setSettleAmount("");
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="th-btn th-btn--primary"
-                  style={{ flex: 1 }}
-                  disabled={!settleFrom || !settleTo || !settleAmount}
-                  onClick={async () => {
-                    setError(null);
-                    const cents = Math.round(parseFloat(settleAmount) * 100);
-                    if (!cents || cents < 1) {
-                      setError("Enter a valid amount");
-                      return;
-                    }
-                    try {
-                      const fromId = settleFrom as number;
-                      const toId = settleTo as number;
-                      const fromUser = joining.find((u) => u.id === fromId);
-                      const toUser = joining.find((u) => u.id === toId);
-                      await api.createExpense(tripId, {
-                        payer_user_id: fromId,
-                        amount_cents: cents,
-                        description: `${fromUser?.name ?? "?"} → ${toUser?.name ?? "?"}`,
-                        split_mode: "custom",
-                        splits: [{ user_id: toId, amount_cents: cents }],
-                        is_settlement: true,
-                      });
-                      setSettling(false);
-                      setSettleAmount("");
-                      await onChanged();
-                    } catch (e) {
-                      setError(e instanceof Error ? e.message : String(e));
-                    }
-                  }}
-                >
-                  Settle debt
-                </button>
-              </div>
-            </div>
-          )}
+            );
+          })}
         </div>
       )}
 
-      {/* Settlement records */}
-      {settlementExpenses.length > 0 && (
-        <div className="card" style={{ marginBottom: 12 }}>
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>Payments</div>
-          {settlementExpenses.map((s) => (
-            <div className="list-item" key={s.id}>
-              <div>
-                <div style={{ fontSize: 14 }}>
-                  {s.payer_name} paid {formatCents(s.amount_cents)} to {s.splits[0]?.name ?? "?"}
-                </div>
-              </div>
-              <button
-                className="th-btn th-btn--tertiary th-btn--icon th-btn--sm"
-                style={{ color: "var(--danger)" }}
-                onClick={async () => {
-                  await api.deleteExpense(tripId, s.id);
-                  await onChanged();
-                }}
-                aria-label="Delete payment"
-              >
-                ✕
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Expense list */}
+      {/* Expense ledger */}
       {realExpenses.length === 0 && !adding && !editingId && (
-        <p className="muted">No expenses yet. Add one to start splitting costs.</p>
+        <p className="muted" style={{ marginTop: 12 }}>
+          No expenses yet. Add one to start splitting costs.
+        </p>
+      )}
+      {realExpenses.length > 0 && (
+        <div className="muted" style={{ fontWeight: 600, fontSize: 13, margin: "16px 0 6px" }}>
+          Expenses
+        </div>
       )}
       {realExpenses.map((exp) => {
         if (editingId === exp.id) {
@@ -2398,30 +2375,81 @@ function ExpensesBody({
         );
       })}
 
-      {/* Add expense form */}
-      {adding ? (
-        <ExpenseForm
-          users={users}
-          currentUserId={currentUserId}
-          onSubmit={async (data) => {
-            await api.createExpense(tripId, data);
-            setAdding(false);
-            await onChanged();
-          }}
-          onCancel={() => setAdding(false)}
-        />
-      ) : (
-        <button
-          className="th-btn th-btn--secondary"
-          onClick={() => {
-            setAdding(true);
-            setEditingId(null);
-          }}
-          style={{ marginTop: 12 }}
-        >
-          + Add expense
-        </button>
+      {/* Payments log */}
+      {settlementExpenses.length > 0 && (
+        <>
+          <div className="muted" style={{ fontWeight: 600, fontSize: 13, margin: "16px 0 6px" }}>
+            Payments
+          </div>
+          <div className="card">
+            {settlementExpenses.map((s) => (
+              <div className="list-item" key={s.id}>
+                <div style={{ fontSize: 14 }}>
+                  {s.payer_name} paid {formatCents(s.amount_cents)} to {s.splits[0]?.name ?? "?"}
+                </div>
+                <button
+                  className="th-btn th-btn--tertiary th-btn--icon th-btn--sm"
+                  style={{ color: "var(--danger)" }}
+                  onClick={async () => {
+                    await api.deleteExpense(tripId, s.id);
+                    await onChanged();
+                  }}
+                  aria-label="Delete payment"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        </>
       )}
+
+      {/* Settle confirmation */}
+      <BottomSheet
+        open={!!settleTarget}
+        onClose={closeSettle}
+        title="Settle up"
+      >
+        {settleTarget && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {error && <div className="error-banner">{error}</div>}
+            <p className="muted" style={{ margin: 0 }}>
+              Record a payment from you to{" "}
+              <strong style={{ color: "var(--min-ink)" }}>{settleTarget.to_name}</strong>.
+            </p>
+            <div>
+              <label>Amount (€)</label>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                max={(settleTarget.amount_cents / 100).toFixed(2)}
+                value={settleAmount}
+                onChange={(e) => setSettleAmount(e.target.value)}
+                placeholder="0.00"
+                inputMode="decimal"
+              />
+            </div>
+            <div className="row" style={{ gap: 8 }}>
+              <button className="th-btn th-btn--secondary" onClick={closeSettle}>
+                Cancel
+              </button>
+              <button
+                className="th-btn th-btn--primary"
+                style={{ flex: 1 }}
+                disabled={settleBusy || !settleAmount}
+                onClick={confirmSettle}
+              >
+                {settleBusy
+                  ? "Settling…"
+                  : `Pay ${settleTarget.to_name} ${formatCents(
+                      Math.round((parseFloat(settleAmount) || 0) * 100)
+                    )}`}
+              </button>
+            </div>
+          </div>
+        )}
+      </BottomSheet>
     </div>
   );
 }

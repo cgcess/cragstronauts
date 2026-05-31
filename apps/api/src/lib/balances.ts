@@ -1,7 +1,7 @@
 export interface Expense {
   payer_user_id: number;
   amount_cents: number;
-  splits: { user_id: number }[];
+  splits: { user_id: number; amount_cents?: number }[];
 }
 
 export interface Settlement {
@@ -18,10 +18,13 @@ export function computeBalances(expenses: Expense[]): Settlement[] {
   for (const exp of expenses) {
     const n = exp.splits.length;
     if (n === 0) continue;
-    const share = Math.floor(exp.amount_cents / n);
+    const isCustom = exp.splits.some((s) => s.amount_cents != null);
+    const equalShare = Math.floor(exp.amount_cents / n);
 
     for (const s of exp.splits) {
+      const share = isCustom ? (s.amount_cents ?? 0) : equalShare;
       if (s.user_id === exp.payer_user_id) continue;
+      if (share === 0) continue;
       // s.user_id owes payer
       const [lo, hi] =
         s.user_id < exp.payer_user_id

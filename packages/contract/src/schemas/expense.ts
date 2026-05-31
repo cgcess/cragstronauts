@@ -3,6 +3,7 @@ import { z } from "zod";
 export const ExpenseSplitMemberSchema = z.object({
   user_id: z.number(),
   name: z.string(),
+  amount_cents: z.number().nullable().optional(),
 });
 
 export const ExpenseSchema = z.object({
@@ -15,12 +16,38 @@ export const ExpenseSchema = z.object({
   splits: z.array(ExpenseSplitMemberSchema),
 });
 
-export const CreateExpenseBodySchema = z.object({
-  payer_user_id: z.number(),
-  amount_cents: z.number().int().min(1),
-  description: z.string().min(1),
-  split_user_ids: z.array(z.number()).min(1),
-});
+export const CreateExpenseBodySchema = z.discriminatedUnion("split_mode", [
+  z.object({
+    payer_user_id: z.number(),
+    amount_cents: z.number().int().min(1),
+    description: z.string().min(1),
+    split_mode: z.literal("equal"),
+    split_user_ids: z.array(z.number()).min(1),
+  }),
+  z.object({
+    payer_user_id: z.number(),
+    amount_cents: z.number().int().min(1),
+    description: z.string().min(1),
+    split_mode: z.literal("custom"),
+    splits: z.array(
+      z.object({
+        user_id: z.number(),
+        amount_cents: z.number().int().min(0),
+      })
+    ).min(1),
+  }),
+]);
+
+/** Backwards-compatible body: accepts old format (no split_mode) as equal. */
+export const CreateExpenseBodyCompatSchema = z.union([
+  CreateExpenseBodySchema,
+  z.object({
+    payer_user_id: z.number(),
+    amount_cents: z.number().int().min(1),
+    description: z.string().min(1),
+    split_user_ids: z.array(z.number()).min(1),
+  }),
+]);
 
 export const SettlementSchema = z.object({
   from_user_id: z.number(),

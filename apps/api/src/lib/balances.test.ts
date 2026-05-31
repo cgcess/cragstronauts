@@ -104,4 +104,84 @@ describe("computeBalances", () => {
     expect(result).toContainEqual({ from_user_id: 2, to_user_id: 1, amount_cents: 333 });
     expect(result).toContainEqual({ from_user_id: 3, to_user_id: 1, amount_cents: 333 });
   });
+
+  // ---- Custom (unequal) splits ----
+
+  it("uses explicit per-member amounts when provided", () => {
+    // Alice (1) pays €100. Bob owes €70, Charlie owes €30.
+    const result = computeBalances([
+      {
+        payer_user_id: 1,
+        amount_cents: 10000,
+        splits: [
+          { user_id: 1, amount_cents: 0 },
+          { user_id: 2, amount_cents: 7000 },
+          { user_id: 3, amount_cents: 3000 },
+        ],
+      },
+    ]);
+    expect(result).toHaveLength(2);
+    expect(result).toContainEqual({ from_user_id: 2, to_user_id: 1, amount_cents: 7000 });
+    expect(result).toContainEqual({ from_user_id: 3, to_user_id: 1, amount_cents: 3000 });
+  });
+
+  it("handles custom split where payer also has a share", () => {
+    // Alice pays €90, split: Alice €30, Bob €40, Charlie €20
+    const result = computeBalances([
+      {
+        payer_user_id: 1,
+        amount_cents: 9000,
+        splits: [
+          { user_id: 1, amount_cents: 3000 },
+          { user_id: 2, amount_cents: 4000 },
+          { user_id: 3, amount_cents: 2000 },
+        ],
+      },
+    ]);
+    expect(result).toHaveLength(2);
+    expect(result).toContainEqual({ from_user_id: 2, to_user_id: 1, amount_cents: 4000 });
+    expect(result).toContainEqual({ from_user_id: 3, to_user_id: 1, amount_cents: 2000 });
+  });
+
+  it("nets custom and equal splits across expenses", () => {
+    const result = computeBalances([
+      // Alice pays €60, custom: Bob €40, Charlie €20
+      {
+        payer_user_id: 1,
+        amount_cents: 6000,
+        splits: [
+          { user_id: 2, amount_cents: 4000 },
+          { user_id: 3, amount_cents: 2000 },
+        ],
+      },
+      // Bob pays €30, equal split 3 ways → each owes 1000
+      {
+        payer_user_id: 2,
+        amount_cents: 3000,
+        splits: [{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }],
+      },
+    ]);
+    // Bob owes Alice 4000, Alice owes Bob 1000 → net Bob→Alice 3000
+    // Charlie owes Alice 2000, Charlie owes Bob 1000
+    expect(result).toHaveLength(3);
+    expect(result).toContainEqual({ from_user_id: 2, to_user_id: 1, amount_cents: 3000 });
+    expect(result).toContainEqual({ from_user_id: 3, to_user_id: 1, amount_cents: 2000 });
+    expect(result).toContainEqual({ from_user_id: 3, to_user_id: 2, amount_cents: 1000 });
+  });
+
+  it("handles a custom split with a zero-amount member", () => {
+    // Alice pays €50, Bob gets the full amount, Charlie owes nothing
+    const result = computeBalances([
+      {
+        payer_user_id: 1,
+        amount_cents: 5000,
+        splits: [
+          { user_id: 2, amount_cents: 5000 },
+          { user_id: 3, amount_cents: 0 },
+        ],
+      },
+    ]);
+    expect(result).toHaveLength(1);
+    expect(result).toContainEqual({ from_user_id: 2, to_user_id: 1, amount_cents: 5000 });
+  });
 });

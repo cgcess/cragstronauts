@@ -59,4 +59,5 @@ export const expenseSplit = table("expense_split", {
   id: column.integer().notNull().primaryKey().autoIncrement(),
   expense_id: column.integer().notNull().references(ref(expense, "id")),
   user_id: column.integer().notNull().references(ref(user, "id")),
+  amount_cents: column.integer(),
 });

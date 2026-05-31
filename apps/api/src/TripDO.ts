@@ -407,18 +407,51 @@ export class TripDO extends DurableObject<Env> {
     return rows.map((r) => this.formatExpense(r));
   }
 
-  async createExpense(data: {
-    payer_user_id: number;
-    amount_cents: number;
-    description: string;
-    split_user_ids: number[];
-  }): Promise<Expense> {
+  async createExpense(data:
+    | {
+        payer_user_id: number;
+        amount_cents: number;
+        description: string;
+        split_mode: "equal";
+        split_user_ids: number[];
+      }
+    | {
+        payer_user_id: number;
+        amount_cents: number;
+        description: string;
+        split_mode: "custom";
+        splits: { user_id: number; amount_cents: number }[];
+      }
+    | {
+        // Legacy format (no split_mode)
+        payer_user_id: number;
+        amount_cents: number;
+        description: string;
+        split_user_ids: number[];
+      }
+  ): Promise<Expense> {
     const payer = this.db.get(user, { where: eq("id", data.payer_user_id) });
     if (!payer) throw new Error("Payer not found");
 
     if (data.amount_cents < 1) throw new Error("Amount must be positive");
     if (!data.description.trim()) throw new Error("Description required");
-    if (data.split_user_ids.length === 0) throw new Error("At least one split member required");
+
+    // Normalize to a list of { user_id, amount_cents | null }
+    let splitRows: { user_id: number; amount_cents: number | null }[];
+
+    if ("split_mode" in data && data.split_mode === "custom") {
+      if (data.splits.length === 0) throw new Error("At least one split member required");
+      const total = data.splits.reduce((s, r) => s + r.amount_cents, 0);
+      if (total !== data.amount_cents) {
+        throw new Error(`Split amounts (${total}) must equal the expense total (${data.amount_cents})`);
+      }
+      splitRows = data.splits.map((s) => ({ user_id: s.user_id, amount_cents: s.amount_cents }));
+    } else {
+      // Equal split (explicit or legacy)
+      const ids = "split_user_ids" in data ? data.split_user_ids : [];
+      if (ids.length === 0) throw new Error("At least one split member required");
+      splitRows = ids.map((uid) => ({ user_id: uid, amount_cents: null }));
+    }
 
     const now = new Date().toISOString();
     const row = this.db.insertReturning(
@@ -432,8 +465,12 @@ export class TripDO extends DurableObject<Env> {
       ["id"]
     );
 
-    for (const uid of data.split_user_ids) {
-      this.db.insert(expenseSplit, { expense_id: row.id, user_id: uid });
+    for (const sr of splitRows) {
+      this.db.insert(expenseSplit, {
+        expense_id: row.id,
+        user_id: sr.user_id,
+        amount_cents: sr.amount_cents,
+      });
     }
 
     return this.formatExpense(
@@ -452,14 +489,17 @@ export class TripDO extends DurableObject<Env> {
   async getBalances(): Promise<Settlement[]> {
     const rows = this.db.all(expense);
     const expensesWithSplits = rows.map((r) => {
-      const splits = this.db.raw<{ user_id: number }>(
-        "SELECT user_id FROM expense_split WHERE expense_id = ?",
+      const splits = this.db.raw<{ user_id: number; amount_cents: number | null }>(
+        "SELECT user_id, amount_cents FROM expense_split WHERE expense_id = ?",
         [r.id]
       );
       return {
         payer_user_id: r.payer_user_id,
         amount_cents: r.amount_cents,
-        splits,
+        splits: splits.map((s) => ({
+          user_id: s.user_id,
+          ...(s.amount_cents != null ? { amount_cents: s.amount_cents } : {}),
+        })),
       };
     });
 
@@ -513,8 +553,8 @@ export class TripDO extends DurableObject<Env> {
     created_at: string;
   }): Expense {
     const payer = this.db.get(user, { where: eq("id", r.payer_user_id) });
-    const splits = this.db.raw<{ user_id: number; name: string }>(
-      `SELECT u.id as user_id, u.name as name
+    const splits = this.db.raw<{ user_id: number; name: string; amount_cents: number | null }>(
+      `SELECT u.id as user_id, u.name as name, es.amount_cents
        FROM expense_split es JOIN user u ON u.id = es.user_id
        WHERE es.expense_id = ? ORDER BY es.id`,
       [r.id]
@@ -526,7 +566,11 @@ export class TripDO extends DurableObject<Env> {
       amount_cents: r.amount_cents,
       description: r.description,
       created_at: r.created_at,
-      splits,
+      splits: splits.map((s) => ({
+        user_id: s.user_id,
+        name: s.name,
+        amount_cents: s.amount_cents ?? undefined,
+      })),
     };
   }
 

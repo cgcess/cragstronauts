@@ -1,6 +1,6 @@
 import { createRoute } from "@hono/zod-openapi";
 import { z } from "zod";
-import { ExpenseSchema, SettlementSchema } from "../schemas/expense";
+import { ExpenseSchema, SettlementSchema, CreateExpenseBodySchema } from "../schemas/expense";
 import { ErrorSchema, OkSchema } from "../schemas/common";
 
 const TripParamsSchema = z.object({
@@ -34,12 +34,7 @@ export const createExpenseRoute = createRoute({
     body: {
       content: {
         "application/json": {
-          schema: z.object({
-            payer_user_id: z.number(),
-            amount_cents: z.number().int().min(1),
-            description: z.string().min(1),
-            split_user_ids: z.array(z.number()).min(1),
-          }),
+          schema: CreateExpenseBodySchema,
         },
       },
     },

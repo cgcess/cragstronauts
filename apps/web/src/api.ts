@@ -112,7 +112,9 @@ export const api = {
     req<Expense[]>("GET", `/api/trips/${tripId}/expenses`),
   createExpense: (
     tripId: string,
-    data: { payer_user_id: number; amount_cents: number; description: string; split_user_ids: number[] }
+    data:
+      | { payer_user_id: number; amount_cents: number; description: string; split_mode: "equal"; split_user_ids: number[] }
+      | { payer_user_id: number; amount_cents: number; description: string; split_mode: "custom"; splits: { user_id: number; amount_cents: number }[] }
   ) => req<Expense>("POST", `/api/trips/${tripId}/expenses`, data),
   deleteExpense: (tripId: string, id: number) =>
     req<Ok>("DELETE", `/api/trips/${tripId}/expenses/${id}`),

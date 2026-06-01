@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import type { DateRange } from "react-day-picker";
@@ -16,6 +16,14 @@ type Car = z.infer<typeof CarSchema>;
 type Contribution = z.infer<typeof GearContributionSchema>;
 type Expense = z.infer<typeof ExpenseSchema>;
 type Settlement = z.infer<typeof SettlementSchema>;
+
+// Sub-views inside the Expenses drawer. The list is the root; add/edit/settle
+// are pushed on top with a right-to-left slide.
+type ExpView =
+  | { kind: "list" }
+  | { kind: "add" }
+  | { kind: "edit"; expense: Expense }
+  | { kind: "settle"; target: Settlement };
 
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
@@ -322,6 +330,15 @@ export default function TripDashboard() {
   const [weatherSheetOpen, setWeatherSheetOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Expenses drawer navigation (list ⇄ add/edit/settle). Direction drives the
+  // slide animation: +1 pushes a sub-view in from the right, −1 pops back.
+  const [expView, setExpView] = useState<ExpView>({ kind: "list" });
+  const expDir = useRef(1);
+  const navExp = (v: ExpView) => {
+    expDir.current = v.kind === "list" ? -1 : 1;
+    setExpView(v);
+  };
+
   const shareTrip = async () => {
     const url = window.location.href;
     if (navigator.share) {
@@ -606,6 +623,9 @@ export default function TripDashboard() {
         balances={balances}
         users={users}
         currentUserId={currentUserId}
+        view={expView}
+        dir={expDir.current}
+        onNav={navExp}
         onChanged={reload}
       />
     ),
@@ -866,8 +886,24 @@ export default function TripDashboard() {
 
       <BottomSheet
         open={selectedCard !== null}
-        onClose={() => setExpandedId(null)}
-        title={selectedCard?.title}
+        onClose={() => {
+          setExpandedId(null);
+          setExpView({ kind: "list" });
+        }}
+        title={
+          selectedCard?.id === "expenses" && expView.kind !== "list"
+            ? expView.kind === "add"
+              ? "Add expense"
+              : expView.kind === "edit"
+              ? "Edit expense"
+              : "Settle up"
+            : selectedCard?.title
+        }
+        onBack={
+          selectedCard?.id === "expenses" && expView.kind !== "list"
+            ? () => navExp({ kind: "list" })
+            : undefined
+        }
       >
         {selectedCard?.body}
       </BottomSheet>
@@ -1919,7 +1955,6 @@ function ExpenseForm({
   currentUserId,
   initial,
   onSubmit,
-  onCancel,
 }: {
   users: ReturnType<typeof useTripContext>["users"];
   currentUserId: number;
@@ -1928,7 +1963,6 @@ function ExpenseForm({
     | { payer_user_id: number; amount_cents: number; description: string; split_mode: "equal"; split_user_ids: number[] }
     | { payer_user_id: number; amount_cents: number; description: string; split_mode: "custom"; splits: { user_id: number; amount_cents: number }[] }
   ) => Promise<void>;
-  onCancel: () => void;
 }) {
   const joining = users.filter((u) => u.joining);
 
@@ -2015,8 +2049,7 @@ function ExpenseForm({
   };
 
   return (
-    <div className="card" style={{ marginTop: 12 }}>
-      <div className="h2" style={{ marginTop: 0 }}>{initial ? "Edit expense" : "New expense"}</div>
+    <div className="card" style={{ marginTop: 0 }}>
       {error && <div className="error-banner">{error}</div>}
       {initial && (
         <>
@@ -2048,71 +2081,82 @@ function ExpenseForm({
         placeholder="e.g. Groceries, Gas, Campsite fee"
       />
       <label style={{ marginTop: 10 }}>Split mode</label>
-      <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-        <button
-          type="button"
-          className={`th-btn th-btn--sm ${splitMode === "equal" ? "th-btn--primary" : "th-btn--secondary"}`}
-          onClick={() => setSplitMode("equal")}
-        >
-          Equal
-        </button>
-        <button
-          type="button"
-          className={`th-btn th-btn--sm ${splitMode === "custom" ? "th-btn--primary" : "th-btn--secondary"}`}
-          onClick={() => setSplitMode("custom")}
-        >
-          Custom
-        </button>
+      <div className="seg" data-active={splitMode} role="tablist" aria-label="Split mode">
+        <span className="seg__thumb" aria-hidden="true" />
+        {(["equal", "custom"] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            role="tab"
+            aria-selected={splitMode === m}
+            className={`seg__opt ${splitMode === m ? "is-active" : ""}`}
+            onClick={() => setSplitMode(m)}
+          >
+            {m === "equal" ? "Equal" : "Custom"}
+          </button>
+        ))}
       </div>
 
       <label style={{ marginTop: 10 }}>Split among</label>
       {splitMode === "equal" ? (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
-          {joining.map((u) => (
-            <button
-              key={u.id}
-              type="button"
-              className={`th-btn th-btn--sm ${
-                splitIds.has(u.id) ? "th-btn--primary" : "th-btn--secondary"
-              }`}
-              onClick={() => toggleSplit(u.id)}
-            >
-              {u.name}
-              {u.id === currentUserId ? " (you)" : ""}
-            </button>
-          ))}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
+          {joining.map((u) => {
+            const on = splitIds.has(u.id);
+            return (
+              <button
+                key={u.id}
+                type="button"
+                role="switch"
+                aria-checked={on}
+                className={`split-chip ${on ? "is-on" : ""}`}
+                onClick={() => toggleSplit(u.id)}
+              >
+                <span className="split-chip__box" aria-hidden="true">✓</span>
+                {u.name}{u.id === currentUserId ? " (you)" : ""}
+              </button>
+            );
+          })}
         </div>
       ) : (
-        <div style={{ marginTop: 4 }}>
+        <div style={{ marginTop: 6 }}>
           {joining.map((u) => {
-            const included = splitIds.has(u.id);
+            const on = splitIds.has(u.id);
             return (
-              <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                 <button
                   type="button"
-                  className={`th-btn th-btn--sm ${included ? "th-btn--primary" : "th-btn--secondary"}`}
+                  role="switch"
+                  aria-checked={on}
+                  className={`split-chip ${on ? "is-on" : ""}`}
                   onClick={() => toggleSplit(u.id)}
-                  style={{ minWidth: 90, textAlign: "left" }}
+                  style={{ flex: 1, justifyContent: "flex-start" }}
                 >
+                  <span className="split-chip__box" aria-hidden="true">✓</span>
                   {u.name}{u.id === currentUserId ? " (you)" : ""}
                 </button>
-                {included && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 4, flex: 1 }}>
-                    <span style={{ fontSize: 14 }}>€</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      value={customAmounts[u.id] ?? ""}
-                      onChange={(e) =>
-                        setCustomAmounts((prev) => ({ ...prev, [u.id]: e.target.value }))
-                      }
-                      style={{ flex: 1 }}
-                    />
-                  </div>
-                )}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                    flex: 1,
+                    visibility: on ? "visible" : "hidden",
+                  }}
+                >
+                  <span style={{ fontSize: 14 }}>€</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={customAmounts[u.id] ?? ""}
+                    onChange={(e) =>
+                      setCustomAmounts((prev) => ({ ...prev, [u.id]: e.target.value }))
+                    }
+                    style={{ flex: 1 }}
+                  />
+                </div>
               </div>
             );
           })}
@@ -2127,21 +2171,13 @@ function ExpenseForm({
           )}
         </div>
       )}
-      <div className="row" style={{ marginTop: 12 }}>
-        <button
-          className="th-btn th-btn--secondary"
-          onClick={onCancel}
-        >
-          Cancel
-        </button>
-        <button
-          className="th-btn th-btn--primary"
-          onClick={submit}
-          style={{ flex: 1 }}
-        >
-          {initial ? "Save changes" : "Add expense"}
-        </button>
-      </div>
+      <button
+        className="th-btn th-btn--primary th-btn--full"
+        onClick={submit}
+        style={{ marginTop: 14 }}
+      >
+        {initial ? "Save changes" : "Add expense"}
+      </button>
     </div>
   );
 }
@@ -2164,12 +2200,23 @@ function SimplifyArrow({ from, to, amount, highlight }: { from: string; to: stri
   );
 }
 
+// Slide + fade for the drawer's push/pop navigation. dir > 0 pushes a sub-view
+// in from the right; dir < 0 pops back toward the left.
+const expPanelVariants = {
+  enter: (dir: number) => ({ x: dir > 0 ? 34 : -34, opacity: 0 }),
+  center: { x: 0, opacity: 1 },
+  exit: (dir: number) => ({ x: dir > 0 ? -34 : 34, opacity: 0 }),
+};
+
 function ExpensesBody({
   tripId,
   expenses,
   balances,
   users,
   currentUserId,
+  view,
+  dir,
+  onNav,
   onChanged,
 }: {
   tripId: string;
@@ -2177,15 +2224,25 @@ function ExpensesBody({
   balances: Settlement[];
   users: ReturnType<typeof useTripContext>["users"];
   currentUserId: number;
+  view: ExpView;
+  dir: number;
+  onNav: (v: ExpView) => void;
   onChanged: () => Promise<void>;
 }) {
-  const [adding, setAdding] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [settleTarget, setSettleTarget] = useState<Settlement | null>(null);
   const [settleAmount, setSettleAmount] = useState("");
   const [settleBusy, setSettleBusy] = useState(false);
   const [simplifyInfoOpen, setSimplifyInfoOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const settleTarget = view.kind === "settle" ? view.target : null;
+
+  // Seed the settle amount with the full outstanding debt when entering.
+  useEffect(() => {
+    if (view.kind === "settle") {
+      setSettleAmount((view.target.amount_cents / 100).toFixed(2));
+      setError(null);
+    }
+  }, [view]);
 
   const realExpenses = expenses.filter((e) => !e.is_settlement);
   const settlementExpenses = expenses.filter((e) => e.is_settlement);
@@ -2211,15 +2268,6 @@ function ExpensesBody({
   const heroAmount = expenses.length === 0 || net === 0 ? null : formatCents(net);
   const heroColor = net > 0 ? "var(--min-accent)" : net < 0 ? "var(--danger)" : "var(--min-ink)";
 
-  const openSettle = (b: Settlement) => {
-    setError(null);
-    setSettleTarget(b);
-    setSettleAmount((b.amount_cents / 100).toFixed(2));
-  };
-  const closeSettle = () => {
-    setSettleTarget(null);
-    setSettleAmount("");
-  };
   const confirmSettle = async () => {
     if (!settleTarget) return;
     setError(null);
@@ -2242,7 +2290,7 @@ function ExpensesBody({
         splits: [{ user_id: settleTarget.to_user_id, amount_cents: cents }],
         is_settlement: true,
       });
-      closeSettle();
+      onNav({ kind: "list" });
       await onChanged();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -2251,9 +2299,10 @@ function ExpensesBody({
     }
   };
 
-  return (
+  // ---- Root list view ----
+  const listPanel = (
     <div>
-      {error && !settleTarget && <div className="error-banner">{error}</div>}
+      {error && <div className="error-banner">{error}</div>}
 
       {/* Net balance hero */}
       <div className="exp-hero">
@@ -2265,29 +2314,15 @@ function ExpensesBody({
         )}
       </div>
 
-      {/* Add expense — primary action right under the balance */}
-      {adding ? (
-        <ExpenseForm
-          users={users}
-          currentUserId={currentUserId}
-          onSubmit={async (data) => {
-            await api.createExpense(tripId, data);
-            setAdding(false);
-            await onChanged();
-          }}
-          onCancel={() => setAdding(false)}
-        />
-      ) : (
+      {/* Add expense — primary action right under the balance, hug-width */}
+      <div className="exp-addbtn">
         <button
-          className="th-btn th-btn--secondary th-btn--full"
-          onClick={() => {
-            setAdding(true);
-            setEditingId(null);
-          }}
+          className="th-btn th-btn--secondary th-btn--pill"
+          onClick={() => onNav({ kind: "add" })}
         >
           + Add expense
         </button>
-      )}
+      </div>
 
       {/* My balances — only what I owe or am owed */}
       {myBalances.length > 0 && (
@@ -2305,7 +2340,7 @@ function ExpensesBody({
                 {!owedToMe && (
                   <button
                     className="th-btn th-btn--primary th-btn--sm"
-                    onClick={() => openSettle(b)}
+                    onClick={() => onNav({ kind: "settle", target: b })}
                   >
                     Settle
                   </button>
@@ -2325,7 +2360,7 @@ function ExpensesBody({
       )}
 
       {/* Expense ledger */}
-      {realExpenses.length === 0 && !adding && !editingId && (
+      {realExpenses.length === 0 && (
         <p className="muted" style={{ marginTop: 12 }}>
           No expenses yet. Add one to start splitting costs.
         </p>
@@ -2336,22 +2371,6 @@ function ExpensesBody({
         </div>
       )}
       {realExpenses.map((exp) => {
-        if (editingId === exp.id) {
-          return (
-            <ExpenseForm
-              key={exp.id}
-              users={users}
-              currentUserId={currentUserId}
-              initial={exp}
-              onSubmit={async (data) => {
-                await api.updateExpense(tripId, exp.id, data);
-                setEditingId(null);
-                await onChanged();
-              }}
-              onCancel={() => setEditingId(null)}
-            />
-          );
-        }
         const isCustom = exp.splits.some((s) => s.amount_cents != null);
         return (
           <div className="list-item" key={exp.id} style={{ flexDirection: "column", alignItems: "stretch", gap: 4 }}>
@@ -2367,10 +2386,7 @@ function ExpensesBody({
                 <div className="row" style={{ gap: 4 }}>
                   <button
                     className="th-btn th-btn--tertiary th-btn--icon th-btn--sm"
-                    onClick={() => {
-                      setEditingId(exp.id);
-                      setAdding(false);
-                    }}
+                    onClick={() => onNav({ kind: "edit", expense: exp })}
                     aria-label="Edit expense"
                   >
                     ✏️
@@ -2430,65 +2446,105 @@ function ExpensesBody({
           </div>
         </>
       )}
+    </div>
+  );
 
-      {/* Settle confirmation */}
-      <BottomSheet
-        open={!!settleTarget}
-        onClose={closeSettle}
-        title="Settle up"
+  // ---- Add / edit form view ----
+  const formPanel = (view.kind === "add" || view.kind === "edit") && (
+    <ExpenseForm
+      users={users}
+      currentUserId={currentUserId}
+      initial={view.kind === "edit" ? view.expense : undefined}
+      onSubmit={async (data) => {
+        if (view.kind === "edit") {
+          await api.updateExpense(tripId, view.expense.id, data);
+        } else {
+          await api.createExpense(tripId, data);
+        }
+        onNav({ kind: "list" });
+        await onChanged();
+      }}
+    />
+  );
+
+  // ---- Settle view ----
+  const settlePanel = settleTarget && (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {error && <div className="error-banner">{error}</div>}
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          padding: "10px 12px",
+          borderRadius: 8,
+          background: "rgba(255, 180, 50, 0.1)",
+          border: "1px solid rgba(255, 180, 50, 0.25)",
+          fontSize: 13,
+          lineHeight: 1.45,
+          color: "var(--min-ink)",
+        }}
       >
-        {settleTarget && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {error && <div className="error-banner">{error}</div>}
-            <div style={{
-              display: "flex", gap: 10, padding: "10px 12px",
-              borderRadius: 8, background: "rgba(255, 180, 50, 0.1)",
-              border: "1px solid rgba(255, 180, 50, 0.25)",
-              fontSize: 13, lineHeight: 1.45, color: "var(--min-ink)",
-            }}>
-              <span style={{ flexShrink: 0, fontSize: 16 }} aria-hidden="true">⚠️</span>
-              <span>
-                This doesn&apos;t send money — it just records that you&apos;ve already paid.
-                Make sure you&apos;ve transferred the money (Revolut, bank, cash, etc.) before confirming.
-              </span>
-            </div>
-            <p className="muted" style={{ margin: 0 }}>
-              Record a payment from you to{" "}
-              <strong style={{ color: "var(--min-ink)" }}>{settleTarget.to_name}</strong>.
-            </p>
-            <div>
-              <label>Amount (€)</label>
-              <input
-                type="number"
-                min="0.01"
-                step="0.01"
-                max={(settleTarget.amount_cents / 100).toFixed(2)}
-                value={settleAmount}
-                onChange={(e) => setSettleAmount(e.target.value)}
-                placeholder="0.00"
-                inputMode="decimal"
-              />
-            </div>
-            <div className="row" style={{ gap: 8 }}>
-              <button className="th-btn th-btn--secondary" onClick={closeSettle}>
-                Cancel
-              </button>
-              <button
-                className="th-btn th-btn--primary"
-                style={{ flex: 1 }}
-                disabled={settleBusy || !settleAmount}
-                onClick={confirmSettle}
-              >
-                {settleBusy
-                  ? "Settling…"
-                  : `I've paid ${settleTarget.to_name} ${formatCents(
-                      Math.round((parseFloat(settleAmount) || 0) * 100)
-                    )}`}
-              </button>
-            </div>
-          </div>
-        )}
-      </BottomSheet>
+        <span style={{ flexShrink: 0, fontSize: 16 }} aria-hidden="true">
+          ⚠️
+        </span>
+        <span>
+          This doesn&apos;t send money — it just records that you&apos;ve already
+          paid. Make sure you&apos;ve transferred the money (Revolut, bank, cash,
+          etc.) before confirming.
+        </span>
+      </div>
+      <p className="muted" style={{ margin: 0 }}>
+        Record a payment from you to{" "}
+        <strong style={{ color: "var(--min-ink)" }}>{settleTarget.to_name}</strong>.
+      </p>
+      <div>
+        <label>Amount (€)</label>
+        <input
+          type="number"
+          min="0.01"
+          step="0.01"
+          max={(settleTarget.amount_cents / 100).toFixed(2)}
+          value={settleAmount}
+          onChange={(e) => setSettleAmount(e.target.value)}
+          placeholder="0.00"
+          inputMode="decimal"
+        />
+      </div>
+      <button
+        className="th-btn th-btn--primary th-btn--full"
+        disabled={settleBusy || !settleAmount}
+        onClick={confirmSettle}
+      >
+        {settleBusy
+          ? "Settling…"
+          : `I've paid ${settleTarget.to_name} ${formatCents(
+              Math.round((parseFloat(settleAmount) || 0) * 100)
+            )}`}
+      </button>
+    </div>
+  );
+
+  return (
+    <>
+      <div style={{ position: "relative", overflowX: "hidden" }}>
+        <AnimatePresence mode="popLayout" custom={dir} initial={false}>
+          <motion.div
+            key={view.kind}
+            custom={dir}
+            variants={expPanelVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 0.17, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {view.kind === "list"
+              ? listPanel
+              : view.kind === "settle"
+              ? settlePanel
+              : formPanel}
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
       {/* Simplification explainer */}
       <BottomSheet
@@ -2551,6 +2607,6 @@ function ExpensesBody({
           </p>
         </div>
       </BottomSheet>
-    </div>
+    </>
   );
 }

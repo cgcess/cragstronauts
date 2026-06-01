@@ -12,6 +12,8 @@ interface BottomSheetProps {
   onClose: () => void;
   title?: React.ReactNode;
   subtitle?: React.ReactNode;
+  /** When provided, a back arrow shows at the top-left and invokes this. */
+  onBack?: () => void;
   children: React.ReactNode;
 }
 
@@ -20,6 +22,7 @@ export default function BottomSheet({
   onClose,
   title,
   subtitle,
+  onBack,
   children,
 }: BottomSheetProps) {
   const dragControls = useDragControls();
@@ -75,8 +78,18 @@ export default function BottomSheet({
               onPointerDown={(e) => dragControls.start(e)}
             >
               <div className="sheet__grabber" aria-hidden="true" />
-              {(title || subtitle) && (
+              {(title || subtitle || onBack) && (
                 <div className="sheet__header">
+                  {onBack && (
+                    <button
+                      type="button"
+                      className="sheet__back"
+                      onClick={onBack}
+                      aria-label="Back"
+                    >
+                      ←
+                    </button>
+                  )}
                   <div className="sheet__titles">
                     {title && <h2 className="sheet__title">{title}</h2>}
                     {subtitle && (

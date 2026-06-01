@@ -184,6 +184,102 @@ input:focus, textarea:focus, select:focus {
   background: color-mix(in srgb, var(--min-accent) 18%, transparent);
 }
 
+/* Add-expense action: hug-width, centered under the balance hero. */
+.exp-addbtn {
+  display: flex;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+/* ---------- Segmented toggle (split mode) ---------- */
+.seg {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  margin-top: 4px;
+  padding: 3px;
+  background: var(--min-canvas);
+  border: 1px solid var(--min-line);
+  border-radius: 999px;
+}
+.seg__opt {
+  position: relative;
+  z-index: 1;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--min-ink-3);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.seg__opt.is-active { color: var(--min-ink); }
+/* Thumb is a single absolute element translated via CSS transform so it is
+   fully decoupled from layout reflow (no jank when the form height changes). */
+.seg__thumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  z-index: 0;
+  width: calc(50% - 3px);
+  border-radius: 999px;
+  background: var(--min-surface-2);
+  border: 1px solid var(--min-line-strong);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  transform: translateX(0);
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.seg[data-active="custom"] .seg__thumb {
+  transform: translateX(100%);
+}
+
+/* ---------- Split-among toggle chips ---------- */
+/* A clearly stateful on/off chip — distinct from the primary action button. */
+.split-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px 7px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--min-line-strong);
+  background: var(--min-surface);
+  color: var(--min-ink-2);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.split-chip__box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  border: 1.5px solid var(--min-ink-3);
+  background: transparent;
+  color: transparent;
+  font-size: 11px;
+  line-height: 1;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.split-chip.is-on {
+  background: rgba(155, 183, 146, 0.18);
+  border-color: var(--min-accent);
+  color: var(--min-ink);
+}
+.split-chip.is-on .split-chip__box {
+  background: var(--min-accent);
+  border-color: var(--min-accent);
+  color: var(--min-canvas);
+}
+
 /* ---------- Dashboard cards ---------- */
 .dash-card {
   background: var(--min-surface) !important;

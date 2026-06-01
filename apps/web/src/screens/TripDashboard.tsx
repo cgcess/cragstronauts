@@ -1502,6 +1502,27 @@ function RosterBody({
   const joining = users.filter((u) => u.joining);
   const out = users.filter((u) => !u.joining);
   const [error, setError] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
+
+  // Members the organizer can hand off to: anyone joining who isn't already organizer.
+  const transferTargets = joining.filter((u) => !u.is_organizer);
+
+  const transfer = async (toUserId: number, name: string) => {
+    if (
+      !confirm(
+        `Transfer ownership to ${name}? They become the organizer and you become a regular member.`
+      )
+    )
+      return;
+    setError(null);
+    try {
+      await api.makeOrganizer(tripId, toUserId);
+      setPicking(false);
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
 
   const remove = async (userId: number, isSelf: boolean, name: string) => {
     const message = isSelf
@@ -1520,10 +1541,11 @@ function RosterBody({
   const renderRow = (u: typeof users[number]) => {
     const isSelf = u.id === currentUserId;
     // One button per row: the organizer removes others; everyone else can
-    // leave their own row. The organizer can't remove themselves (they'd
-    // transfer ownership first), so their own row has no action yet.
+    // leave their own row. On the organizer's own row they instead hand off
+    // ownership, since they can't remove themselves while still organizer.
     const canRemove = isOrganizer && !u.is_organizer && !isSelf;
     const canLeave = isSelf && !u.is_organizer;
+    const canTransfer = isOrganizer && isSelf && u.is_organizer;
     return (
       <div className="list-item" key={u.id}>
         <span>
@@ -1554,6 +1576,50 @@ function RosterBody({
               ↦ Leave
             </button>
           )}
+          {canTransfer &&
+            (picking ? (
+              <>
+                <select
+                  defaultValue=""
+                  onChange={(e) => {
+                    const id = Number(e.target.value);
+                    const target = transferTargets.find((t) => t.id === id);
+                    if (target) transfer(target.id, target.name);
+                  }}
+                  aria-label="Choose a member to transfer ownership to"
+                >
+                  <option value="" disabled>
+                    Hand off to…
+                  </option>
+                  {transferTargets.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  className="th-btn th-btn--tertiary th-btn--sm"
+                  onClick={() => setPicking(false)}
+                  aria-label="Cancel transfer"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button
+                className="th-btn th-btn--secondary th-btn--sm"
+                onClick={() => setPicking(true)}
+                disabled={transferTargets.length === 0}
+                title={
+                  transferTargets.length === 0
+                    ? "No other joining members to transfer to"
+                    : undefined
+                }
+                aria-label="Transfer ownership to another member"
+              >
+                ⇄ Transfer ownership
+              </button>
+            ))}
         </div>
       </div>
     );

@@ -78,6 +78,8 @@ export const api = {
     req<Ok>("DELETE", `/api/trips/${tripId}/users/${id}`),
   completeSignup: (tripId: string, id: number) =>
     req<User>("POST", `/api/trips/${tripId}/users/${id}/complete-signup`),
+  makeOrganizer: (tripId: string, id: number) =>
+    req<User>("POST", `/api/trips/${tripId}/users/${id}/make-organizer`),
 
   // Gear categories
   listCategories: (tripId: string) =>

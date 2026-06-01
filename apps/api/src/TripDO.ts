@@ -193,6 +193,22 @@ export class TripDO extends DurableObject<Env> {
   }
 
   async deleteUser(userId: number): Promise<{ ok: boolean }> {
+    const row = this.db.get(user, { where: eq("id", userId) });
+    if (!row) throw new Error("User not found");
+    if (row.is_organizer) throw new Error("Cannot remove the organizer");
+
+    const paidExpenses = this.db.raw<{ cnt: number }>(
+      "SELECT COUNT(*) as cnt FROM expense WHERE payer_user_id = ?",
+      [userId]
+    )[0].cnt;
+    const splitInvolvement = this.db.raw<{ cnt: number }>(
+      "SELECT COUNT(*) as cnt FROM expense_split WHERE user_id = ?",
+      [userId]
+    )[0].cnt;
+    if (paidExpenses > 0 || splitInvolvement > 0) {
+      throw new Error("Cannot remove a user who is part of expenses");
+    }
+
     this.db.delete(user, { where: eq("id", userId) });
     return { ok: true };
   }

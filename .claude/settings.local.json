@@ -103,7 +103,8 @@
       "Bash(pkill -f esbuild)",
       "Bash(awk '{print $2,$8,$9}')",
       "Bash(curl -s -m 2 -o /dev/null -w \"vite=%{http_code} worker=\" http://localhost:3000/)",
-      "Bash(curl -s -m 2 -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8787/api/trips)"
+      "Bash(curl -s -m 2 -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8787/api/trips)",
+      "Bash(curl -s -m 2 -o /dev/null -w \"vite=%{http_code}\\\\n\" http://localhost:3000/)"
     ]
   }
 }

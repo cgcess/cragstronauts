@@ -30,16 +30,28 @@ html.theme-party {
                        0 6px 14px rgba(0, 200, 255, 0.30);
 }
 
-/* Multi-spot gradient wash on the canvas — feels like club lighting. */
-html.theme-party,
+/* Club lighting comes in two layers:
+   1. Solid canvas on html
+   2. Static + animated spotlights on ::before / ::after (defined below
+      so the animated layer respects prefers-reduced-motion).
+   Body + #root go transparent so the layered gradients show through. */
+html.theme-party {
+  background: var(--min-canvas) !important;
+}
 html.theme-party body,
 html.theme-party #root {
+  background: transparent !important;
+}
+html.theme-party::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background:
     radial-gradient(40% 35% at 20% 12%, rgba(255, 43, 214, 0.28), transparent 70%),
     radial-gradient(45% 35% at 82% 18%, rgba(0, 200, 255, 0.22), transparent 70%),
-    radial-gradient(50% 40% at 50% 95%, rgba(255, 215, 0, 0.18), transparent 75%),
-    var(--min-canvas) !important;
-  background-attachment: fixed !important;
+    radial-gradient(50% 40% at 50% 95%, rgba(255, 215, 0, 0.18), transparent 75%);
 }
 
 /* Marquee-style gradient on headings. */
@@ -141,4 +153,189 @@ html.theme-party .theme-toggle {
 @keyframes party-pulse {
   0%, 100% { box-shadow: 0 0 14px rgba(255, 43, 214, 0.6); }
   50%      { box-shadow: 0 0 22px rgba(0, 212, 255, 0.7); }
+}
+
+/* ============================================================
+   MORE PARTY — animations layer.
+   All inside prefers-reduced-motion: no-preference so visitors
+   who've opted out of motion get the static party theme above
+   without the bouncing/spinning.
+   ============================================================ */
+@media (prefers-reduced-motion: no-preference) {
+
+  /* Drifting club spotlights behind everything. Sits on a second
+     ::after layer so the static gradients above stay anchored and
+     this layer can translate/rotate without affecting them. */
+  html.theme-party::after {
+    content: "";
+    position: fixed;
+    inset: -20%;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(28% 22% at 25% 25%, rgba(255, 43, 214, 0.22), transparent 70%),
+      radial-gradient(30% 24% at 75% 55%, rgba(0, 200, 255, 0.20), transparent 70%),
+      radial-gradient(24% 20% at 50% 85%, rgba(255, 215, 0, 0.18), transparent 70%);
+    filter: blur(30px);
+    animation: party-spotlights 16s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+  @keyframes party-spotlights {
+    0%   { transform: translate(0%, 0%) rotate(0deg) scale(1); }
+    50%  { transform: translate(5%, -3%) rotate(8deg) scale(1.06); }
+    100% { transform: translate(-4%, 4%) rotate(-6deg) scale(1.08); }
+  }
+
+  /* Tiles float gently. Staggered delays so the dashboard doesn't
+     breathe in unison (which would look like the whole page is
+     beating). */
+  html.theme-party .dash-tile {
+    animation: party-float 5.5s ease-in-out infinite;
+    will-change: transform;
+  }
+  html.theme-party .dash-tile:nth-child(2) { animation-delay: -0.9s; }
+  html.theme-party .dash-tile:nth-child(3) { animation-delay: -1.8s; }
+  html.theme-party .dash-tile:nth-child(4) { animation-delay: -2.7s; }
+  @keyframes party-float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-4px); }
+  }
+
+  /* Lit Gear-chip dots throb in neon cyan. */
+  html.theme-party .dash-tile__chip.is-on .dash-tile__dot {
+    animation: party-dot 1.4s ease-in-out infinite;
+  }
+  @keyframes party-dot {
+    0%, 100% {
+      text-shadow: 0 0 6px rgba(0, 255, 208, 0.7);
+      transform: scale(1);
+    }
+    50% {
+      text-shadow: 0 0 14px rgba(0, 255, 208, 1);
+      transform: scale(1.18);
+    }
+  }
+
+  /* Action-needed flag pulses + tilts to draw the eye. */
+  html.theme-party .dash-tile__flag,
+  html.theme-party .dash-card__flag {
+    animation: party-flag 1.6s ease-in-out infinite;
+    transform-origin: center;
+  }
+  @keyframes party-flag {
+    0%, 100% { transform: translateY(0) rotate(-2deg); }
+    50%      { transform: translateY(-1.5px) rotate(2deg); }
+  }
+
+  /* Urgent dash tile breathes a magenta halo. */
+  html.theme-party .dash-tile--urgent {
+    animation: party-urgent 2.4s ease-in-out infinite;
+  }
+  @keyframes party-urgent {
+    0%, 100% {
+      box-shadow:
+        var(--min-shadow),
+        inset 0 0 0 1px rgba(255, 43, 214, 0.45);
+    }
+    50% {
+      box-shadow:
+        var(--min-shadow-lg),
+        inset 0 0 0 1px rgba(255, 43, 214, 0.85),
+        0 0 28px rgba(255, 43, 214, 0.30);
+    }
+  }
+
+  /* Hero CTA + primary buttons cycle their gradient — looks like a
+     marquee. */
+  html.theme-party .fl-hero__cta,
+  html.theme-party button.btn-3d,
+  html.theme-party button:not(.theme-toggle):not(.dash-tile):not(.dash-card__head):not(.fab) {
+    background: linear-gradient(90deg, #ff2bd6, #ffb800, #00d4ff, #ff2bd6) !important;
+    background-size: 300% 100% !important;
+    color: #fff !important;
+    animation: party-cta-cycle 5s linear infinite;
+  }
+  @keyframes party-cta-cycle {
+    from { background-position: 0% 0%; }
+    to   { background-position: 300% 0%; }
+  }
+
+  /* The disco-ball toggle spins on top of the existing color pulse. */
+  html.theme-party .theme-toggle {
+    animation:
+      party-pulse 1.6s ease-in-out infinite,
+      party-spin 6s linear infinite;
+  }
+  @keyframes party-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  /* :active scale would fight the spin — drop it in party mode. */
+  html.theme-party .theme-toggle:active { transform: none; }
+
+  /* Bottom sheet does a tiny springy wobble on entry. */
+  html.theme-party .sheet {
+    animation: party-sheet-in 480ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes party-sheet-in {
+    0%   { transform: translateY(24px) rotate(-1.2deg); }
+    60%  { transform: translateY(-3px) rotate(0.6deg); }
+    100% { transform: translateY(0) rotate(0); }
+  }
+
+  /* ----------------------------------------------------------------
+     Disco lights — two rotating conic-gradient beam layers behind
+     content. Each is a viewport-spanning square anchored at center;
+     narrow color slices (a few degrees wide) read as light rays that
+     sweep around the room as the layer rotates. Counter-rotating
+     speeds + a tiny blur sell the dance-floor swirl.
+  ---------------------------------------------------------------- */
+  html.theme-party body::before,
+  html.theme-party body::after {
+    content: "";
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 220vmax;
+    height: 220vmax;
+    margin-top: -110vmax;
+    margin-left: -110vmax;
+    z-index: -1;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    filter: blur(6px);
+    will-change: transform;
+  }
+  /* Beam set A — magenta / cyan / gold / mint, spins clockwise. */
+  html.theme-party body::before {
+    background: conic-gradient(
+      from 0deg,
+      rgba(255, 43, 214, 0.22) 0deg 4deg,
+      transparent 4deg 90deg,
+      rgba(0, 200, 255, 0.20) 90deg 94deg,
+      transparent 94deg 180deg,
+      rgba(255, 215, 0, 0.20) 180deg 184deg,
+      transparent 184deg 270deg,
+      rgba(127, 255, 196, 0.22) 270deg 274deg,
+      transparent 274deg 360deg
+    );
+    animation: disco-spin 12s linear infinite;
+  }
+  /* Beam set B — softer, off-axis, spins the other way at half speed. */
+  html.theme-party body::after {
+    background: conic-gradient(
+      from 45deg,
+      rgba(255, 100, 200, 0.16) 0deg 6deg,
+      transparent 6deg 120deg,
+      rgba(100, 220, 255, 0.16) 120deg 126deg,
+      transparent 126deg 240deg,
+      rgba(255, 180, 100, 0.14) 240deg 246deg,
+      transparent 246deg 360deg
+    );
+    animation: disco-spin 22s linear infinite reverse;
+  }
+  @keyframes disco-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
 }

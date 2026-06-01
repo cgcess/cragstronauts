@@ -22,7 +22,7 @@ import type {
   ExpenseSchema,
   SettlementSchema,
 } from "@cragstronauts/contract";
-import { computeSimplifiedBalances } from "./lib/balances";
+import { computeSimplifiedBalances, distributeEqual } from "./lib/balances";
 
 type Trip = z.infer<typeof TripSchema>;
 type User = z.infer<typeof UserSchema>;
@@ -455,10 +455,11 @@ export class TripDO extends DurableObject<Env> {
       }
       splitRows = data.splits.map((s) => ({ user_id: s.user_id, amount_cents: s.amount_cents }));
     } else {
-      // Equal split (explicit or legacy)
+      // Equal split — resolve to concrete cent amounts so every cent is accounted for.
       const ids = "split_user_ids" in data ? data.split_user_ids : [];
       if (ids.length === 0) throw new Error("At least one split member required");
-      splitRows = ids.map((uid) => ({ user_id: uid, amount_cents: null }));
+      const amounts = distributeEqual(data.amount_cents, ids.length);
+      splitRows = ids.map((uid, i) => ({ user_id: uid, amount_cents: amounts[i] }));
     }
 
     const now = new Date().toISOString();
@@ -529,7 +530,8 @@ export class TripDO extends DurableObject<Env> {
       splitRows = data.splits.map((s) => ({ user_id: s.user_id, amount_cents: s.amount_cents }));
     } else {
       if (data.split_user_ids.length === 0) throw new Error("At least one split member required");
-      splitRows = data.split_user_ids.map((uid) => ({ user_id: uid, amount_cents: null }));
+      const amounts = distributeEqual(data.amount_cents, data.split_user_ids.length);
+      splitRows = data.split_user_ids.map((uid, i) => ({ user_id: uid, amount_cents: amounts[i] }));
     }
 
     const isSettlement = "is_settlement" in data && data.is_settlement ? 1 : 0;

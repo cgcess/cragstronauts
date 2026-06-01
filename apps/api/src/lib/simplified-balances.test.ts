@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeSimplifiedBalances, type Settlement } from "./balances";
+import { computeSimplifiedBalances, distributeEqual, type Settlement } from "./balances";
 
 describe("computeSimplifiedBalances", () => {
   it("returns empty settlements when there are no expenses", () => {
@@ -290,5 +290,201 @@ describe("computeSimplifiedBalances", () => {
     expect(result).toEqual([
       { from_user_id: 1, to_user_id: 2, amount_cents: 2000 },
     ]);
+  });
+});
+
+describe("distributeEqual", () => {
+  it("splits evenly when no remainder", () => {
+    expect(distributeEqual(900, 3)).toEqual([300, 300, 300]);
+  });
+
+  it("gives the first share the extra cent (remainder 1)", () => {
+    expect(distributeEqual(1000, 3)).toEqual([334, 333, 333]);
+  });
+
+  it("gives the first two shares an extra cent (remainder 2)", () => {
+    expect(distributeEqual(1001, 3)).toEqual([334, 334, 333]);
+  });
+
+  it("handles 2-way odd split", () => {
+    expect(distributeEqual(999, 2)).toEqual([500, 499]);
+  });
+
+  it("handles single-person split", () => {
+    expect(distributeEqual(1000, 1)).toEqual([1000]);
+  });
+
+  it("always sums to the total", () => {
+    const cases: [number, number][] = [
+      [1000, 3], [1001, 3], [999, 2], [7, 4], [100, 7], [1, 3], [2, 3], [10000, 6],
+    ];
+    for (const [total, n] of cases) {
+      const shares = distributeEqual(total, n);
+      expect(shares.reduce((a, b) => a + b, 0)).toBe(total);
+      expect(shares).toHaveLength(n);
+    }
+  });
+
+  it("no share differs from another by more than 1", () => {
+    const cases: [number, number][] = [
+      [1000, 3], [7, 4], [100, 7], [1, 5], [9999, 11],
+    ];
+    for (const [total, n] of cases) {
+      const shares = distributeEqual(total, n);
+      const min = Math.min(...shares);
+      const max = Math.max(...shares);
+      expect(max - min).toBeLessThanOrEqual(1);
+    }
+  });
+});
+
+describe("computeSimplifiedBalances — remainder handling", () => {
+  it("accounts for every cent in a 3-way split of 1000 (null amounts)", () => {
+    // 1000 / 3 → shares [334, 333, 333]. Payer (u1) is at position 0.
+    // u2 owes 333, u3 owes 333. Payer's implicit share = 334.
+    const result = computeSimplifiedBalances([
+      {
+        payer_user_id: 1,
+        amount_cents: 1000,
+        splits: [{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }],
+      },
+    ]);
+    const totalOwed = result.reduce((s, r) => s + r.amount_cents, 0);
+    expect(totalOwed).toBe(666);
+    expect(result).toContainEqual({ from_user_id: 2, to_user_id: 1, amount_cents: 333 });
+    expect(result).toContainEqual({ from_user_id: 3, to_user_id: 1, amount_cents: 333 });
+  });
+
+  it("accounts for every cent in a 3-way split of 1000 (stored amounts)", () => {
+    // Same scenario but with explicit amounts as the write path now produces.
+    const result = computeSimplifiedBalances([
+      {
+        payer_user_id: 1,
+        amount_cents: 1000,
+        splits: [
+          { user_id: 1, amount_cents: 334 },
+          { user_id: 2, amount_cents: 333 },
+          { user_id: 3, amount_cents: 333 },
+        ],
+      },
+    ]);
+    const totalOwed = result.reduce((s, r) => s + r.amount_cents, 0);
+    expect(totalOwed).toBe(666);
+    expect(result).toContainEqual({ from_user_id: 2, to_user_id: 1, amount_cents: 333 });
+    expect(result).toContainEqual({ from_user_id: 3, to_user_id: 1, amount_cents: 333 });
+  });
+
+  it("payer at non-first position gets the smaller share", () => {
+    // splits: [u2, u1(payer), u3]. distributeEqual(1000, 3) = [334, 333, 333].
+    // u2 gets 334 (owes 334), u1(payer) gets 333 (skipped), u3 gets 333 (owes 333).
+    const result = computeSimplifiedBalances([
+      {
+        payer_user_id: 1,
+        amount_cents: 1000,
+        splits: [{ user_id: 2 }, { user_id: 1 }, { user_id: 3 }],
+      },
+    ]);
+    const totalOwed = result.reduce((s, r) => s + r.amount_cents, 0);
+    expect(totalOwed).toBe(667);
+    expect(result).toContainEqual({ from_user_id: 2, to_user_id: 1, amount_cents: 334 });
+    expect(result).toContainEqual({ from_user_id: 3, to_user_id: 1, amount_cents: 333 });
+  });
+
+  it("2-way split of odd amount with remainder (null amounts)", () => {
+    // 999 / 2 → [500, 499]. Payer is u1 (position 0, gets 500, skipped).
+    // u2 owes 499.
+    const result = computeSimplifiedBalances([
+      {
+        payer_user_id: 1,
+        amount_cents: 999,
+        splits: [{ user_id: 1 }, { user_id: 2 }],
+      },
+    ]);
+    expect(result).toEqual([
+      { from_user_id: 2, to_user_id: 1, amount_cents: 499 },
+    ]);
+  });
+
+  it("net across all users is exactly zero (no lost cents)", () => {
+    // Three expenses with odd totals. The net across everyone must be 0.
+    const expenses = [
+      {
+        payer_user_id: 1,
+        amount_cents: 1000,
+        splits: [{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }],
+      },
+      {
+        payer_user_id: 2,
+        amount_cents: 700,
+        splits: [{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }],
+      },
+      {
+        payer_user_id: 3,
+        amount_cents: 500,
+        splits: [{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }],
+      },
+    ];
+    const result = computeSimplifiedBalances(expenses);
+    // Sum of all from_amounts must equal sum of all to_amounts
+    // (every cent that leaves someone arrives at someone else).
+    const totalFrom = result.reduce((s, r) => s + r.amount_cents, 0);
+    const totalTo = result.reduce((s, r) => s + r.amount_cents, 0);
+    expect(totalFrom).toBe(totalTo);
+    // Also verify indirectly: credits - debits = 0 over all users.
+    const net = new Map<number, number>();
+    for (const s of result) {
+      net.set(s.from_user_id, (net.get(s.from_user_id) ?? 0) - s.amount_cents);
+      net.set(s.to_user_id, (net.get(s.to_user_id) ?? 0) + s.amount_cents);
+    }
+    const globalNet = [...net.values()].reduce((a, b) => a + b, 0);
+    expect(globalNet).toBe(0);
+  });
+
+  it("remainder 2: stored amounts from 1001 split 3 ways", () => {
+    // distributeEqual(1001, 3) = [334, 334, 333]
+    const result = computeSimplifiedBalances([
+      {
+        payer_user_id: 1,
+        amount_cents: 1001,
+        splits: [
+          { user_id: 1, amount_cents: 334 },
+          { user_id: 2, amount_cents: 334 },
+          { user_id: 3, amount_cents: 333 },
+        ],
+      },
+    ]);
+    expect(result).toHaveLength(2);
+    expect(result).toContainEqual({ from_user_id: 2, to_user_id: 1, amount_cents: 334 });
+    expect(result).toContainEqual({ from_user_id: 3, to_user_id: 1, amount_cents: 333 });
+    const totalOwed = result.reduce((s, r) => s + r.amount_cents, 0);
+    expect(totalOwed).toBe(667); // payer's implicit share = 334, 334+334+333=1001
+  });
+
+  it("settlement still zeros out a remainder-affected expense", () => {
+    // Alice(1) pays 1000 split 3 ways → shares [334, 333, 333]
+    // Bob(2) owes 333, Charlie(3) owes 333.
+    // Bob settles 333, Charlie settles 333.
+    const result = computeSimplifiedBalances([
+      {
+        payer_user_id: 1,
+        amount_cents: 1000,
+        splits: [
+          { user_id: 1, amount_cents: 334 },
+          { user_id: 2, amount_cents: 333 },
+          { user_id: 3, amount_cents: 333 },
+        ],
+      },
+      {
+        payer_user_id: 2,
+        amount_cents: 333,
+        splits: [{ user_id: 1, amount_cents: 333 }],
+      },
+      {
+        payer_user_id: 3,
+        amount_cents: 333,
+        splits: [{ user_id: 1, amount_cents: 333 }],
+      },
+    ]);
+    expect(result).toEqual([]);
   });
 });

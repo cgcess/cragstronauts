@@ -11,6 +11,16 @@ export interface Settlement {
 }
 
 /**
+ * Distribute `total` cents into `n` integer shares that sum exactly to `total`.
+ * The first `total % n` shares get one extra cent.
+ */
+export function distributeEqual(total: number, n: number): number[] {
+  const base = Math.floor(total / n);
+  const remainder = total % n;
+  return Array.from({ length: n }, (_, i) => base + (i < remainder ? 1 : 0));
+}
+
+/**
  * Compute simplified (minimized) settlements.
  * Nets each person's total balance, then greedily matches
  * creditors with debtors to minimize transaction count.
@@ -23,17 +33,16 @@ export function computeSimplifiedBalances(expenses: Expense[]): Settlement[] {
   for (const exp of expenses) {
     const n = exp.splits.length;
     if (n === 0) continue;
-    const isCustom = exp.splits.some((s) => s.amount_cents != null);
-    const equalShare = Math.floor(exp.amount_cents / n);
+    // Fallback shares for splits that don't carry explicit amounts.
+    const shares = distributeEqual(exp.amount_cents, n);
 
-    for (const s of exp.splits) {
-      const share = isCustom ? (s.amount_cents ?? 0) : equalShare;
-      if (s.user_id === exp.payer_user_id) continue;
-      if (share === 0) continue;
-      // s.user_id owes `share` to payer
+    exp.splits.forEach((s, i) => {
+      const share = s.amount_cents != null ? s.amount_cents : shares[i];
+      if (s.user_id === exp.payer_user_id) return;
+      if (share === 0) return;
       netBalance.set(s.user_id, (netBalance.get(s.user_id) ?? 0) - share);
       netBalance.set(exp.payer_user_id, (netBalance.get(exp.payer_user_id) ?? 0) + share);
-    }
+    });
   }
 
   // Step 2: Separate into creditors and debtors.

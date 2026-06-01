@@ -693,7 +693,7 @@ export default function TripDashboard() {
               onClick={() => setEditingHero(true)}
               aria-label="Edit trip"
             >
-              ✏️ Edit
+              ✏️
             </button>
           )}
           <div className="fl-detail-hero__meta">

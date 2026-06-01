@@ -156,23 +156,33 @@ input:focus, textarea:focus, select:focus {
   color: var(--min-ink);
 }
 
-/* ---------- Gear sheet: grouped flat sections ---------- */
-/* Drop the float shadow on every card in the gear sheet. */
-.gear-sheet .card {
+/* ---------- Bottom-sheet cards: grouped flat sections ----------
+   Shared treatment for the Gear / Rides / Expenses sheets: flatten the
+   floating cards and, where they stack, group them as one unit with a
+   gently alternating surface tint instead of drop shadows. */
+.sheet-flat .card {
   box-shadow: none !important;
-}
-/* Stack the category sections as one tight group; tell each apart with a
-   gently alternating surface tint instead of a drop shadow. */
-.gear-sheet__sections > .card {
-  margin: 0 0 8px !important;
   border: 1px solid var(--min-line) !important;
+}
+/* Stack section cards as one tight group; tell each apart with a gently
+   alternating surface tint instead of elevation. */
+.sheet-sections > .card {
+  margin: 0 0 8px !important;
   border-radius: 14px !important;
 }
-.gear-sheet__sections > .card:last-child {
+.sheet-sections > .card:last-child {
   margin-bottom: 0 !important;
 }
-.gear-sheet__sections > .card:nth-child(even) {
+.sheet-sections > .card:nth-child(even) {
   background: var(--min-surface-2) !important;
+}
+/* Standalone card-level action buttons (e.g. "+ I'm bringing one") sit
+   centered at hugging width rather than flush-left. */
+.sheet-sections > .card > .th-btn {
+  display: flex;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* ---------- Expenses: balance hero + per-person rows ---------- */

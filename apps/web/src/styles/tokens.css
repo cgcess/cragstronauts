@@ -6,114 +6,214 @@
    Layers:
      1. --th-*   raw palette (namespaced, never used directly in screens)
      2. semantic (--primary, --text, --surface…) — used by UI components
-     3. legacy bridge (--fl-*) — re-points the old theme so existing
-        screens re-skin to Trailhead with zero JSX churn
-   Default theme: DARK ("camp / night").
+     3. legacy bridges:
+          --fl-*  (the old "Flatlay" theme)
+          --min-* (the minimalist override layer)
+
+   Default theme = DARK ("camp / night"), cool charcoal canvas + sage
+   primary. `html.theme-light` flips role mappings to a paper-light
+   palette. `html.theme-party` (in party-theme.css) overrides --min-*
+   only and ignores semantic tokens.
    ============================================================ */
 
 :root {
-  /* ---------- 1. RAW PALETTE (--th-*) ---------- */
+  /* ---------- 1. RAW PALETTE (--th-*) -------------------------------
+     Token names kept for backwards compatibility, but the values are
+     now a cool charcoal + sage system. */
 
-  /* clay — primary accent (lighter warm brown) */
-  --th-clay-200: #E6C79B;
-  --th-clay-300: #DCA877;
-  --th-clay-400: #C68B53;
-  --th-clay-500: #B3753E;
-  --th-clay-600: #97602F;
-  --th-clay-700: #7A4C24;
-  --th-clay-800: #5E3A1C;
+  /* clay — primary accent (sage greens; "clay" name is legacy) */
+  --th-clay-200: #C8E0C2;
+  --th-clay-300: #A8CFA3;
+  --th-clay-400: #7FB67B;   /* primary on dark */
+  --th-clay-500: #5E9156;
+  --th-clay-600: #466A42;   /* primary on light */
+  --th-clay-700: #324C2F;
+  --th-clay-800: #213620;
 
-  /* bark & stone — earth neutrals */
-  --th-bark-950: #221C16;
-  --th-bark-900: #2E2720;
-  --th-bark-800: #3A332A;
-  --th-bark-700: #4A4034;
-  --th-stone-600: #6B5F50;
-  --th-stone-500: #837561;
-  --th-stone-400: #9C8E78;
-  --th-stone-300: #B8AB94;
-  --th-stone-200: #D6CBB5;
-  --th-oat-100:  #E8DECB;
-  --th-canvas:   #F4ECDB;
-  --th-paper:    #FBF6EC;
+  /* bark — cool charcoal canvas/surface ramp */
+  --th-bark-950: #0F1115;
+  --th-bark-900: #161922;
+  --th-bark-800: #1C1F29;
+  --th-bark-700: #252935;
 
-  /* nature semantics */
-  --th-moss-200: #C3CBA3; --th-moss-300: #97A06B; --th-moss-500: #5F6B45; --th-moss-700: #41492F;
+  /* stone — cool gray text ramp */
+  --th-stone-600: #5E6470;
+  --th-stone-500: #7D8290;
+  --th-stone-400: #9AA0AD;
+  --th-stone-300: #B8BDC8;
+  --th-stone-200: #D6DAE3;
+
+  /* paper ramp — cool off-whites */
+  --th-oat-100:  #E8EAEE;
+  --th-canvas:   #F4F5F7;
+  --th-paper:    #FFFFFF;
+
+  /* nature semantics — moss / slate cool, ember / rust kept */
+  --th-moss-200: #C8E0C2; --th-moss-300: #A8CFA3; --th-moss-500: #5E9156; --th-moss-700: #324C2F;
   --th-slate-200:#BCC7CF; --th-slate-300:#97A6B2; --th-slate-500:#607282; --th-slate-700:#41505C;
-  --th-ember-200:#F2CF9E; --th-ember-300:#E6A861; --th-ember-500:#CC7A33; --th-ember-700:#9E5A22;
-  --th-rust-200: #E0B3A6; --th-rust-300: #C9755E; --th-rust-500: #A8442B; --th-rust-700: #7E311E;
+  --th-ember-200:#F4D8A0; --th-ember-300:#F1B454; --th-ember-500:#D08A2A; --th-ember-700:#9C661D;
+  --th-rust-200: #F0B5AB; --th-rust-300: #E37868; --th-rust-500: #D04E36; --th-rust-700: #A1361F;
 
-  /* ---------- 2. SEMANTIC — DARK (camp) default ---------- */
+  /* ---------- 2. SEMANTIC — DARK default ---------- */
   --bg:            var(--th-bark-950);
   --surface:       var(--th-bark-900);
   --surface-2:     var(--th-bark-800);
   --surface-3:     var(--th-bark-700);
 
-  --text:          #F1E8D8;
-  --text-muted:    var(--th-stone-400);
+  --text:          #E8EAF0;
+  --text-muted:    var(--th-stone-300);
   --text-faint:    var(--th-stone-500);
 
-  --border:        rgba(241, 232, 216, 0.12);
-  --border-strong: rgba(241, 232, 216, 0.26);
+  --border:        rgba(232, 234, 240, 0.10);
+  --border-strong: rgba(232, 234, 240, 0.18);
 
   --primary:       var(--th-clay-400);
   --primary-hover: var(--th-clay-300);
   --primary-press: var(--th-clay-500);
   --on-primary:    var(--th-bark-950);
-  --primary-soft:  rgba(198, 139, 83, 0.16);
-  --ring:          rgba(220, 168, 119, 0.5);
+  --primary-soft:  rgba(127, 182, 123, 0.18);
+  --ring:          rgba(127, 182, 123, 0.45);
 
   --danger:        var(--th-rust-500);
   --danger-hover:  var(--th-rust-300);
   --danger-press:  var(--th-rust-700);
-  --on-danger:     #FBF6EC;
+  --on-danger:     #FBFCFD;
 
-  /* shape & motion */
   --r-btn:  14px;
   --r-pill: 999px;
   --r-card: 18px;
-  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.42);
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.55);
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 
-  /* ---------- 3. LEGACY BRIDGE (--fl-*) ---------- */
-  /* Existing screens read these; re-point them to Trailhead so the
-     whole app adopts the new palette without touching component CSS. */
+  /* ---------- 3a. LEGACY BRIDGE (--fl-*) ---------- */
   --fl-bg:           var(--th-bark-950);
   --fl-surface:      var(--th-bark-900);
   --fl-surface-2:    var(--th-bark-800);
   --fl-surface-3:    var(--th-bark-700);
-  --fl-glass:        rgba(46, 39, 32, 0.78);
-  --fl-glass-strong: rgba(34, 28, 22, 0.92);
-  --fl-divider:      rgba(241, 232, 216, 0.10);
+  --fl-glass:        rgba(22, 25, 34, 0.78);   /* bark-900 @ alpha */
+  --fl-glass-strong: rgba(15, 17, 21, 0.92);   /* bark-950 @ alpha */
+  --fl-divider:      rgba(232, 234, 240, 0.10);
 
-  --fl-fg:           #F1E8D8;
+  --fl-fg:           #E8EAF0;
   --fl-fg-2:         var(--th-stone-200);
   --fl-fg-3:         var(--th-stone-400);
   --fl-fg-mute:      var(--th-stone-500);
 
   --fl-accent:       var(--th-clay-400);
-  --fl-accent-soft:  rgba(198, 139, 83, 0.18);
-  --fl-accent-ring:  rgba(220, 168, 119, 0.5);
+  --fl-accent-soft:  rgba(127, 182, 123, 0.18);
+  --fl-accent-ring:  rgba(127, 182, 123, 0.45);
   --fl-past:         var(--th-stone-500);
   --fl-now:          var(--th-ember-300);
   --fl-danger:       var(--th-rust-500);
 
   /* ---------- 3b. LEGACY BRIDGE (--min-* / minimalist layer) ---------- */
-  /* The minimalist override layer shipped a leftover green accent. Re-point
-     its tokens to Trailhead: a refined moss for secondary accents/links/
-     focus, rust for danger. (Primary buttons are clay via <Button>.) */
   --min-canvas:        var(--th-bark-950);
-  --min-canvas-2:      #1a150f;
-  --min-surface:       var(--th-bark-900);
-  --min-surface-2:     var(--th-bark-800);
-  --min-ink:           #F1E8D8;
-  --min-ink-2:         var(--th-stone-200);
+  --min-canvas-2:      #0A0C10;
+  --min-surface:       var(--th-bark-800);
+  --min-surface-2:     var(--th-bark-700);
+  --min-ink:           #E8EAF0;
+  --min-ink-2:         var(--th-stone-300);
   --min-ink-3:         var(--th-stone-400);
-  --min-line:          rgba(241, 232, 216, 0.08);
-  --min-line-strong:   var(--border-strong);
-  --min-accent:        var(--th-moss-300);
-  --min-accent-2:      var(--th-moss-200);
-  --min-accent-soft:   rgba(151, 160, 107, 0.16);
-  --min-accent-focus:  rgba(151, 160, 107, 0.40);
+  --min-line:          rgba(232, 234, 240, 0.10);
+  --min-line-strong:   rgba(232, 234, 240, 0.18);
+  --min-accent:        var(--th-clay-400);
+  --min-accent-2:      var(--th-clay-300);
+  --min-accent-soft:   rgba(127, 182, 123, 0.18);
+  --min-accent-focus:  rgba(127, 182, 123, 0.42);
   --min-danger:        var(--th-rust-500);
+  /* Action needed — saturated amber/yellow on dark, distinctly NOT
+     brown (the ember ramp went too earthy at low saturation). */
+  --min-attn:          #FFC857;
+  --min-attn-soft:     rgba(255, 200, 87, 0.16);
+  --min-attn-ring:     rgba(255, 200, 87, 0.40);
+  /* Default `button` rule uses --min-ink as the bg with --min-surface
+     as the fg, so on dark the primary CTA is light-on-dark. */
+  --min-primary-hover: #D5D8E0;
+  --min-shadow-sm:     0 1px 2px rgba(0, 0, 0, 0.55);
+  --min-shadow:        0 6px 16px -4px rgba(0, 0, 0, 0.55),
+                       0 2px 4px rgba(0, 0, 0, 0.40);
+  --min-shadow-lg:     0 14px 32px -8px rgba(0, 0, 0, 0.70),
+                       0 4px 10px rgba(0, 0, 0, 0.40);
+}
+
+/* ====================================================================
+   LIGHT mode — html.theme-light flips role mappings only. Raw palette
+   stays cool/charcoal; surfaces become paper, ink becomes deep gray.
+   ==================================================================== */
+html.theme-light {
+  /* Semantic */
+  --bg:            var(--th-canvas);
+  --surface:       var(--th-paper);
+  --surface-2:     var(--th-oat-100);
+  --surface-3:     var(--th-stone-200);
+
+  --text:          #1A1D23;
+  --text-muted:    var(--th-stone-600);
+  --text-faint:    var(--th-stone-500);
+
+  --border:        rgba(15, 20, 30, 0.10);
+  --border-strong: rgba(15, 20, 30, 0.20);
+
+  --primary:       var(--th-clay-600);
+  --primary-hover: var(--th-clay-700);
+  --primary-press: var(--th-clay-800);
+  --on-primary:    #FFFFFF;
+  --primary-soft:  rgba(70, 106, 66, 0.10);
+  --ring:          rgba(70, 106, 66, 0.32);
+
+  --danger:        var(--th-rust-500);
+  --danger-hover:  var(--th-rust-700);
+  --danger-press:  #7A2814;
+  --on-danger:     #FFFFFF;
+
+  --shadow-card:   0 4px 14px rgba(15, 20, 30, 0.10);
+
+  /* --fl-* bridge */
+  --fl-bg:           var(--th-canvas);
+  --fl-surface:      var(--th-paper);
+  --fl-surface-2:    var(--th-oat-100);
+  --fl-surface-3:    var(--th-stone-200);
+  --fl-glass:        rgba(255, 255, 255, 0.78);
+  --fl-glass-strong: rgba(248, 249, 251, 0.92);
+  --fl-divider:      rgba(15, 20, 30, 0.10);
+
+  --fl-fg:           #1A1D23;
+  --fl-fg-2:         var(--th-stone-600);
+  --fl-fg-3:         var(--th-stone-500);
+  --fl-fg-mute:      var(--th-stone-400);
+
+  --fl-accent:       var(--th-clay-600);
+  --fl-accent-soft:  rgba(70, 106, 66, 0.10);
+  --fl-accent-ring:  rgba(70, 106, 66, 0.32);
+  --fl-past:         var(--th-stone-400);
+  --fl-now:          var(--th-ember-500);
+  --fl-danger:       var(--th-rust-500);
+
+  /* --min-* bridge */
+  --min-canvas:        var(--th-canvas);
+  --min-canvas-2:      var(--th-oat-100);
+  --min-surface:       var(--th-paper);
+  --min-surface-2:     var(--th-oat-100);
+  --min-ink:           #1A1D23;
+  --min-ink-2:         var(--th-stone-600);
+  --min-ink-3:         var(--th-stone-500);
+  --min-line:          rgba(15, 20, 30, 0.10);
+  --min-line-strong:   rgba(15, 20, 30, 0.18);
+  --min-accent:        var(--th-clay-600);
+  --min-accent-2:      var(--th-clay-700);
+  --min-accent-soft:   rgba(70, 106, 66, 0.10);
+  --min-accent-focus:  rgba(70, 106, 66, 0.32);
+  --min-danger:        var(--th-rust-500);
+  /* Light-mode attention — vivid burnt orange. Reads as alert on
+     paper without going earth-brown. */
+  --min-attn:          #D4571A;
+  --min-attn-soft:     rgba(212, 87, 26, 0.10);
+  --min-attn-ring:     rgba(212, 87, 26, 0.32);
+  /* Primary button on light = dark fill + light text; hover darkens. */
+  --min-primary-hover: #0D0F14;
+  --min-shadow-sm:     0 1px 2px rgba(15, 20, 30, 0.06);
+  --min-shadow:        0 4px 12px -3px rgba(15, 20, 30, 0.10),
+                       0 1px 3px rgba(15, 20, 30, 0.06);
+  --min-shadow-lg:     0 12px 26px -6px rgba(15, 20, 30, 0.16),
+                       0 4px 10px rgba(15, 20, 30, 0.08);
 }

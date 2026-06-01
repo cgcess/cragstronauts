@@ -47,8 +47,11 @@ if (!isSafari) {
 // Restore the user's theme choice before the first paint so we don't
 // flash the default palette on every load. The ThemeToggle component
 // owns the runtime state; this is just the persistence hand-off.
-if (localStorage.getItem("cragstronauts.theme") === "party") {
-  document.documentElement.classList.add("theme-party");
+{
+  const t = localStorage.getItem("cragstronauts.theme");
+  if (t === "light") document.documentElement.classList.add("theme-light");
+  else if (t === "party") document.documentElement.classList.add("theme-party");
+  // "dark" = no class (it's the :root default).
 }
 
 const router = createBrowserRouter([

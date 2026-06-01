@@ -8,37 +8,62 @@
    ============================================================ */
 
 :root {
-  /* Dark, warm — sleek, no glass.  Same structure as the light variant;
-     palette lifted enough that drop shadows actually register and cards
-     can stand off the page without a border. */
-  --min-canvas:        #1c1814;       /* page — warm dark gray, lifted so shadows show */
-  --min-canvas-2:      #15110e;       /* sunk well */
-  --min-surface:       #2a241e;       /* cards — clearly above canvas */
-  --min-surface-2:     #322c24;       /* hover / panel */
-  --min-ink:           #f0eadc;       /* primary text */
-  --min-ink-2:         #bdb6a8;       /* secondary */
-  --min-ink-3:         #8d867a;       /* tertiary / labels */
-  --min-line:          #3a3329;       /* hairline (used only for inputs/fab/nav) */
-  --min-line-strong:   #4a4239;
-  --min-accent:        #9bb792;       /* brand green, lifted for dark */
-  --min-accent-2:      #c2d2bb;
-  --min-accent-soft:   rgba(155, 183, 146, 0.16);
-  --min-accent-focus:  rgba(155, 183, 146, 0.40);
-  --min-danger:        #e36b56;
+  /* Default = dark mode.  Cool charcoal (subtle blue undertone), not
+     the old warm brown. Surfaces stepped so drop-shadows lift; sage
+     green accent that reads on dark without going neon. */
+  --min-canvas:        #0f1115;       /* page */
+  --min-canvas-2:      #161922;       /* sunk well */
+  --min-surface:       #1c1f29;       /* cards */
+  --min-surface-2:     #252935;       /* hover / panel */
+  --min-ink:           #e8eaf0;       /* primary text */
+  --min-ink-2:         #b0b5c2;       /* secondary */
+  --min-ink-3:         #7d8290;       /* tertiary / labels */
+  --min-line:          #2a2e3a;       /* hairline */
+  --min-line-strong:   #3a3f4d;
+  --min-accent:        #6dc592;       /* brand green, bright for dark */
+  --min-accent-2:      #92dab1;
+  --min-accent-soft:   rgba(109, 197, 146, 0.16);
+  --min-accent-focus:  rgba(109, 197, 146, 0.42);
+  --min-danger:        #f06464;
   /* Attention / "action needed" — amber, distinct from brand green
-     (good/done/on) and danger coral. Carries urgency on flags + card tints. */
-  --min-attn:          #e6a850;
-  --min-attn-soft:     rgba(230, 168, 80, 0.14);
-  --min-attn-ring:     rgba(230, 168, 80, 0.34);
-  --min-primary-hover: #ddd6c5;
-  /* Small shadow — for nav pills, fab base, inputs. */
+     (good/done/on) and danger coral. */
+  --min-attn:          #f1b454;
+  --min-attn-soft:     rgba(241, 180, 84, 0.16);
+  --min-attn-ring:     rgba(241, 180, 84, 0.36);
+  --min-primary-hover: #d5d8e0;
   --min-shadow-sm:     0 1px 2px rgba(0, 0, 0, 0.55);
-  /* Card shadow — two stops: tight bottom edge + soft diffuse lift. */
   --min-shadow:        0 6px 16px -4px rgba(0, 0, 0, 0.55),
-                       0 2px 4px rgba(0, 0, 0, 0.4);
-  /* Heroes / hovered cards / open dash cards. */
-  --min-shadow-lg:     0 14px 32px -8px rgba(0, 0, 0, 0.7),
-                       0 4px 10px rgba(0, 0, 0, 0.4);
+                       0 2px 4px rgba(0, 0, 0, 0.40);
+  --min-shadow-lg:     0 14px 32px -8px rgba(0, 0, 0, 0.70),
+                       0 4px 10px rgba(0, 0, 0, 0.40);
+}
+
+/* ---------- Light mode (html.theme-light) --------------------------- */
+html.theme-light {
+  --min-canvas:        #f4f5f7;
+  --min-canvas-2:      #e8eaee;
+  --min-surface:       #ffffff;
+  --min-surface-2:     #f0f1f4;
+  --min-ink:           #1a1d23;
+  --min-ink-2:         #5a5f6d;
+  --min-ink-3:         #8a8f9c;
+  --min-line:          #e3e5ea;
+  --min-line-strong:   #c8ccd4;
+  --min-accent:        #2e6b48;
+  --min-accent-2:      #1f4f33;
+  --min-accent-soft:   rgba(46, 107, 72, 0.10);
+  --min-accent-focus:  rgba(46, 107, 72, 0.32);
+  --min-danger:        #c8341e;
+  --min-attn:          #b07a18;
+  --min-attn-soft:     rgba(176, 122, 24, 0.10);
+  --min-attn-ring:     rgba(176, 122, 24, 0.30);
+  /* Primary button on light = dark fill + light text; hover darkens. */
+  --min-primary-hover: #0d0f14;
+  --min-shadow-sm:     0 1px 2px rgba(15, 20, 30, 0.06);
+  --min-shadow:        0 4px 12px -3px rgba(15, 20, 30, 0.10),
+                       0 1px 3px rgba(15, 20, 30, 0.06);
+  --min-shadow-lg:     0 12px 26px -6px rgba(15, 20, 30, 0.16),
+                       0 4px 10px rgba(15, 20, 30, 0.08);
 }
 
 /* ---------- Canvas & background photo ---------- */
@@ -383,7 +408,18 @@ input:focus, textarea:focus, select:focus {
 }
 .fl-hero__countdown-label { color: var(--min-ink-3) !important; }
 .fl-hero__accent-glow { display: none !important; }
-.fl-hero__cta { color: var(--min-ink-2) !important; }
+/* Hero "Open trip" CTA — inverted neutral pill so text contrast is
+   guaranteed in every mode. Light fill on dark / dark fill on light;
+   muted surface for past trips with mid-tone text. */
+.fl-hero__cta {
+  background: var(--min-ink) !important;
+  color: var(--min-surface) !important;
+  border: 0 !important;
+}
+.fl-hero--past .fl-hero__cta {
+  background: var(--min-surface-2) !important;
+  color: var(--min-ink-2) !important;
+}
 
 .fl-empty,
 .fl-empty__title,

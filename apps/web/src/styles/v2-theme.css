@@ -854,7 +854,8 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.sheet__close {
+.sheet__close,
+.sheet__back {
   flex: 0 0 auto;
   width: 32px;
   height: 32px;
@@ -868,7 +869,12 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   font-size: 13px;
   cursor: pointer;
 }
-.sheet__close:hover {
+.sheet__back {
+  font-size: 17px;
+  line-height: 1;
+}
+.sheet__close:hover,
+.sheet__back:hover {
   background: var(--fl-surface-2);
   color: var(--fl-fg);
 }

@@ -2440,6 +2440,18 @@ function ExpensesBody({
         {settleTarget && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {error && <div className="error-banner">{error}</div>}
+            <div style={{
+              display: "flex", gap: 10, padding: "10px 12px",
+              borderRadius: 8, background: "rgba(255, 180, 50, 0.1)",
+              border: "1px solid rgba(255, 180, 50, 0.25)",
+              fontSize: 13, lineHeight: 1.45, color: "var(--min-ink)",
+            }}>
+              <span style={{ flexShrink: 0, fontSize: 16 }} aria-hidden="true">⚠️</span>
+              <span>
+                This doesn&apos;t send money — it just records that you&apos;ve already paid.
+                Make sure you&apos;ve transferred the money (Revolut, bank, cash, etc.) before confirming.
+              </span>
+            </div>
             <p className="muted" style={{ margin: 0 }}>
               Record a payment from you to{" "}
               <strong style={{ color: "var(--min-ink)" }}>{settleTarget.to_name}</strong>.
@@ -2469,7 +2481,7 @@ function ExpensesBody({
               >
                 {settleBusy
                   ? "Settling…"
-                  : `Pay ${settleTarget.to_name} ${formatCents(
+                  : `I've paid ${settleTarget.to_name} ${formatCents(
                       Math.round((parseFloat(settleAmount) || 0) * 100)
                     )}`}
               </button>

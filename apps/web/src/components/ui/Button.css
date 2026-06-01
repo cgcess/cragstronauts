@@ -81,6 +81,20 @@
   transform: translateY(1px);
 }
 
+/* ---- fill: solid neutral secondary (no outline) ---- */
+.th-btn--fill {
+  background: var(--surface-3);
+  color: var(--text);
+}
+.th-btn--fill:hover {
+  background: color-mix(in srgb, var(--surface-3) 86%, var(--text) 14%);
+  transform: translateY(-1px);
+}
+.th-btn--fill:active {
+  background: color-mix(in srgb, var(--surface-3) 78%, var(--text) 22%);
+  transform: translateY(1px);
+}
+
 /* ---- tertiary ---- */
 .th-btn--tertiary {
   color: var(--text-muted);

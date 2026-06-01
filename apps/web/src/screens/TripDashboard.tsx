@@ -1791,7 +1791,7 @@ function GearBody({
   };
 
   return (
-    <div>
+    <div className="gear-sheet">
       {error && <div className="error-banner">{error}</div>}
       {categories.length === 0 && (
         <p className="muted">
@@ -1801,7 +1801,8 @@ function GearBody({
         </p>
       )}
 
-      {categories.map((cat) => (
+      <div className="gear-sheet__sections">
+        {categories.map((cat) => (
         <div className="card" key={cat.id}>
           <div className="row between">
             <div style={{ fontWeight: 600 }}>{cat.name}</div>
@@ -1882,7 +1883,7 @@ function GearBody({
             </div>
           ) : (
             <button
-              className="th-btn th-btn--secondary"
+              className="th-btn th-btn--fill"
               onClick={() => {
                 setAddingFor(cat.id);
                 setValues({});
@@ -1893,7 +1894,8 @@ function GearBody({
             </button>
           )}
         </div>
-      ))}
+        ))}
+      </div>
 
       {isOrganizer && (
         addingCategory ? (
@@ -1927,7 +1929,7 @@ function GearBody({
           </div>
         ) : (
           <button
-            className="th-btn th-btn--secondary"
+            className="th-btn th-btn--fill"
             onClick={() => setAddingCategory(true)}
             style={{ marginTop: 10 }}
           >

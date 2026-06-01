@@ -154,6 +154,25 @@ input:focus, textarea:focus, select:focus {
   color: var(--min-ink);
 }
 
+/* ---------- Gear sheet: grouped flat sections ---------- */
+/* Drop the float shadow on every card in the gear sheet. */
+.gear-sheet .card {
+  box-shadow: none !important;
+}
+/* Stack the category sections as one tight group; tell each apart with a
+   gently alternating surface tint instead of a drop shadow. */
+.gear-sheet__sections > .card {
+  margin: 0 0 8px !important;
+  border: 1px solid var(--min-line) !important;
+  border-radius: 14px !important;
+}
+.gear-sheet__sections > .card:last-child {
+  margin-bottom: 0 !important;
+}
+.gear-sheet__sections > .card:nth-child(even) {
+  background: var(--min-surface-2) !important;
+}
+
 /* ---------- Expenses: balance hero + per-person rows ---------- */
 .exp-hero {
   text-align: center;

@@ -1597,13 +1597,14 @@ function CarsBody({
   };
 
   return (
-    <div>
+    <div className="sheet-flat">
       {error && <div className="error-banner">{error}</div>}
       {cars.length === 0 && (
         <p className="muted">No cars yet. Be the first to offer a ride!</p>
       )}
 
-      {cars.map((c) => {
+      <div className="sheet-sections">
+        {cars.map((c) => {
         const passengerCount = c.passengers.length;
         const passengerCapacity = Math.max(0, c.total_seats - 1);
         const empty = passengerCapacity - passengerCount;
@@ -1681,6 +1682,7 @@ function CarsBody({
           </div>
         );
       })}
+      </div>
 
       {!myCar && !adding && (
         <button className="th-btn th-btn--secondary" onClick={() => setAdding(true)} style={{ marginTop: 12 }}>
@@ -1793,7 +1795,7 @@ function GearBody({
   };
 
   return (
-    <div className="gear-sheet">
+    <div className="sheet-flat">
       {error && <div className="error-banner">{error}</div>}
       {categories.length === 0 && (
         <p className="muted">
@@ -1803,7 +1805,7 @@ function GearBody({
         </p>
       )}
 
-      <div className="gear-sheet__sections">
+      <div className="sheet-sections">
         {categories.map((cat) => (
         <div className="card" key={cat.id}>
           <div className="row between">
@@ -1931,7 +1933,7 @@ function GearBody({
           </div>
         ) : (
           <button
-            className="th-btn th-btn--fill"
+            className="th-btn th-btn--primary th-btn--full"
             onClick={() => setAddingCategory(true)}
             style={{ marginTop: 10 }}
           >
@@ -2305,7 +2307,7 @@ function ExpensesBody({
 
   // ---- Root list view ----
   const listPanel = (
-    <div>
+    <div className="sheet-flat">
       {error && <div className="error-banner">{error}</div>}
 
       {/* Net balance hero */}

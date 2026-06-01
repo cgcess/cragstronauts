@@ -980,10 +980,12 @@ function HeroWeatherChip({
       onClick={onOpen}
       aria-label={`Weather: ${label}. Tap for the full forecast.`}
     >
-      <span className="fl-weather__icon" aria-hidden="true">
-        {icon}
+      <span className="fl-weather__main">
+        <span className="fl-weather__icon" aria-hidden="true">
+          {icon}
+        </span>
+        {temps}
       </span>
-      {temps}
       <span className="fl-weather__sub">{label}</span>
     </button>
   );

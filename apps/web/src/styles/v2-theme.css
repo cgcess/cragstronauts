@@ -264,7 +264,9 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   appearance: none;
   -webkit-tap-highlight-color: transparent;
 }
-.fl-trip-card:hover { background: var(--fl-surface-3); border-color: rgba(255,255,255,0.1); }
+@media (hover: hover) {
+  .fl-trip-card:hover { background: var(--fl-surface-3); border-color: rgba(255,255,255,0.1); }
+}
 .fl-trip-card:focus-visible { outline: 2px solid var(--fl-accent-ring); outline-offset: 2px; }
 .fl-trip-card--past { filter: saturate(0.6); }
 
@@ -340,7 +342,9 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   -webkit-tap-highlight-color: transparent;
   font-family: var(--fl-font-body);
 }
-.fl-hero:hover { border-color: rgba(255,255,255,0.12); }
+@media (hover: hover) {
+  .fl-hero:hover { border-color: rgba(255,255,255,0.12); }
+}
 .fl-hero__top {
   display: flex; align-items: center; gap: 10px;
   color: var(--fl-fg-3); font-size: 11px;
@@ -464,7 +468,7 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   font-weight: 800;
   font-size: 36px;
   line-height: 1.05; letter-spacing: -0.02em;
-  margin: 0 0 6px;
+  margin: 0 0 16px;
   color: var(--fl-fg);
 }
 .fl-detail-hero__dates {
@@ -493,9 +497,11 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   transition: border-color 160ms var(--fl-ease-out),
     color 160ms var(--fl-ease-out);
 }
-.fl-detail-hero__edit:hover {
-  border-color: var(--fl-accent-ring);
-  color: var(--fl-fg);
+@media (hover: hover) {
+  .fl-detail-hero__edit:hover {
+    border-color: var(--fl-accent-ring);
+    color: var(--fl-fg);
+  }
 }
 
 /* Inline editable hero title (matches .fl-detail-hero__title typography). */
@@ -538,9 +544,11 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   width: auto;
   min-width: 0;
 }
-.fl-detail-hero__dates-edit .date-range-input:hover {
-  border-color: var(--fl-accent-ring);
-  color: var(--fl-fg);
+@media (hover: hover) {
+  .fl-detail-hero__dates-edit .date-range-input:hover {
+    border-color: var(--fl-accent-ring);
+    color: var(--fl-fg);
+  }
 }
 .fl-detail-hero__dates-edit .date-range-input.is-filled {
   color: var(--fl-fg-2);
@@ -638,8 +646,10 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   box-shadow: none;
   cursor: pointer;
 }
-.fl-detail-hero__logistics-item--action:hover .fl-detail-hero__logistics-detail {
-  color: var(--fl-fg);
+@media (hover: hover) {
+  .fl-detail-hero__logistics-item--action:hover .fl-detail-hero__logistics-detail {
+    color: var(--fl-fg);
+  }
 }
 .fl-detail-hero__logistics-detail {
   font-size: 14px;
@@ -681,9 +691,11 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
     background 160ms var(--fl-ease-out),
     transform 120ms var(--fl-ease-out);
 }
-.fl-hero-action:hover {
-  border-color: var(--fl-accent-ring);
-  background: rgba(255, 255, 255, 0.07);
+@media (hover: hover) {
+  .fl-hero-action:hover {
+    border-color: var(--fl-accent-ring);
+    background: rgba(255, 255, 255, 0.07);
+  }
 }
 .fl-hero-action:active {
   transform: translateY(1px);
@@ -711,20 +723,27 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 2px;
   padding: 10px 12px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--fl-divider);
   min-width: 96px;
-  text-align: right;
+  text-align: left;
   font-family: var(--fl-font-body);
+}
+/* Icon + temps share one row (icon to the left of the temperature). */
+.fl-weather__main {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
 }
 .fl-weather__icon {
   font-size: 28px;
   line-height: 1;
-  margin-bottom: 2px;
+  margin-bottom: 0;
   filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
 }
 .fl-weather__temps {
@@ -769,9 +788,11 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   transition: transform 0.15s var(--fl-ease-out),
     border-color 0.15s var(--fl-ease-out), background 0.15s var(--fl-ease-out);
 }
-.fl-weather--btn:hover {
-  border-color: var(--fl-accent-ring);
-  background: rgba(255, 255, 255, 0.06);
+@media (hover: hover) {
+  .fl-weather--btn:hover {
+    border-color: var(--fl-accent-ring);
+    background: rgba(255, 255, 255, 0.06);
+  }
 }
 .fl-weather--btn:active {
   transform: scale(0.97);
@@ -873,10 +894,12 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   font-size: 17px;
   line-height: 1;
 }
-.sheet__close:hover,
-.sheet__back:hover {
-  background: var(--fl-surface-2);
-  color: var(--fl-fg);
+@media (hover: hover) {
+  .sheet__close:hover,
+  .sheet__back:hover {
+    background: var(--fl-surface-2);
+    color: var(--fl-fg);
+  }
 }
 .sheet__body {
   flex: 1 1 auto;
@@ -963,7 +986,9 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   background: var(--fl-accent-soft);
 }
 .dash-card__head { color: var(--fl-fg); }
-.dash-card__head:hover { background: rgba(255, 255, 255, 0.02); }
+@media (hover: hover) {
+  .dash-card__head:hover { background: rgba(255, 255, 255, 0.02); }
+}
 .dash-card__title { color: var(--fl-fg); }
 .dash-card__flag {
   color: var(--fl-accent);
@@ -998,7 +1023,9 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   color: var(--fl-fg);
   border-color: var(--fl-divider);
 }
-.date-range-input:hover { border-color: var(--fl-accent-ring); }
+@media (hover: hover) {
+  .date-range-input:hover { border-color: var(--fl-accent-ring); }
+}
 .date-range-input:focus-visible {
   border-color: var(--fl-accent);
   box-shadow: 0 0 0 3px var(--fl-accent-soft);
@@ -1019,9 +1046,11 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
 
 /* Calendar — react-day-picker (rdp) cells */
 .rdp-day_button { color: var(--fl-fg); }
-.rdp-day_button:hover {
-  background: var(--fl-surface-3);
-  color: var(--fl-fg);
+@media (hover: hover) {
+  .rdp-day_button:hover {
+    background: var(--fl-surface-3);
+    color: var(--fl-fg);
+  }
 }
 .rdp-day_disabled .rdp-day_button { color: var(--fl-fg-mute); }
 .rdp-weekday { color: var(--fl-fg-3); }
@@ -1031,8 +1060,10 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   background: var(--fl-accent-soft);
   color: var(--fl-fg);
 }
-.rdp-range_middle .rdp-day_button:hover {
-  background: var(--fl-accent-ring);
+@media (hover: hover) {
+  .rdp-range_middle .rdp-day_button:hover {
+    background: var(--fl-accent-ring);
+  }
 }
 
 /* Anchor pills — the "Airbnb dark circle" becomes the stone accent */
@@ -1041,14 +1072,18 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   background: var(--fl-accent);
   color: var(--fl-bg);
 }
-.rdp-range_start .rdp-day_button:hover { background: var(--fl-accent); }
+@media (hover: hover) {
+  .rdp-range_start .rdp-day_button:hover { background: var(--fl-accent); }
+}
 
 .rdp-range_end .rdp-day_button {
   background: var(--fl-surface);
   color: var(--fl-fg);
   box-shadow: inset 0 0 0 2px var(--fl-accent);
 }
-.rdp-range_end .rdp-day_button:hover { background: var(--fl-surface); }
+@media (hover: hover) {
+  .rdp-range_end .rdp-day_button:hover { background: var(--fl-surface); }
+}
 
 /* ============================================================
    Wizard step indicator + misc bits
@@ -1109,27 +1144,33 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
     0 2px 4px rgba(0, 0, 0, 0.4),
     0 10px 24px -10px rgba(0, 0, 0, 0.6);
 }
-.swipe-actions .action-btn:hover:not(:disabled) {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 4px 10px rgba(0, 0, 0, 0.45),
-    0 14px 28px -10px rgba(0, 0, 0, 0.7);
+@media (hover: hover) {
+  .swipe-actions .action-btn:hover:not(:disabled) {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.05),
+      0 4px 10px rgba(0, 0, 0, 0.45),
+      0 14px 28px -10px rgba(0, 0, 0, 0.7);
+  }
 }
 .swipe-actions .action-btn.no {
   color: var(--fl-danger);
   border-color: rgba(255, 107, 107, 0.4);
 }
-.swipe-actions .action-btn.no:hover:not(:disabled) {
-  background: var(--fl-danger);
-  color: #fff;
-  border-color: var(--fl-danger);
+@media (hover: hover) {
+  .swipe-actions .action-btn.no:hover:not(:disabled) {
+    background: var(--fl-danger);
+    color: #fff;
+    border-color: var(--fl-danger);
+  }
 }
 .swipe-actions .action-btn.yes {
   color: var(--fl-accent);
   border-color: var(--fl-accent-ring);
 }
-.swipe-actions .action-btn.yes:hover:not(:disabled) {
-  background: var(--fl-accent);
-  color: var(--fl-bg);
-  border-color: var(--fl-accent);
+@media (hover: hover) {
+  .swipe-actions .action-btn.yes:hover:not(:disabled) {
+    background: var(--fl-accent);
+    color: var(--fl-bg);
+    border-color: var(--fl-accent);
+  }
 }

@@ -1503,13 +1503,11 @@ function RosterBody({
   const out = users.filter((u) => !u.joining);
   const [error, setError] = useState<string | null>(null);
 
-  const remove = async (userId: number, name: string) => {
-    if (
-      !confirm(
-        `Remove ${name} from the trip? Their car and gear contributions will also be removed.`
-      )
-    )
-      return;
+  const remove = async (userId: number, isSelf: boolean, name: string) => {
+    const message = isSelf
+      ? "Leave this trip? Your car and gear contributions will also be removed."
+      : `Remove ${name} from the trip? Their car and gear contributions will also be removed.`;
+    if (!confirm(message)) return;
     setError(null);
     try {
       await api.deleteUser(tripId, userId);
@@ -1519,43 +1517,58 @@ function RosterBody({
     }
   };
 
-  const renderRow = (u: typeof users[number], pill: React.ReactNode) => (
-    <div className="list-item" key={u.id}>
-      <span>
-        {u.name} {u.is_organizer && "👑"}
-        {u.id === currentUserId && <span className="muted"> (you)</span>}
-        {u.can_lead_belay && (
-          <Tag variant="moss" size="sm" style={{ marginLeft: 8 }} title="Lead belayer">
-            🛡 Lead belay
-          </Tag>
-        )}
-      </span>
-      <div className="row" style={{ gap: 6, alignItems: "center" }}>
-        {pill}
-        {isOrganizer && !u.is_organizer && u.id !== currentUserId && (
-          <button
-            className="th-btn th-btn--tertiary th-btn--icon th-btn--sm"
-            style={{ color: "var(--danger)" }}
-            onClick={() => remove(u.id, u.name)}
-            aria-label={`Remove ${u.name}`}
-          >
-            ✕
-          </button>
-        )}
+  const renderRow = (u: typeof users[number]) => {
+    const isSelf = u.id === currentUserId;
+    // One button per row: the organizer removes others; everyone else can
+    // leave their own row. The organizer can't remove themselves (they'd
+    // transfer ownership first), so their own row has no action yet.
+    const canRemove = isOrganizer && !u.is_organizer && !isSelf;
+    const canLeave = isSelf && !u.is_organizer;
+    return (
+      <div className="list-item" key={u.id}>
+        <span>
+          {u.name} {u.is_organizer && "👑"}
+          {isSelf && <span className="muted"> (you)</span>}
+          {u.can_lead_belay && (
+            <Tag variant="moss" size="sm" style={{ marginLeft: 8 }} title="Lead belayer">
+              🛡 Lead belay
+            </Tag>
+          )}
+        </span>
+        <div className="row" style={{ gap: 6, alignItems: "center" }}>
+          {canRemove && (
+            <button
+              className="th-btn th-btn--danger th-btn--sm"
+              onClick={() => remove(u.id, false, u.name)}
+              aria-label={`Remove ${u.name} from the trip`}
+            >
+              ⊖ Remove
+            </button>
+          )}
+          {canLeave && (
+            <button
+              className="th-btn th-btn--secondary th-btn--sm"
+              onClick={() => remove(u.id, true, u.name)}
+              aria-label="Leave this trip"
+            >
+              ↦ Leave
+            </button>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <>
       {error && <div className="error-banner">{error}</div>}
-      {joining.map((u) => renderRow(u, <Tag variant="moss">Going</Tag>))}
+      {joining.map((u) => renderRow(u))}
       {out.length > 0 && (
         <>
           <div className="muted" style={{ marginTop: 8 }}>
             Not joining
           </div>
-          {out.map((u) => renderRow(u, <Tag variant="neutral">Out</Tag>))}
+          {out.map((u) => renderRow(u))}
         </>
       )}
     </>

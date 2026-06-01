@@ -17,6 +17,9 @@ import "./styles/minimalist.css";
 // Trailhead design tokens — imported LAST so its semantic + legacy-bridge
 // variables win the cascade and re-skin the whole app to the new palette.
 import "./styles/tokens.css";
+// Party mode override — scopes everything under html.theme-party so the
+// normal theme is untouched until the user flips the toggle.
+import "./styles/party-theme.css";
 
 // SVG-backdrop-filter capability probe.
 //
@@ -39,6 +42,13 @@ const ua = navigator.userAgent;
 const isSafari = /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(ua);
 if (!isSafari) {
   document.documentElement.classList.add("has-svg-glass");
+}
+
+// Restore the user's theme choice before the first paint so we don't
+// flash the default palette on every load. The ThemeToggle component
+// owns the runtime state; this is just the persistence hand-off.
+if (localStorage.getItem("cragstronauts.theme") === "party") {
+  document.documentElement.classList.add("theme-party");
 }
 
 const router = createBrowserRouter([

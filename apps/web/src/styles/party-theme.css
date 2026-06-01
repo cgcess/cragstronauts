@@ -1,0 +1,144 @@
+/* ============================================================
+   Party mode.
+   Loaded LAST. All rules scope under html.theme-party, so the
+   normal theme is untouched until the toggle flips. Same surface
+   structure as minimalist — palette vars are overridden and a few
+   targeted accents (gradient hero text, neon shadows, animated
+   canvas wash) layer on top.
+   ============================================================ */
+
+html.theme-party {
+  --min-canvas:        #150027;
+  --min-canvas-2:      #240744;
+  --min-surface:       #2f0c5a;
+  --min-surface-2:     #421b78;
+  --min-ink:           #fff5fb;
+  --min-ink-2:         #ffc8e8;
+  --min-ink-3:         #c79bd8;
+  --min-line:          #6a2da3;
+  --min-line-strong:   #8a47cf;
+  --min-accent:        #ff2bd6;       /* hot magenta */
+  --min-accent-2:      #ff7bdb;
+  --min-accent-soft:   rgba(255, 43, 214, 0.22);
+  --min-accent-focus:  rgba(255, 43, 214, 0.45);
+  --min-danger:        #ff5252;
+  --min-primary-hover: #ffe4f7;
+  --min-shadow-sm:     0 0 10px rgba(255, 43, 214, 0.40);
+  --min-shadow:        0 10px 24px -6px rgba(255, 43, 214, 0.45),
+                       0 2px 6px rgba(0, 200, 255, 0.30);
+  --min-shadow-lg:     0 18px 40px -8px rgba(255, 43, 214, 0.55),
+                       0 6px 14px rgba(0, 200, 255, 0.30);
+}
+
+/* Multi-spot gradient wash on the canvas — feels like club lighting. */
+html.theme-party,
+html.theme-party body,
+html.theme-party #root {
+  background:
+    radial-gradient(40% 35% at 20% 12%, rgba(255, 43, 214, 0.28), transparent 70%),
+    radial-gradient(45% 35% at 82% 18%, rgba(0, 200, 255, 0.22), transparent 70%),
+    radial-gradient(50% 40% at 50% 95%, rgba(255, 215, 0, 0.18), transparent 75%),
+    var(--min-canvas) !important;
+  background-attachment: fixed !important;
+}
+
+/* Marquee-style gradient on headings. */
+html.theme-party .h1,
+html.theme-party .fl-hero__title,
+html.theme-party .fl-detail-hero__title {
+  background: linear-gradient(90deg, #ff2bd6, #ffb800, #00d4ff, #ff2bd6);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+  animation: party-shimmer 6s linear infinite;
+}
+@keyframes party-shimmer {
+  from { background-position: 0% 0%; }
+  to   { background-position: 200% 0%; }
+}
+
+/* Primary buttons turn into neon. */
+html.theme-party button {
+  background: linear-gradient(180deg, #ff2bd6, #b510a5) !important;
+  color: #fff !important;
+  border-color: #ff2bd6 !important;
+  box-shadow: 0 0 14px rgba(255, 43, 214, 0.45) !important;
+}
+html.theme-party button:hover {
+  background: linear-gradient(180deg, #ff5be0, #d11dc4) !important;
+  box-shadow: 0 0 20px rgba(255, 91, 224, 0.6) !important;
+}
+
+/* Tiles get a candy backplate + neon hover. */
+html.theme-party .dash-tile {
+  background: linear-gradient(180deg, var(--min-surface), var(--min-surface-2)) !important;
+}
+html.theme-party .dash-tile:hover {
+  box-shadow:
+    0 0 0 1px rgba(255, 43, 214, 0.45),
+    0 14px 32px -8px rgba(0, 200, 255, 0.40),
+    0 4px 10px rgba(255, 43, 214, 0.35) !important;
+}
+html.theme-party .dash-card--urgent .dash-card__head {
+  background: rgba(255, 43, 214, 0.18) !important;
+}
+
+/* Lit dots / on-state pop in neon cyan against magenta. */
+html.theme-party .dash-tile__chip.is-on .dash-tile__dot {
+  color: #00ffd0 !important;
+  text-shadow: 0 0 6px rgba(0, 255, 208, 0.7);
+}
+html.theme-party .pill.accent {
+  background: linear-gradient(90deg, #ff2bd6, #00d4ff) !important;
+  color: #fff !important;
+  border: 0 !important;
+}
+
+/* Bottom sheet keeps the dark backdrop but the plate is candy. */
+html.theme-party .sheet {
+  background: linear-gradient(180deg, var(--min-surface), var(--min-surface-2)) !important;
+  box-shadow: 0 -16px 40px rgba(255, 43, 214, 0.45) !important;
+}
+
+/* The toggle button itself (theme-toggle styles defined below). */
+.theme-toggle {
+  position: fixed;
+  left: 16px;
+  bottom: calc(22px + env(safe-area-inset-bottom));
+  z-index: 60;
+  width: 42px;
+  height: 42px;
+  padding: 0 !important;
+  border-radius: 999px !important;
+  background: var(--min-surface) !important;
+  color: var(--min-ink) !important;
+  border: 1px solid var(--min-line) !important;
+  font-size: 20px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--min-shadow-sm) !important;
+  cursor: pointer;
+  transition: transform 120ms ease-out, background 160ms ease-out, box-shadow 160ms ease-out;
+}
+.theme-toggle:hover { background: var(--min-surface-2) !important; }
+.theme-toggle:active { transform: scale(0.94); }
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--min-accent-focus);
+  outline-offset: 3px;
+}
+
+html.theme-party .theme-toggle {
+  background: linear-gradient(135deg, #ff2bd6, #ffb800, #00d4ff) !important;
+  border: 0 !important;
+  color: #fff !important;
+  box-shadow: 0 0 14px rgba(255, 43, 214, 0.6) !important;
+  animation: party-pulse 1.6s ease-in-out infinite;
+}
+@keyframes party-pulse {
+  0%, 100% { box-shadow: 0 0 14px rgba(255, 43, 214, 0.6); }
+  50%      { box-shadow: 0 0 22px rgba(0, 212, 255, 0.7); }
+}

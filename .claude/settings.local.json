@@ -87,7 +87,23 @@
       "Bash(grep -nA 12 \"\\\\.bottom-cta\\\\b\" styles/v2-theme.css)",
       "Bash(grep -nA 14 \"\\\\.bottom-cta\\\\b\" styles.css)",
       "Bash(sed -n '170,195p' styles/v2-theme.css)",
-      "Bash(grep -nC 2 \"Plan new trip\\\\|+ New trip\\\\|onCreate\" screens/TripListing.tsx)"
+      "Bash(grep -nC 2 \"Plan new trip\\\\|+ New trip\\\\|onCreate\" screens/TripListing.tsx)",
+      "Bash(sed -n '1,40p' components/BottomSheet.tsx)",
+      "Bash(sed -n '1,200p' screens/TripDashboard.tsx)",
+      "Bash(grep -nA 8 \"^export const user\" apps/api/src/db/schema.ts)",
+      "Bash(grep -nA 10 \"^function formatUser\" apps/api/src/TripDO.ts)",
+      "Bash(sed -n '224,242p' apps/api/src/TripDO.ts)",
+      "Bash(sed -n '1,80p' apps/web/src/screens/SignupSwipe.tsx)",
+      "Bash(grep *)",
+      "Bash(awk '{print $2,$8,$9,$10}')",
+      "Bash(pkill -f turbo)",
+      "Bash(pkill -f wrangler)",
+      "Bash(pkill -f vite)",
+      "Bash(pkill -f workerd)",
+      "Bash(pkill -f esbuild)",
+      "Bash(awk '{print $2,$8,$9}')",
+      "Bash(curl -s -m 2 -o /dev/null -w \"vite=%{http_code} worker=\" http://localhost:3000/)",
+      "Bash(curl -s -m 2 -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8787/api/trips)"
     ]
   }
 }

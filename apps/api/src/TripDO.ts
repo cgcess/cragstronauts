@@ -223,6 +223,22 @@ export class TripDO extends DurableObject<Env> {
     return formatUser(updated);
   }
 
+  async makeOrganizer(userId: number): Promise<User> {
+    const target = this.db.get(user, { where: eq("id", userId) });
+    if (!target) throw new Error("User not found");
+    if (target.is_organizer) return formatUser(target);
+
+    // DO methods run single-threaded, so demote + promote land together.
+    const current = this.db.get(user, { where: eq("is_organizer", 1) });
+    if (current) {
+      this.db.update(user, { is_organizer: 0 }, { where: eq("id", current.id) });
+    }
+    this.db.update(user, { is_organizer: 1 }, { where: eq("id", userId) });
+
+    const updated = this.db.get(user, { where: eq("id", userId) })!;
+    return formatUser(updated);
+  }
+
   async updateUser(
     userId: number,
     data: { name?: string; joining?: boolean; can_lead_belay?: boolean }

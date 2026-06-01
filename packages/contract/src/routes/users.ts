@@ -89,6 +89,27 @@ export const completeSignupRoute = createRoute({
   },
 });
 
+export const makeOrganizerRoute = createRoute({
+  method: "post",
+  path: "/api/trips/{trip_id}/users/{user_id}/make-organizer",
+  summary: "Transfer trip ownership to a user",
+  request: { params: UserParamsSchema },
+  responses: {
+    200: {
+      content: { "application/json": { schema: UserSchema } },
+      description: "Ownership transferred to the user",
+    },
+    400: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Error",
+    },
+    404: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "User not found",
+    },
+  },
+});
+
 export const updateUserRoute = createRoute({
   method: "patch",
   path: "/api/trips/{trip_id}/users/{user_id}",

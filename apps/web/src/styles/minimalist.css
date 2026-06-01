@@ -25,6 +25,11 @@
   --min-accent-soft:   rgba(155, 183, 146, 0.16);
   --min-accent-focus:  rgba(155, 183, 146, 0.40);
   --min-danger:        #e36b56;
+  /* Attention / "action needed" — amber, distinct from brand green
+     (good/done/on) and danger coral. Carries urgency on flags + card tints. */
+  --min-attn:          #e6a850;
+  --min-attn-soft:     rgba(230, 168, 80, 0.14);
+  --min-attn-ring:     rgba(230, 168, 80, 0.34);
   --min-primary-hover: #ddd6c5;
   /* Small shadow — for nav pills, fab base, inputs. */
   --min-shadow-sm:     0 1px 2px rgba(0, 0, 0, 0.55);
@@ -658,11 +663,13 @@ input:focus, textarea:focus, select:focus {
   color: var(--min-ink-3) !important;
 }
 
-/* Tiny "action needed" pill, sized for the tile */
+/* Tiny "action needed" pill, sized for the tile — amber soft-fill so it
+   reads as "attention", consistent with the hero accommodation flag. */
 .dash-tile__flag {
   align-self: flex-start;
-  background: var(--min-accent) !important;
-  color: var(--min-surface) !important;
+  background: var(--min-attn-soft) !important;
+  color: var(--min-attn) !important;
+  box-shadow: inset 0 0 0 1px var(--min-attn-ring);
   border-radius: 4px;
   padding: 2px 6px;
   font-size: 9px;
@@ -671,7 +678,30 @@ input:focus, textarea:focus, select:focus {
   text-transform: uppercase;
 }
 
-/* Urgent tile — subtle green-tinted backplate, no glow */
+/* Urgent tile — whole-card warm amber tint + edge ring. Green blends with
+   the brand-positive states (done/on), so amber carries the urgency. */
 .dash-tile--urgent {
-  background: linear-gradient(180deg, var(--min-accent-soft), var(--min-surface)) !important;
+  background: color-mix(in srgb, var(--min-attn) 12%, var(--min-surface)) !important;
+  box-shadow: var(--min-shadow), inset 0 0 0 1px var(--min-attn-ring) !important;
+}
+.dash-tile--urgent:hover {
+  background: color-mix(in srgb, var(--min-attn) 17%, var(--min-surface)) !important;
+  box-shadow: var(--min-shadow-lg), inset 0 0 0 1px var(--min-attn-ring) !important;
+}
+
+/* Hero accommodation "action needed" — v2-theme styled this with the old
+   taupe accent + outline; pull it onto the same amber attention treatment. */
+.fl-detail-hero__flag {
+  color: var(--min-attn) !important;
+  background: var(--min-attn-soft) !important;
+  box-shadow: inset 0 0 0 1px var(--min-attn-ring) !important;
+}
+.fl-detail-hero__logistics-item--action {
+  background: color-mix(in srgb, var(--min-attn) 10%, transparent) !important;
+  box-shadow: inset 0 0 0 1px var(--min-attn-ring) !important;
+  border-radius: 12px !important;
+  padding: 10px 12px !important;
+}
+.fl-detail-hero__logistics-item--action:hover {
+  background: color-mix(in srgb, var(--min-attn) 15%, transparent) !important;
 }

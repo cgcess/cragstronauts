@@ -40,18 +40,6 @@ export const CreateExpenseBodySchema = z.discriminatedUnion("split_mode", [
     is_settlement: z.boolean().optional(),
   }),
 ]);
-
-/** Backwards-compatible body: accepts old format (no split_mode) as equal. */
-export const CreateExpenseBodyCompatSchema = z.union([
-  CreateExpenseBodySchema,
-  z.object({
-    payer_user_id: z.number(),
-    amount_cents: z.number().int().min(1),
-    description: z.string().min(1),
-    split_user_ids: z.array(z.number()).min(1),
-  }),
-]);
-
 /** Update body — same shape as create (full replacement semantics). */
 export const UpdateExpenseBodySchema = CreateExpenseBodySchema;
 
@@ -62,5 +50,4 @@ export const SettlementSchema = z.object({
   to_name: z.string(),
   amount_cents: z.number(),
 });
-
 

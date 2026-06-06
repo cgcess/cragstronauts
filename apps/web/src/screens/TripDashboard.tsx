@@ -340,7 +340,7 @@ export default function TripDashboard() {
   };
 
   const shareTrip = async () => {
-    const url = window.location.href;
+    const url = `${window.location.origin}/trips/${tripId}`;
     if (navigator.share) {
       try {
         await navigator.share({
@@ -364,7 +364,8 @@ export default function TripDashboard() {
   };
 
   const addToCalendar = () => {
-    const ics = buildTripIcs(trip, window.location.href);
+    const url = `${window.location.origin}/trips/${tripId}`;
+    const ics = buildTripIcs(trip, url);
     if (!ics) return;
     openCalendarFile(`${slugify(trip.location)}.ics`, ics);
   };

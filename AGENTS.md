@@ -33,4 +33,4 @@ These same checks run in CI on every push to main and on PRs.
 ## Resetting local state
 
 - Delete `apps/api/.wrangler/` to wipe the local database.
-- Clear `climbingTrip.userId` and `climbingTrip.signupDone.*` from localStorage to switch user.
+- Clear `climbingTrip.userId` from localStorage to switch user. Identity is created lazily on the first write (joining a car, adding gear, adding an expense) via the "who are you?" sheet — there is no separate signup step.

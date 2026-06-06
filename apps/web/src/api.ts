@@ -38,7 +38,9 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
       const j = (await r.json()) as { detail?: string };
       detail = j.detail || JSON.stringify(j);
     } catch {}
-    throw new Error(`${r.status} ${detail}`);
+    // 4xx are user-facing domain errors with a meaningful detail message, so
+    // show it as-is. 5xx are unexpected — keep the status code to aid debugging.
+    throw new Error(r.status >= 500 ? `${r.status} ${detail}` : detail);
   }
   if (r.status === 204) return null as T;
   return r.json() as Promise<T>;

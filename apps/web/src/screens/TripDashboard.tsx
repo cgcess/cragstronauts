@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Navigate, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import type { DateRange } from "react-day-picker";
 import type { z } from "zod";
@@ -314,11 +314,13 @@ export default function TripDashboard() {
     categories,
     currentUserId,
     switchUser,
+    ensureUser,
     refresh,
     deleteTrip,
   } = useTripContext();
   const navigate = useNavigate();
-  const me = users.find((u) => u.id === currentUserId);
+  const me = users.find((u) => u.id === currentUserId) ?? null;
+  const isOrganizer = me?.is_organizer ?? false;
 
   const [cars, setCars] = useState<Car[]>([]);
   const [gear, setGear] = useState<Contribution[]>([]);
@@ -401,13 +403,9 @@ export default function TripDashboard() {
     trip.end_date
   );
 
-  // Guards (after hooks)
-  if (!currentUserId || !me) {
-    return <Navigate to={`/trips/${tripId}`} replace />;
-  }
-  if (!me.signup_completed) {
-    return <Navigate to={`/trips/${tripId}/signup`} replace />;
-  }
+  // No guards: the board is the default, fully-interactive view for everyone.
+  // `me`/`currentUserId` may be null (anonymous visitor). Write actions run
+  // ensureUser() to lazily establish identity on first interaction.
 
   // ---- Derived state for priority ----
   const joining = users.filter((u) => u.joining);
@@ -437,20 +435,25 @@ export default function TripDashboard() {
 
   const cards: CardDef[] = [];
 
-  // Cars — prominent if you have no ride.
-  const carsStatus = amInCar
+  // Cars — prominent if you (once identified) have no ride.
+  const carsStatus = !me
+    ? cars.length === 0
+      ? "No rides yet"
+      : `${cars.length} ${cars.length === 1 ? "car" : "cars"} offered`
+    : amInCar
     ? myCar
       ? "You're driving"
       : `Riding with ${ridingIn?.driver_name}`
     : cars.length === 0
     ? "No rides yet"
     : "You don't have a ride yet";
+  const carsUrgent = Boolean(me) && !amInCar;
   cards.push({
     id: "cars",
-    score: amInCar ? 35 : 110,
+    score: carsUrgent ? 110 : 35,
     icon: "🚗",
     title: "Rides",
-    urgent: !amInCar,
+    urgent: carsUrgent,
     badge: cars.length ? `${seatsFilled}/${seatsTotal}` : undefined,
     summary: (
       <>
@@ -477,13 +480,14 @@ export default function TripDashboard() {
         tripId={tripId}
         cars={cars}
         currentUserId={currentUserId}
+        ensureUser={ensureUser}
         onChanged={reload}
       />
     ),
   });
 
-  // Gear — prominent if you haven't claimed anything.
-  const gearUrgent = categories.length > 0 && myGear.length === 0;
+  // Gear — prominent if you (once identified) haven't claimed anything.
+  const gearUrgent = Boolean(me) && categories.length > 0 && myGear.length === 0;
   cards.push({
     id: "gear",
     score: gearUrgent ? 80 : 33,
@@ -532,7 +536,8 @@ export default function TripDashboard() {
         categories={categories}
         gear={gear}
         currentUserId={currentUserId}
-        isOrganizer={me.is_organizer}
+        ensureUser={ensureUser}
+        isOrganizer={isOrganizer}
         onChanged={reload}
       />
     ),
@@ -571,7 +576,7 @@ export default function TripDashboard() {
         tripId={tripId}
         users={users}
         currentUserId={currentUserId}
-        isOrganizer={me.is_organizer}
+        isOrganizer={isOrganizer}
         onChanged={reload}
       />
     ),
@@ -593,19 +598,20 @@ export default function TripDashboard() {
     icon: "💸",
     title: "Expenses",
     badge: expenses.length ? `${expenses.length}` : undefined,
-    urgent: myBalance < 0,
+    urgent: Boolean(me) && myBalance < 0,
     summary: (() => {
       if (expenses.length === 0) return "No expenses yet";
       const totalSpent = expenses.reduce(
         (sum, e) => sum + e.amount_cents,
         0
       );
-      const statusLine =
-        myBalance === 0
-          ? "You're settled up"
-          : myBalance > 0
-          ? `You're owed ${formatCents(myBalance)}`
-          : `You owe ${formatCents(-myBalance)}`;
+      const statusLine = !me
+        ? `${formatCents(totalSpent)} total`
+        : myBalance === 0
+        ? "You're settled up"
+        : myBalance > 0
+        ? `You're owed ${formatCents(myBalance)}`
+        : `You owe ${formatCents(-myBalance)}`;
       return (
         <>
           <span>{statusLine}</span>
@@ -624,6 +630,7 @@ export default function TripDashboard() {
         balances={balances}
         users={users}
         currentUserId={currentUserId}
+        ensureUser={ensureUser}
         view={expView}
         dir={expDir.current}
         onNav={navExp}
@@ -652,20 +659,28 @@ export default function TripDashboard() {
           <Button variant="secondary" pill onClick={() => navigate("/")}>
             ← Trips
           </Button>
-          <div className="glass-surface nav-cap">
-            <strong>{me.name}</strong>
-            {me.is_organizer && " 👑"}
-          </div>
-          <Button
-            variant="secondary"
-            pill
-            onClick={() => {
-              switchUser();
-              navigate(`/trips/${tripId}`);
-            }}
-          >
-            Switch
-          </Button>
+          {me ? (
+            <>
+              <div className="glass-surface nav-cap">
+                <strong>{me.name}</strong>
+                {me.is_organizer && " 👑"}
+              </div>
+              <Button
+                variant="secondary"
+                pill
+                onClick={() => {
+                  switchUser();
+                  navigate(`/trips/${tripId}`);
+                }}
+              >
+                Logout
+              </Button>
+            </>
+          ) : (
+            <Button variant="secondary" pill onClick={() => ensureUser()}>
+              Sign in
+            </Button>
+          )}
         </div>
       </div>
 
@@ -674,7 +689,7 @@ export default function TripDashboard() {
 
         {/* Weather-app hero: date / trip name / countdown / weather.
             Organizers edit title, dates & logistics inline here. */}
-        {editingHero && me.is_organizer ? (
+        {editingHero && isOrganizer ? (
           <HeroEdit
             trip={trip}
             tripId={tripId}
@@ -688,7 +703,7 @@ export default function TripDashboard() {
           />
         ) : (
         <div className={"fl-detail-hero" + (tripUpcoming ? "" : " fl-detail-hero--past")}>
-          {me.is_organizer && (
+          {isOrganizer && (
             <button
               className="fl-detail-hero__edit"
               onClick={() => setEditingHero(true)}
@@ -728,7 +743,7 @@ export default function TripDashboard() {
             </div>
             <HeroWeatherChip
               weather={weather}
-              isOrganizer={me.is_organizer}
+              isOrganizer={isOrganizer}
               onOpen={() => setWeatherSheetOpen(true)}
             />
           </div>
@@ -756,7 +771,7 @@ export default function TripDashboard() {
                   </div>
                 </div>
               ) : trip.start_date || trip.end_date ? (
-                me.is_organizer ? (
+                isOrganizer ? (
                   <button
                     type="button"
                     className="fl-detail-hero__logistics-item fl-detail-hero__logistics-item--action"
@@ -880,7 +895,7 @@ export default function TripDashboard() {
           weather={weather}
           trip={trip}
           tripId={tripId}
-          isOrganizer={me.is_organizer}
+          isOrganizer={isOrganizer}
           onChanged={reload}
         />
       </BottomSheet>
@@ -1521,7 +1536,7 @@ function RosterBody({
 }: {
   tripId: string;
   users: ReturnType<typeof useTripContext>["users"];
-  currentUserId: number;
+  currentUserId: number | null;
   isOrganizer: boolean;
   onChanged: () => Promise<void>;
 }) {
@@ -1529,6 +1544,17 @@ function RosterBody({
   const out = users.filter((u) => !u.joining);
   const [error, setError] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
+
+  // Lead-belay is never prompted; it's an optional self-toggle on your own row.
+  const toggleLeadBelay = async (userId: number, next: boolean) => {
+    setError(null);
+    try {
+      await api.updateUser(tripId, userId, { can_lead_belay: next });
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
 
   // Members the organizer can hand off to: anyone joining who isn't already organizer.
   const transferTargets = joining.filter((u) => !u.is_organizer);
@@ -1584,6 +1610,19 @@ function RosterBody({
           )}
         </span>
         <div className="row" style={{ gap: 6, alignItems: "center" }}>
+          {isSelf && (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={u.can_lead_belay}
+              className={`split-chip ${u.can_lead_belay ? "is-on" : ""}`}
+              onClick={() => toggleLeadBelay(u.id, !u.can_lead_belay)}
+              title="Toggle whether you can lead belay"
+            >
+              <span className="split-chip__box" aria-hidden="true">✓</span>
+              🛡 I can lead belay
+            </button>
+          )}
           {canRemove && (
             <button
               className="th-btn th-btn--danger th-btn--sm"
@@ -1671,11 +1710,13 @@ function CarsBody({
   tripId,
   cars,
   currentUserId,
+  ensureUser,
   onChanged,
 }: {
   tripId: string;
   cars: Car[];
-  currentUserId: number;
+  currentUserId: number | null;
+  ensureUser: () => Promise<number | null>;
   onChanged: () => Promise<void>;
 }) {
   const [adding, setAdding] = useState(false);
@@ -1688,8 +1729,10 @@ function CarsBody({
   const submitCar = async () => {
     setError(null);
     try {
+      const uid = await ensureUser();
+      if (uid == null) return;
       await api.createCar(tripId, {
-        driver_user_id: currentUserId,
+        driver_user_id: uid,
         total_seats: Number(seats),
         notes: notes.trim() || null,
       });
@@ -1771,7 +1814,9 @@ function CarsBody({
                       className="chip-x"
                       aria-label="Leave this car"
                       onClick={async () => {
-                        await api.carSignoff(tripId, c.id, currentUserId);
+                        const uid = await ensureUser();
+                        if (uid == null) return;
+                        await api.carSignoff(tripId, c.id, uid);
                         onChanged();
                       }}
                     >
@@ -1800,7 +1845,9 @@ function CarsBody({
                       return;
                     setError(null);
                     try {
-                      await api.carSignup(tripId, c.id, currentUserId, true);
+                      const uid = await ensureUser();
+                      if (uid == null) return;
+                      await api.carSignup(tripId, c.id, uid, true);
                       onChanged();
                     } catch (e) {
                       setError(e instanceof Error ? e.message : String(e));
@@ -1824,7 +1871,9 @@ function CarsBody({
                     }
                     setError(null);
                     try {
-                      await api.carSignup(tripId, c.id, currentUserId);
+                      const uid = await ensureUser();
+                      if (uid == null) return;
+                      await api.carSignup(tripId, c.id, uid);
                       onChanged();
                     } catch (e) {
                       setError(e instanceof Error ? e.message : String(e));
@@ -1842,7 +1891,15 @@ function CarsBody({
       </div>
 
       {!myCar && !adding && (
-        <button className="th-btn th-btn--secondary" onClick={() => setAdding(true)} style={{ marginTop: 12 }}>
+        <button
+          className="th-btn th-btn--secondary"
+          onClick={async () => {
+            const uid = await ensureUser();
+            if (uid == null) return;
+            setAdding(true);
+          }}
+          style={{ marginTop: 12 }}
+        >
           + Offer a ride
         </button>
       )}
@@ -1882,13 +1939,15 @@ function GearBody({
   categories,
   gear,
   currentUserId,
+  ensureUser,
   isOrganizer,
   onChanged,
 }: {
   tripId: string;
   categories: Category[];
   gear: Contribution[];
-  currentUserId: number;
+  currentUserId: number | null;
+  ensureUser: () => Promise<number | null>;
   isOrganizer: boolean;
   onChanged: () => Promise<void>;
 }) {
@@ -1938,8 +1997,10 @@ function GearBody({
   const addContribution = async (cat: Category) => {
     setError(null);
     try {
+      const uid = await ensureUser();
+      if (uid == null) return;
       await api.addGear(tripId, {
-        user_id: currentUserId,
+        user_id: uid,
         category_id: cat.id,
         details: values,
       });
@@ -2377,6 +2438,7 @@ function ExpensesBody({
   balances,
   users,
   currentUserId,
+  ensureUser,
   view,
   dir,
   onNav,
@@ -2386,7 +2448,8 @@ function ExpensesBody({
   expenses: Expense[];
   balances: Settlement[];
   users: ReturnType<typeof useTripContext>["users"];
-  currentUserId: number;
+  currentUserId: number | null;
+  ensureUser: () => Promise<number | null>;
   view: ExpView;
   dir: number;
   onNav: (v: ExpView) => void;
@@ -2420,15 +2483,26 @@ function ExpensesBody({
     0
   );
 
+  // Neutral copy for anonymous visitors (no "you owe / you're owed").
+  const totalSpent = realExpenses.reduce((s, e) => s + e.amount_cents, 0);
   const heroLabel =
     expenses.length === 0
       ? "No expenses yet"
+      : currentUserId == null
+      ? "Total spent"
       : net > 0
       ? "You're owed"
       : net < 0
       ? "You owe"
       : "You're all settled up";
-  const heroAmount = expenses.length === 0 || net === 0 ? null : formatCents(net);
+  const heroAmount =
+    expenses.length === 0
+      ? null
+      : currentUserId == null
+      ? formatCents(totalSpent)
+      : net === 0
+      ? null
+      : formatCents(net);
   const heroColor = net > 0 ? "var(--min-accent)" : net < 0 ? "var(--danger)" : "var(--min-ink)";
 
   const confirmSettle = async () => {
@@ -2481,7 +2555,11 @@ function ExpensesBody({
       <div className="exp-addbtn">
         <button
           className="th-btn th-btn--secondary th-btn--pill"
-          onClick={() => onNav({ kind: "add" })}
+          onClick={async () => {
+            const uid = await ensureUser();
+            if (uid == null) return;
+            onNav({ kind: "add" });
+          }}
         >
           + Add expense
         </button>
@@ -2613,7 +2691,8 @@ function ExpensesBody({
   );
 
   // ---- Add / edit form view ----
-  const formPanel = (view.kind === "add" || view.kind === "edit") && (
+  const formPanel = (view.kind === "add" || view.kind === "edit") &&
+    currentUserId != null && (
     <ExpenseForm
       users={users}
       currentUserId={currentUserId}

@@ -14,6 +14,13 @@ export interface TripContextValue {
   currentUserId: number | null;
   setUser: (userId: number | null) => void;
   switchUser: () => void;
+  /**
+   * Resolve the current user's id, opening the identity sheet if nobody is
+   * identified yet. Resolves with the id once the visitor identifies, or
+   * `null` if they dismiss the sheet. Lets a write action resume seamlessly
+   * after lazily creating/selecting a user.
+   */
+  ensureUser: () => Promise<number | null>;
   refresh: () => Promise<void>;
   deleteTrip: () => Promise<void>;
 }

@@ -1784,8 +1784,13 @@ function CarsBody({
                 <button
                   key={`reserved-${i}`}
                   className="seat empty"
-                  disabled={iAmIn}
+                  disabled={iAmIn && !isDriver}
+                  aria-label={isDriver ? "Release reserved seat" : undefined}
                   onClick={async () => {
+                    if (isDriver) {
+                      setReserved(c.reserved_seats - 1);
+                      return;
+                    }
                     if (iAmIn) return;
                     if (
                       !confirm(
@@ -1810,8 +1815,13 @@ function CarsBody({
                 <button
                   key={`empty-${i}`}
                   className="seat empty"
-                  disabled={iAmIn}
+                  disabled={iAmIn && !isDriver}
+                  aria-label={isDriver ? "Reserve a seat" : undefined}
                   onClick={async () => {
+                    if (isDriver) {
+                      setReserved(c.reserved_seats + 1);
+                      return;
+                    }
                     setError(null);
                     try {
                       await api.carSignup(tripId, c.id, currentUserId);
@@ -1822,32 +1832,10 @@ function CarsBody({
                   }}
                   style={{ border: "1px dashed var(--border)", background: "transparent" }}
                 >
-                  + open seat
+                  {isDriver ? "+ Reserve" : "+ open seat"}
                 </button>
               ))}
             </div>
-            {isDriver && (
-              <div className="row" style={{ marginTop: 10, alignItems: "center", gap: 8 }}>
-                <span className="muted" style={{ fontSize: 13 }}>Reserved seats</span>
-                <button
-                  type="button"
-                  className="th-btn th-btn--tertiary"
-                  disabled={c.reserved_seats <= 0}
-                  onClick={() => setReserved(c.reserved_seats - 1)}
-                >
-                  −
-                </button>
-                <span style={{ minWidth: 16, textAlign: "center" }}>{c.reserved_seats}</span>
-                <button
-                  type="button"
-                  className="th-btn th-btn--tertiary"
-                  disabled={empty <= 0}
-                  onClick={() => setReserved(c.reserved_seats + 1)}
-                >
-                  +
-                </button>
-              </div>
-            )}
           </div>
         );
       })}

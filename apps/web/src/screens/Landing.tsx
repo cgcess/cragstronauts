@@ -4,7 +4,7 @@ import { api } from "../api";
 import { useTripContext, type User } from "../context/TripContext";
 import { formatDateRange } from "../dateUtils";
 import { Button } from "../components/ui";
-import Linkify from "../components/Linkify";
+import Markdown from "../components/Markdown";
 
 const SIGNOFF_WORDS = [
   "Send it",
@@ -80,7 +80,7 @@ export default function Landing() {
               whiteSpace: "pre-wrap",
             }}
           >
-            <Linkify>{trip.welcome_message}</Linkify>
+            <Markdown>{trip.welcome_message}</Markdown>
             {trip.signature && (
               <p style={{ marginTop: 16, marginBottom: 0 }}>
                 <em

@@ -4,6 +4,18 @@ import { api } from "../api";
 import { useTripContext, type User } from "../context/TripContext";
 import { formatDateRange } from "../dateUtils";
 import { Button } from "../components/ui";
+import Linkify from "../components/Linkify";
+
+const SIGNOFF_WORDS = [
+  "Send it",
+  "Stay psyched",
+  "Climb on",
+  "Yours in chalk",
+  "Belay on",
+  "Stoked",
+  "Crimps & dreams",
+  "Keep sending",
+];
 
 export default function Landing() {
   const { tripId, trip, users, setUser, refresh } = useTripContext();
@@ -12,6 +24,7 @@ export default function Landing() {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [signoffIndex, setSignoffIndex] = useState(0);
 
   const pickExisting = (userId: number) => {
     setUser(userId);
@@ -55,6 +68,42 @@ export default function Landing() {
           <p className="muted">
             {formatDateRange(trip.start_date, trip.end_date)}
           </p>
+        )}
+
+        {trip.welcome_message && (
+          <div
+            className="card"
+            style={{
+              marginTop: 20,
+              lineHeight: 1.6,
+              maxWidth: 560,
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            <Linkify>{trip.welcome_message}</Linkify>
+            {trip.signature && (
+              <p style={{ marginTop: 16, marginBottom: 0 }}>
+                <em
+                  role="button"
+                  tabIndex={0}
+                  onClick={() =>
+                    setSignoffIndex((i) => (i + 1) % SIGNOFF_WORDS.length)
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSignoffIndex((i) => (i + 1) % SIGNOFF_WORDS.length);
+                    }
+                  }}
+                  style={{ cursor: "pointer", userSelect: "none" }}
+                  title="Tap me"
+                >
+                  {SIGNOFF_WORDS[signoffIndex]}
+                </em>
+                , {trip.signature}
+              </p>
+            )}
+          </div>
         )}
 
         {mode === "choose" && (

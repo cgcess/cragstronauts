@@ -57,6 +57,8 @@ export const api = {
     latitude?: number | null;
     longitude?: number | null;
     place_label?: string | null;
+    welcome_message: string;
+    signature: string;
     organizer_name: string;
     gear_categories: { name: string; fields: { key: string; label: string; type: string }[] }[];
   }) => req<CreateTripResponse>("POST", "/api/trips", data),

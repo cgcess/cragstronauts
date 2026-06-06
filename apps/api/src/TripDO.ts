@@ -62,6 +62,8 @@ export class TripDO extends DurableObject<Env> {
     latitude?: number | null;
     longitude?: number | null;
     place_label?: string | null;
+    welcome_message: string;
+    signature: string;
     gear_categories: {
       name: string;
       fields: { key: string; label: string; type: string }[];
@@ -79,6 +81,8 @@ export class TripDO extends DurableObject<Env> {
       latitude: data.latitude != null ? String(data.latitude) : null,
       longitude: data.longitude != null ? String(data.longitude) : null,
       place_label: data.place_label ?? null,
+      welcome_message: data.welcome_message,
+      signature: data.signature,
     });
 
     for (const cat of data.gear_categories) {
@@ -116,6 +120,8 @@ export class TripDO extends DurableObject<Env> {
     latitude?: number | null;
     longitude?: number | null;
     place_label?: string | null;
+    welcome_message?: string;
+    signature?: string;
   }): Promise<Trip> {
     const row = this.db.get(trip, { where: eq("id", 1) });
     if (!row) throw new Error("Trip not found");
@@ -148,6 +154,12 @@ export class TripDO extends DurableObject<Env> {
         longitude: numToText(data.longitude, row.longitude),
         place_label:
           data.place_label !== undefined ? data.place_label : row.place_label,
+        welcome_message:
+          data.welcome_message !== undefined
+            ? data.welcome_message
+            : row.welcome_message,
+        signature:
+          data.signature !== undefined ? data.signature : row.signature,
       },
       { where: eq("id", 1) }
     );
@@ -728,6 +740,8 @@ function formatTrip(r: {
   latitude?: string | null;
   longitude?: string | null;
   place_label?: string | null;
+  welcome_message?: string | null;
+  signature?: string | null;
 }): Trip {
   return {
     location: r.location,
@@ -739,6 +753,8 @@ function formatTrip(r: {
     latitude: r.latitude != null ? Number(r.latitude) : null,
     longitude: r.longitude != null ? Number(r.longitude) : null,
     place_label: r.place_label ?? null,
+    welcome_message: r.welcome_message ?? null,
+    signature: r.signature ?? null,
   };
 }
 

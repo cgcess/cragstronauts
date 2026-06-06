@@ -1367,6 +1367,10 @@ function HeroEdit({
     trip.accommodation_details || ""
   );
   const [notes, setNotes] = useState(trip.notes || "");
+  const [welcomeMessage, setWelcomeMessage] = useState(
+    trip.welcome_message || ""
+  );
+  const [signature, setSignature] = useState(trip.signature || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -1381,6 +1385,10 @@ function HeroEdit({
         accommodation_type: accomType,
         accommodation_details: accomDetails.trim() || null,
         notes: notes.trim() || null,
+        ...(welcomeMessage.trim()
+          ? { welcome_message: welcomeMessage.trim() }
+          : {}),
+        ...(signature.trim() ? { signature: signature.trim() } : {}),
       });
       await onSaved();
     } catch (e) {
@@ -1432,6 +1440,23 @@ function HeroEdit({
             rows={3}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
+        <div>
+          <label>Welcome message</label>
+          <textarea
+            rows={4}
+            value={welcomeMessage}
+            onChange={(e) => setWelcomeMessage(e.target.value)}
+            placeholder="The first thing people see when they open the link…"
+          />
+        </div>
+        <div>
+          <label>Sign off as</label>
+          <input
+            value={signature}
+            onChange={(e) => setSignature(e.target.value)}
+            placeholder="e.g. Juan & Lovely Girl"
           />
         </div>
 

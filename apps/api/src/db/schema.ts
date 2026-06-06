@@ -11,6 +11,8 @@ export const trip = table("trip", {
   latitude: column.text(),
   longitude: column.text(),
   place_label: column.text(),
+  welcome_message: column.text(),
+  signature: column.text(),
 });
 
 export const user = table("user", {

@@ -5,5 +5,6 @@ import m0003 from './migrations/0003_expense_split_amounts.sql';
 import m0004 from './migrations/0004_settlements.sql';
 import m0005 from './migrations/0005_lead_belay.sql';
 import m0006 from './migrations/0006_restrict_user_delete.sql';
+import m0007 from './migrations/0007_trip_welcome_message.sql';
 
-export const migrations = { m0000, m0001, m0002, m0003, m0004, m0005, m0006 };
+export const migrations = { m0000, m0001, m0002, m0003, m0004, m0005, m0006, m0007 };

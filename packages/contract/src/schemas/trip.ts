@@ -10,6 +10,8 @@ export const TripSchema = z.object({
   latitude: z.number().nullable(),
   longitude: z.number().nullable(),
   place_label: z.string().nullable(),
+  welcome_message: z.string().nullable(),
+  signature: z.string().nullable(),
 });
 
 export const GearCategoryFieldSchema = z.object({
@@ -28,6 +30,8 @@ export const CreateTripBodySchema = z.object({
   latitude: z.number().nullable().optional(),
   longitude: z.number().nullable().optional(),
   place_label: z.string().nullable().optional(),
+  welcome_message: z.string().min(1),
+  signature: z.string().min(1),
   gear_categories: z.array(
     z.object({
       name: z.string(),
@@ -52,6 +56,8 @@ export const UpdateTripBodySchema = z.object({
   latitude: z.number().nullable().optional(),
   longitude: z.number().nullable().optional(),
   place_label: z.string().nullable().optional(),
+  welcome_message: z.string().min(1).optional(),
+  signature: z.string().min(1).optional(),
 });
 
 export const TripIndexEntrySchema = z.object({

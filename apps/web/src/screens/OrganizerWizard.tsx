@@ -86,6 +86,9 @@ export default function OrganizerWizard() {
   const [accomType, setAccomType] = useState("campsite");
   const [accomDetails, setAccomDetails] = useState("");
   const [notes, setNotes] = useState("");
+  const [welcomeMessage, setWelcomeMessage] = useState("");
+  const [signature, setSignature] = useState("");
+  const [signatureTouched, setSignatureTouched] = useState(false);
   const [categories, setCategories] = useState<CategoryDraft[]>(defaultCategories);
   const [organizerName, setOrganizerName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -156,6 +159,8 @@ export default function OrganizerWizard() {
         latitude: pinLat,
         longitude: pinLon,
         place_label: placeLabel,
+        welcome_message: welcomeMessage.trim(),
+        signature: signature.trim(),
         organizer_name: organizerName.trim(),
         gear_categories: categories
           .filter((c) => c.name.trim())
@@ -482,19 +487,55 @@ export default function OrganizerWizard() {
                 You&apos;re the rope captain — the trip lives on your account.
                 What should the squad call you?
               </motion.p>
-              <motion.input
-                variants={item}
-                placeholder="Your name"
-                value={organizerName}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOrganizerName(e.target.value)}
-              />
+              <motion.div variants={item}>
+                <label>Your name *</label>
+                <input
+                  placeholder="Your name"
+                  value={organizerName}
+                  onChange={(e) => {
+                    setOrganizerName(e.target.value);
+                    if (!signatureTouched) setSignature(e.target.value);
+                  }}
+                />
+              </motion.div>
+              <motion.div variants={item}>
+                <label>The welcome message *</label>
+                <textarea
+                  rows={4}
+                  placeholder={"Hey crew! Booked us a Grillh\u00fctte right by the crag for the weekend \ud83e\uddd7 Bring your gear and an appetite \u2014 we'll fire up the BBQ on Saturday night. Tap below to join and let's send it!"}
+                  value={welcomeMessage}
+                  onChange={(e) => setWelcomeMessage(e.target.value)}
+                />
+                <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                  The first thing people see when they open the link.
+                </p>
+              </motion.div>
+              <motion.div variants={item}>
+                <label>Sign off as *</label>
+                <input
+                  placeholder="e.g. Juan & Lovely Girl"
+                  value={signature}
+                  onChange={(e) => {
+                    setSignature(e.target.value);
+                    setSignatureTouched(true);
+                  }}
+                />
+                <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                  Shown after the sign-off on your welcome message.
+                </p>
+              </motion.div>
               <motion.div variants={item} className="row">
                 <button className="th-btn th-btn--secondary" onClick={() => setStep(1)}>
                   Back
                 </button>
                 <motion.button
                   className="th-btn th-btn--primary"
-                  disabled={!organizerName.trim() || submitting}
+                  disabled={
+                    !organizerName.trim() ||
+                    !welcomeMessage.trim() ||
+                    !signature.trim() ||
+                    submitting
+                  }
                   onClick={submit}
                   style={{ flex: 1 }}
                   whileTap={reduceMotion ? undefined : { scale: 0.97 }}

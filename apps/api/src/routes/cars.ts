@@ -45,7 +45,7 @@ carRoutes.openapi(carSignupRoute, async (c) => {
   const body = c.req.valid("json");
   try {
     const stub = getTripDO(c.env, tripId);
-    const car = await stub.carSignup(carId, body.user_id);
+    const car = await stub.carSignup(carId, body.user_id, body.from_reserved);
     return c.json(car, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

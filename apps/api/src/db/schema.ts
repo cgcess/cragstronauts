@@ -34,6 +34,7 @@ export const car = table("car", {
   id: column.integer().notNull().primaryKey().autoIncrement(),
   driver_user_id: column.integer().notNull().references(ref(user, "id")),
   total_seats: column.integer().notNull(),
+  reserved_seats: column.integer().notNull().default(0),
   notes: column.text(),
 });
 

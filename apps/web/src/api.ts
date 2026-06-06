@@ -98,12 +98,12 @@ export const api = {
 
   // Cars
   listCars: (tripId: string) => req<Car[]>("GET", `/api/trips/${tripId}/cars`),
-  createCar: (tripId: string, data: { driver_user_id: number; total_seats: number; notes: string | null }) =>
+  createCar: (tripId: string, data: { driver_user_id: number; total_seats: number; reserved_seats?: number; notes: string | null }) =>
     req<Car>("POST", `/api/trips/${tripId}/cars`, data),
   deleteCar: (tripId: string, id: number) =>
     req<Ok>("DELETE", `/api/trips/${tripId}/cars/${id}`),
-  carSignup: (tripId: string, carId: number, userId: number) =>
-    req<Car>("POST", `/api/trips/${tripId}/cars/${carId}/signup`, { user_id: userId }),
+  carSignup: (tripId: string, carId: number, userId: number, fromReserved?: boolean) =>
+    req<Car>("POST", `/api/trips/${tripId}/cars/${carId}/signup`, { user_id: userId, from_reserved: fromReserved }),
   carSignoff: (tripId: string, carId: number, userId: number) =>
     req<Car>("DELETE", `/api/trips/${tripId}/cars/${carId}/signup/${userId}`),
 

@@ -417,7 +417,7 @@ export default function TripDashboard() {
   );
   const amInCar = Boolean(myCar || ridingIn);
   const seatsTotal = cars.reduce((n, c) => n + Math.max(0, c.total_seats), 0);
-  const seatsFilled = cars.reduce((n, c) => n + 1 + c.passengers.length, 0);
+  const seatsFilled = cars.reduce((n, c) => n + 1 + c.passengers.length + c.reserved_seats, 0);
   const myGear = gear.filter((g) => g.user_id === currentUserId);
   const coveredCats = new Set(gear.map((g) => g.category_id)).size;
   const dUntil = daysUntil(trip.start_date);
@@ -1712,10 +1712,25 @@ function CarsBody({
         {cars.map((c) => {
         const passengerCount = c.passengers.length;
         const passengerCapacity = Math.max(0, c.total_seats - 1);
-        const empty = passengerCapacity - passengerCount;
+        const empty = Math.max(0, passengerCapacity - passengerCount - c.reserved_seats);
+        const isDriver = c.driver_user_id === currentUserId;
         const iAmIn =
-          c.driver_user_id === currentUserId ||
+          isDriver ||
           c.passengers.some((p) => p.user_id === currentUserId);
+        const setReserved = async (next: number) => {
+          setError(null);
+          try {
+            await api.createCar(tripId, {
+              driver_user_id: c.driver_user_id,
+              total_seats: c.total_seats,
+              reserved_seats: next,
+              notes: c.notes,
+            });
+            onChanged();
+          } catch (e) {
+            setError(e instanceof Error ? e.message : String(e));
+          }
+        };
         return (
           <div className="card" key={c.id}>
             <div className="row between">
@@ -1723,9 +1738,10 @@ function CarsBody({
                 <div style={{ fontWeight: 600 }}>{c.driver_name}&apos;s car</div>
                 <div className="muted" style={{ fontSize: 13 }}>
                   {c.total_seats} seats · {passengerCount}/{passengerCapacity} passengers
+                  {c.reserved_seats > 0 && ` · ${c.reserved_seats} reserved`}
                 </div>
               </div>
-              {c.driver_user_id === currentUserId && (
+              {isDriver && (
                 <button
                   className="th-btn th-btn--tertiary"
                   onClick={async () => {
@@ -1764,6 +1780,32 @@ function CarsBody({
                   )}
                 </span>
               ))}
+              {Array.from({ length: c.reserved_seats }).map((_, i) => (
+                <button
+                  key={`reserved-${i}`}
+                  className="seat empty"
+                  disabled={iAmIn}
+                  onClick={async () => {
+                    if (iAmIn) return;
+                    if (
+                      !confirm(
+                        "This seat is reserved by the driver for someone else. Only take it if you've already cleared it with the driver. Take this seat?"
+                      )
+                    )
+                      return;
+                    setError(null);
+                    try {
+                      await api.carSignup(tripId, c.id, currentUserId, true);
+                      onChanged();
+                    } catch (e) {
+                      setError(e instanceof Error ? e.message : String(e));
+                    }
+                  }}
+                  style={{ border: "1px dashed var(--accent, #c90)", background: "transparent", fontStyle: "italic" }}
+                >
+                  Reserved
+                </button>
+              ))}
               {Array.from({ length: empty }).map((_, i) => (
                 <button
                   key={`empty-${i}`}
@@ -1784,6 +1826,28 @@ function CarsBody({
                 </button>
               ))}
             </div>
+            {isDriver && (
+              <div className="row" style={{ marginTop: 10, alignItems: "center", gap: 8 }}>
+                <span className="muted" style={{ fontSize: 13 }}>Reserved seats</span>
+                <button
+                  type="button"
+                  className="th-btn th-btn--tertiary"
+                  disabled={c.reserved_seats <= 0}
+                  onClick={() => setReserved(c.reserved_seats - 1)}
+                >
+                  −
+                </button>
+                <span style={{ minWidth: 16, textAlign: "center" }}>{c.reserved_seats}</span>
+                <button
+                  type="button"
+                  className="th-btn th-btn--tertiary"
+                  disabled={empty <= 0}
+                  onClick={() => setReserved(c.reserved_seats + 1)}
+                >
+                  +
+                </button>
+              </div>
+            )}
           </div>
         );
       })}

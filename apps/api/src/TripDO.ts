@@ -339,6 +339,7 @@ export class TripDO extends DurableObject<Env> {
   async createCar(data: {
     driver_user_id: number;
     total_seats: number;
+    reserved_seats?: number;
     notes: string | null;
   }): Promise<Car> {
     if (data.total_seats < 1) throw new Error("total_seats must be >= 1");
@@ -346,15 +347,28 @@ export class TripDO extends DurableObject<Env> {
     const driver = this.db.get(user, { where: eq("id", data.driver_user_id) });
     if (!driver) throw new Error("Driver not found");
 
+    const reservedSeats = data.reserved_seats ?? 0;
+    if (reservedSeats < 0) throw new Error("reserved_seats must be >= 0");
+
     const existing = this.db.get(car, {
       where: eq("driver_user_id", data.driver_user_id),
     });
+
+    const passengers = existing
+      ? this.db.count(carSignup, { where: eq("car_id", existing.id) })
+      : 0;
+    if (passengers + reservedSeats > data.total_seats - 1)
+      throw new Error("Not enough open seats to reserve");
 
     let carId: number;
     if (existing) {
       this.db.update(
         car,
-        { total_seats: data.total_seats, notes: data.notes },
+        {
+          total_seats: data.total_seats,
+          reserved_seats: reservedSeats,
+          notes: data.notes,
+        },
         { where: eq("id", existing.id) }
       );
       carId = existing.id;
@@ -364,6 +378,7 @@ export class TripDO extends DurableObject<Env> {
         {
           driver_user_id: data.driver_user_id,
           total_seats: data.total_seats,
+          reserved_seats: reservedSeats,
           notes: data.notes,
         },
         ["id"]
@@ -382,20 +397,39 @@ export class TripDO extends DurableObject<Env> {
 
   async carSignup(
     carId: number,
-    userId: number
+    userId: number,
+    fromReserved = false
   ): Promise<Car> {
     const c = this.db.get(car, { where: eq("id", carId) });
     if (!c) throw new Error("Car not found");
 
-    const taken = this.db.count(carSignup, { where: eq("car_id", carId) });
-    const capacity = Math.max(0, c.total_seats - 1);
-    if (taken >= capacity) throw new Error("Car is full");
     if (userId === c.driver_user_id)
       throw new Error("Driver is already in the car");
+
+    const taken = this.db.count(carSignup, { where: eq("car_id", carId) });
+    const capacity = Math.max(0, c.total_seats - 1);
+
+    if (fromReserved) {
+      if (c.reserved_seats <= 0) throw new Error("No reserved seats available");
+      this.db.update(
+        car,
+        { reserved_seats: c.reserved_seats - 1 },
+        { where: eq("id", carId) }
+      );
+    } else {
+      if (taken + c.reserved_seats >= capacity) throw new Error("Car is full");
+    }
 
     try {
       this.db.insert(carSignup, { car_id: carId, user_id: userId });
     } catch {
+      if (fromReserved) {
+        this.db.update(
+          car,
+          { reserved_seats: c.reserved_seats },
+          { where: eq("id", carId) }
+        );
+      }
       throw new Error("Already signed up");
     }
 
@@ -653,6 +687,7 @@ export class TripDO extends DurableObject<Env> {
     id: number;
     driver_user_id: number;
     total_seats: number;
+    reserved_seats: number;
     notes: string | null;
   }): Car {
     const driver = this.db.get(user, {
@@ -671,6 +706,7 @@ export class TripDO extends DurableObject<Env> {
       driver_user_id: r.driver_user_id,
       driver_name: driver ? driver.name : "(unknown)",
       total_seats: r.total_seats,
+      reserved_seats: r.reserved_seats,
       notes: r.notes,
       passengers,
     };

@@ -1,0 +1,1 @@
+ALTER TABLE `car` ADD COLUMN `reserved_seats` INTEGER NOT NULL DEFAULT 0;

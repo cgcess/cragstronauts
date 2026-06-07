@@ -52,7 +52,13 @@ export default function Landing() {
   };
 
   const accom = accomMeta(trip.accommodation_type);
-  const joiningCount = users.filter((u) => u.joining).length;
+  const joiningNames = users
+    .filter((u) => u.joining)
+    .map((u) => u.name + (u.is_organizer ? " 👑" : ""));
+  const rosterLabel =
+    joiningNames.length === 0
+      ? "No one in yet — be the first"
+      : joiningNames.join(", ");
   const dUntil = daysUntil(trip.start_date);
   const hasDates = Boolean(trip.start_date || trip.end_date);
   const countdownLabel =
@@ -63,10 +69,6 @@ export default function Landing() {
       : dUntil === 0
       ? "Happening today"
       : `${Math.abs(dUntil)} ${Math.abs(dUntil) === 1 ? "day" : "days"} ago`;
-  const rosterLabel =
-    joiningCount === 0
-      ? "No one in yet — be the first"
-      : `${joiningCount} ${joiningCount === 1 ? "climber" : "climbers"} in`;
 
   return (
     <div className="app-shell">

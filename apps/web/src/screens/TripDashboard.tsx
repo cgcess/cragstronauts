@@ -783,37 +783,30 @@ export default function TripDashboard() {
     ),
   });
 
-  // Roster
-  const rosterVisible = joining.slice(0, 4);
-  const rosterMore = Math.max(0, joining.length - rosterVisible.length);
-  const rosterNames = rosterVisible
-    .map((u) => u.name + (u.is_organizer ? " 👑" : ""))
-    .join(", ");
-  cards.push({
-    id: "roster",
-    score: 40,
-    icon: "🧗",
-    title: "Roster",
-    badge: `${joining.length}`,
-    summary:
-      joining.length === 0 ? (
-        "No one joining yet"
-      ) : (
-        <span className="dash-tile__sub">
-          {rosterNames}
-          {rosterMore > 0 ? ` +${rosterMore}` : ""}
-        </span>
+  // Roster management (transfer / remove) — only relevant for organizers.
+  // The climber list itself is shown in the hero card; this tile is only
+  // surfaced when the organizer needs admin actions.
+  if (isOrganizer) {
+    cards.push({
+      id: "roster",
+      score: 40,
+      icon: "🧗",
+      title: "Manage members",
+      badge: `${joining.length}`,
+      summary: (
+        <span className="dash-tile__sub">Transfer ownership · remove members</span>
       ),
-    body: (
-      <RosterBody
-        tripId={tripId}
-        users={users}
-        currentUserId={currentUserId}
-        isOrganizer={isOrganizer}
-        onChanged={reload}
-      />
-    ),
-  });
+      body: (
+        <RosterBody
+          tripId={tripId}
+          users={users}
+          currentUserId={currentUserId}
+          isOrganizer={isOrganizer}
+          onChanged={reload}
+        />
+      ),
+    });
+  }
 
   // Polls — organizer-defined questions (lead belay, BBQ headcount, …).
   {
@@ -1040,7 +1033,8 @@ export default function TripDashboard() {
             trip.accommodation_details ||
             trip.start_date ||
             trip.end_date ||
-            trip.notes) && (
+            trip.notes ||
+            joining.length > 0) && (
             <div className="fl-detail-hero__logistics">
               {trip.links?.length ? (
                 <div className="fl-detail-hero__logistics-item">
@@ -1150,6 +1144,29 @@ export default function TripDashboard() {
                     <div className="fl-detail-hero__logistics-detail fl-detail-hero__notes">
                       <Markdown>{trip.notes}</Markdown>
                     </div>
+                  </div>
+                </div>
+              )}
+              {joining.length > 0 && (
+                <div className="fl-detail-hero__logistics-item">
+                  <span
+                    className="fl-detail-hero__logistics-icon"
+                    aria-hidden="true"
+                  >
+                    🧗
+                  </span>
+                  <div className="fl-detail-hero__logistics-text">
+                    <span className="fl-detail-hero__logistics-label">
+                      Climbers · {joining.length}
+                    </span>
+                    <span className="fl-detail-hero__logistics-detail fl-detail-hero__climbers">
+                      {joining.map((u, i) => (
+                        <span key={u.id}>
+                          {u.name}{u.is_organizer ? " 👑" : ""}
+                          {i < joining.length - 1 ? ", " : ""}
+                        </span>
+                      ))}
+                    </span>
                   </div>
                 </div>
               )}

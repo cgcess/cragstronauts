@@ -662,6 +662,10 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
 .fl-detail-hero__notes {
   white-space: pre-wrap;
 }
+.fl-detail-hero__climbers {
+  font-size: 12px;
+  line-height: 1.4;
+}
 
 /* Named location links (crag / maps / topo) rendered as a wrapping row of
    tappable chips in both the trip hero and the landing facts. */

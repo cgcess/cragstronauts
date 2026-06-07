@@ -32,6 +32,18 @@ npx vitest run
 
 These same checks run in CI on every push to main and on PRs.
 
+## Feedback
+
+Bugs and ideas all funnel into **GitHub Issues** (one hub, triaged with labels:
+`type:bug` / `type:idea`, `status:triage`, `reporter:*`). Two ways to file:
+
+- **From your Claude agent:** run `/feedback <your feedback in plain words>` — it
+  classifies, dedupe-checks, labels, and opens the issue for you. (Defined in
+  `.claude/commands/feedback.md`; you get it just by having this repo checked out.)
+- **From GitHub:** New issue → the 💬 Feedback form.
+
+Triage later with e.g. *"Claude, list open `status:triage` issues and fix the top 3."*
+
 ## Resetting local state
 
 - Delete `apps/api/.wrangler/` to wipe the local database.

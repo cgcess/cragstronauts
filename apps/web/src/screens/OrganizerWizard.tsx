@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router";
 import { api } from "../api";
+import { tripPath } from "../lib/tripUrl";
 import DateRangePicker from "../components/DateRangePicker";
 import { Button } from "../components/ui";
 
@@ -170,7 +171,7 @@ export default function OrganizerWizard() {
           })),
       });
       localStorage.setItem(userKey(res.trip_id), String(res.organizer_user_id));
-      navigate(`/trips/${res.trip_id}/board`, { replace: true });
+      navigate(tripPath(location.trim(), res.trip_id, "board"), { replace: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {

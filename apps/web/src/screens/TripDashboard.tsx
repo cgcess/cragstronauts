@@ -5,6 +5,7 @@ import type { DateRange } from "react-day-picker";
 import type { z } from "zod";
 import type { CarSchema, GearContributionSchema, ExpenseSchema, SettlementSchema } from "@cragstronauts/contract";
 import { api } from "../api";
+import { tripPath, slugify } from "../lib/tripUrl";
 import { useTripContext, type Category } from "../context/TripContext";
 import { formatDateRange } from "../dateUtils";
 import Linkify from "../components/Linkify";
@@ -106,16 +107,6 @@ function buildTripIcs(trip: ShareableTrip, url: string): string | null {
   }
   lines.push("END:VEVENT", "END:VCALENDAR");
   return lines.join("\r\n");
-}
-
-/** Slugify a trip name into a safe download filename stem. */
-function slugify(value: string): string {
-  return (
-    value
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "") || "trip"
-  );
 }
 
 /** Hand the .ics off to the OS so the native calendar app can import it. */
@@ -372,7 +363,7 @@ export default function TripDashboard() {
   };
 
   const shareTrip = async () => {
-    const url = `${window.location.origin}/trips/${tripId}`;
+    const url = `${window.location.origin}${tripPath(trip.location, tripId)}`;
     if (navigator.share) {
       try {
         await navigator.share({
@@ -396,10 +387,10 @@ export default function TripDashboard() {
   };
 
   const addToCalendar = () => {
-    const url = `${window.location.origin}/trips/${tripId}`;
+    const url = `${window.location.origin}${tripPath(trip.location, tripId)}`;
     const ics = buildTripIcs(trip, url);
     if (!ics) return;
-    openCalendarFile(`${slugify(trip.location)}.ics`, ics);
+    openCalendarFile(`${slugify(trip.location) || "trip"}.ics`, ics);
   };
 
   const reload = async () => {
@@ -431,9 +422,9 @@ export default function TripDashboard() {
   // "Join trip" flow lives. Logging out also lands you here.
   useEffect(() => {
     if (currentUserId == null) {
-      navigate(`/trips/${tripId}`, { replace: true });
+      navigate(tripPath(trip.location, tripId), { replace: true });
     }
-  }, [currentUserId, tripId, navigate]);
+  }, [currentUserId, tripId, trip.location, navigate]);
 
   // Leave the trip from the topbar: removes you (+ your car/gear) after a
   // confirm, then exits to the trips list. Organizers can't leave outright —
@@ -740,7 +731,7 @@ export default function TripDashboard() {
                 variant="text"
                 onClick={() => {
                   switchUser();
-                  navigate(`/trips/${tripId}`);
+                  navigate(tripPath(trip.location, tripId));
                 }}
               >
                 Logout

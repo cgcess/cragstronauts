@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router";
 import { api } from "../api";
+import { tripPath } from "../lib/tripUrl";
 import type { z } from "zod";
 import type { TripIndexEntrySchema } from "@cragstronauts/contract";
 import { Tag } from "../components/ui";
@@ -247,7 +248,8 @@ export default function TripListing() {
   // Land on the public trip page (welcome + basics + Join). The board itself
   // is members-only, so non-members enter through the landing's join flow;
   // members tap straight through with "View trip".
-  const onSelect = (id: string) => navigate(`/trips/${id}`);
+  const onSelect = (trip: { id: string; location: string }) =>
+    navigate(tripPath(trip.location, trip.id));
 
   if (!loaded) {
     return (
@@ -302,7 +304,7 @@ export default function TripListing() {
                 <HeroTripCard
                   trip={hero.trip}
                   model={hero.model}
-                  onClick={() => onSelect(hero.trip.id)}
+                  onClick={() => onSelect(hero.trip)}
                 />
               </motion.div>
             )}
@@ -322,7 +324,7 @@ export default function TripListing() {
                     <TripCard
                       trip={trip}
                       model={model}
-                      onClick={() => onSelect(trip.id)}
+                      onClick={() => onSelect(trip)}
                     />
                   </motion.div>
                 ))}
@@ -342,7 +344,7 @@ export default function TripListing() {
                     <TripCard
                       trip={trip}
                       model={model}
-                      onClick={() => onSelect(trip.id)}
+                      onClick={() => onSelect(trip)}
                     />
                   </motion.div>
                 ))}

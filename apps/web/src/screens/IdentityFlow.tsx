@@ -221,10 +221,6 @@ function IdentifyPanel({
       <div className="identity-identify__inner">
         <div className="identity-identify__head">
           <h1 className="identity-identify__title">Hop in 🧗</h1>
-          <p className="identity-identify__sub">
-            Pop in your name to join. A couple of quick questions next — skip
-            them if you like.
-          </p>
           <input
             className="identity-identify__input"
             placeholder="Your name"

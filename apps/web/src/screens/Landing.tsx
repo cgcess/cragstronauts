@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { useTripContext } from "../context/TripContext";
 import { formatDateRange } from "../dateUtils";
 import { Button } from "../components/ui";
+import Markdown from "../components/Markdown";
 import Linkify from "../components/Linkify";
 
 const SIGNOFF_WORDS = [
@@ -94,7 +95,7 @@ export default function Landing() {
               whiteSpace: "pre-wrap",
             }}
           >
-            <Linkify>{trip.welcome_message}</Linkify>
+            <Markdown>{trip.welcome_message}</Markdown>
             {trip.signature && (
               <p style={{ marginTop: 16, marginBottom: 0 }}>
                 <em

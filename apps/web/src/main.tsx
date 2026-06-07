@@ -9,6 +9,7 @@ import TripLayout from "./screens/TripLayout";
 import Landing from "./screens/Landing";
 import TripDashboard from "./screens/TripDashboard";
 import NotFound from "./screens/NotFound";
+import { partyDayActive } from "./lib/partyDay";
 
 import "./styles.css";
 import "./styles/v2-theme.css";
@@ -48,7 +49,12 @@ if (!isSafari) {
 // follow the OS's prefers-color-scheme. ThemeToggle then takes over.
 {
   const t = localStorage.getItem("cragstronauts.theme");
-  if (t === "light") {
+  if (partyDayActive()) {
+    // Party day: everyone boots into party mode before first paint. Applied
+    // here too (not just in ThemeToggle) so there's no flash of the normal
+    // theme first. Saved preference is left untouched, so it resumes after.
+    document.documentElement.classList.add("theme-party");
+  } else if (t === "light") {
     document.documentElement.classList.add("theme-light");
   } else if (t === "party") {
     document.documentElement.classList.add("theme-party");

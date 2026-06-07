@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { PARTY_OPT_OUT_KEY, partyDayActive } from "../lib/partyDay";
 
 type Theme = "dark" | "light" | "party";
 const THEMES: Theme[] = ["dark", "light", "party"];
@@ -35,11 +36,16 @@ function apply(theme: Theme) {
 }
 
 export default function ThemeToggle() {
+  // On the party day we surface party mode for everyone without persisting it,
+  // so saved preferences survive untouched and normal behavior resumes after.
+  const partyDay = useRef<boolean>(partyDayActive());
+
   // Track whether the user has explicitly chosen a theme. Until they
-  // tap the toggle, the app mirrors the OS's prefers-color-scheme.
-  const userChose = useRef<boolean>(storedTheme() !== null);
-  const [theme, setTheme] = useState<Theme>(
-    () => storedTheme() ?? systemTheme()
+  // tap the toggle, the app mirrors the OS's prefers-color-scheme — except
+  // on the party day, where the forced default must not be persisted.
+  const userChose = useRef<boolean>(!partyDay.current && storedTheme() !== null);
+  const [theme, setTheme] = useState<Theme>(() =>
+    partyDay.current ? "party" : storedTheme() ?? systemTheme()
   );
 
   // Apply the current theme + persist only after an explicit choice.
@@ -48,9 +54,16 @@ export default function ThemeToggle() {
     if (userChose.current) localStorage.setItem(STORAGE_KEY, theme);
   }, [theme]);
 
-  // Follow OS changes while the user hasn't picked anything yet.
+  // Follow OS changes while the user hasn't picked anything yet — but not on
+  // the party day, where the party default should hold until the user acts.
   useEffect(() => {
-    if (userChose.current || typeof window === "undefined" || !window.matchMedia) return;
+    if (
+      partyDay.current ||
+      userChose.current ||
+      typeof window === "undefined" ||
+      !window.matchMedia
+    )
+      return;
     const mq = window.matchMedia("(prefers-color-scheme: light)");
     const onChange = (e: MediaQueryListEvent) =>
       setTheme(e.matches ? "light" : "dark");
@@ -64,6 +77,12 @@ export default function ThemeToggle() {
   }, []);
 
   const cycle = () => {
+    // A manual change on the party day opts the user out of the forced default
+    // for the rest of the day and becomes a normal, persisted choice.
+    if (partyDay.current) {
+      partyDay.current = false;
+      localStorage.setItem(PARTY_OPT_OUT_KEY, String(new Date().getFullYear()));
+    }
     userChose.current = true;
     setTheme((cur) => THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length]);
   };

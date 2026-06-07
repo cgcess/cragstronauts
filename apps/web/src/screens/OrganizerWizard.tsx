@@ -507,7 +507,8 @@ export default function OrganizerWizard() {
                   onChange={(e) => setWelcomeMessage(e.target.value)}
                 />
                 <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-                  The first thing people see when they open the link.
+                  The first thing people see when they open the link. Supports
+                  Markdown — bold, lists, headings, and links.
                 </p>
               </motion.div>
               <motion.div variants={item}>

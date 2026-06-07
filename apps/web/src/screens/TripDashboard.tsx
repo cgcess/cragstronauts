@@ -8,6 +8,7 @@ import { api } from "../api";
 import { useTripContext, type Category } from "../context/TripContext";
 import { formatDateRange } from "../dateUtils";
 import Linkify from "../components/Linkify";
+import Markdown from "../components/Markdown";
 import DateRangePicker from "../components/DateRangePicker";
 import BottomSheet from "../components/BottomSheet";
 import { Button, Tag } from "../components/ui";
@@ -835,9 +836,9 @@ export default function TripDashboard() {
                     <span className="fl-detail-hero__logistics-label">
                       Notes
                     </span>
-                    <span className="fl-detail-hero__logistics-detail fl-detail-hero__notes">
-                      <Linkify>{trip.notes}</Linkify>
-                    </span>
+                    <div className="fl-detail-hero__logistics-detail fl-detail-hero__notes">
+                      <Markdown>{trip.notes}</Markdown>
+                    </div>
                   </div>
                 </div>
               )}

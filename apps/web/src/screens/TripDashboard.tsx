@@ -6,6 +6,8 @@ import type { z } from "zod";
 import type { CarSchema, GearContributionSchema, ExpenseSchema, SettlementSchema } from "@cragstronauts/contract";
 import { api } from "../api";
 import { tripPath, slugify } from "../lib/tripUrl";
+import { cleanLinks } from "../lib/links";
+import LinksEditor from "../components/LinksEditor";
 import { useTripContext, type Category } from "../context/TripContext";
 import { formatDateRange } from "../dateUtils";
 import Linkify from "../components/Linkify";
@@ -805,11 +807,40 @@ export default function TripDashboard() {
               onOpen={() => setWeatherSheetOpen(true)}
             />
           </div>
-          {(trip.accommodation_details ||
+          {(trip.links?.length ||
+            trip.accommodation_details ||
             trip.start_date ||
             trip.end_date ||
             trip.notes) && (
             <div className="fl-detail-hero__logistics">
+              {trip.links?.length ? (
+                <div className="fl-detail-hero__logistics-item">
+                  <span
+                    className="fl-detail-hero__logistics-icon"
+                    aria-hidden="true"
+                  >
+                    📍
+                  </span>
+                  <div className="fl-detail-hero__logistics-text">
+                    <span className="fl-detail-hero__logistics-label">
+                      Links
+                    </span>
+                    <span className="fl-detail-hero__logistics-detail fl-detail-hero__links">
+                      {trip.links.map((l, i) => (
+                        <a
+                          key={i}
+                          href={l.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="fl-detail-hero__link"
+                        >
+                          {l.name}
+                        </a>
+                      ))}
+                    </span>
+                  </div>
+                </div>
+              ) : null}
               {trip.accommodation_details ? (
                 <div className="fl-detail-hero__logistics-item">
                   <span
@@ -1435,6 +1466,9 @@ function HeroEdit({
     trip.welcome_message || ""
   );
   const [signature, setSignature] = useState(trip.signature || "");
+  const [links, setLinks] = useState<{ name: string; url: string }[]>(
+    trip.links ?? []
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -1450,6 +1484,7 @@ function HeroEdit({
         accommodation_type: accomType,
         accommodation_details: accomDetails.trim() || null,
         notes: notes.trim() || null,
+        links: cleanLinks(links),
         ...(welcomeMessage.trim()
           ? { welcome_message: welcomeMessage.trim() }
           : {}),
@@ -1488,6 +1523,10 @@ function HeroEdit({
             onChange={(e) => setLocation(e.target.value)}
             placeholder="e.g. Yosemite Valley"
           />
+        </div>
+        <div>
+          <label>Useful links</label>
+          <LinksEditor links={links} onChange={setLinks} />
         </div>
         <div>
           <label>Accommodation</label>

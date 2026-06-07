@@ -15,6 +15,7 @@ import {
 import type { z } from "zod";
 import type {
   TripSchema,
+  TripLinkSchema,
   UserSchema,
   GearCategorySchema,
   CarSchema,
@@ -25,6 +26,7 @@ import type {
 import { computeSimplifiedBalances, distributeEqual } from "./lib/balances";
 
 type Trip = z.infer<typeof TripSchema>;
+type TripLink = z.infer<typeof TripLinkSchema>;
 type User = z.infer<typeof UserSchema>;
 type Category = z.infer<typeof GearCategorySchema>;
 type Car = z.infer<typeof CarSchema>;
@@ -65,6 +67,7 @@ export class TripDO extends DurableObject<Env> {
     place_label?: string | null;
     welcome_message: string;
     signature: string;
+    links?: TripLink[];
     gear_categories: {
       name: string;
       fields: { key: string; label: string; type: string }[];
@@ -85,6 +88,7 @@ export class TripDO extends DurableObject<Env> {
       place_label: data.place_label ?? null,
       welcome_message: data.welcome_message,
       signature: data.signature,
+      links: JSON.stringify(data.links ?? []),
     });
 
     for (const cat of data.gear_categories) {
@@ -125,6 +129,7 @@ export class TripDO extends DurableObject<Env> {
     place_label?: string | null;
     welcome_message?: string;
     signature?: string;
+    links?: TripLink[];
   }): Promise<Trip> {
     const row = this.db.get(trip, { where: eq("id", 1) });
     if (!row) throw new Error("Trip not found");
@@ -167,6 +172,8 @@ export class TripDO extends DurableObject<Env> {
             : row.welcome_message,
         signature:
           data.signature !== undefined ? data.signature : row.signature,
+        links:
+          data.links !== undefined ? JSON.stringify(data.links) : row.links,
       },
       { where: eq("id", 1) }
     );
@@ -786,6 +793,7 @@ function formatTrip(r: {
   place_label?: string | null;
   welcome_message?: string | null;
   signature?: string | null;
+  links?: string | null;
 }): Trip {
   return {
     name: r.name,
@@ -800,6 +808,7 @@ function formatTrip(r: {
     place_label: r.place_label ?? null,
     welcome_message: r.welcome_message ?? null,
     signature: r.signature ?? null,
+    links: r.links ? (JSON.parse(r.links) as TripLink[]) : [],
   };
 }
 

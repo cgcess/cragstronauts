@@ -663,6 +663,25 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   white-space: pre-wrap;
 }
 
+/* Named location links (crag / maps / topo) rendered as a wrapping row of
+   tappable chips in both the trip hero and the landing facts. */
+.fl-detail-hero__links,
+.landing-fact__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+.fl-detail-hero__link,
+.landing-fact__links a {
+  color: var(--min-accent, var(--fl-accent));
+  text-decoration: none;
+  font-weight: 600;
+}
+.fl-detail-hero__link:hover,
+.landing-fact__links a:hover {
+  text-decoration: underline;
+}
+
 /* Landing-page at-a-glance facts (location / accommodation / notes) so a
    visitor can size up the trip before joining. Mirrors the hero logistics. */
 .landing-fact {

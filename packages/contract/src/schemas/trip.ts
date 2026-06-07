@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+export const TripLinkSchema = z.object({
+  name: z.string().min(1),
+  url: z.string().url(),
+});
+
 export const TripSchema = z.object({
   name: z.string(),
   location: z.string(),
@@ -13,6 +18,7 @@ export const TripSchema = z.object({
   place_label: z.string().nullable(),
   welcome_message: z.string().nullable(),
   signature: z.string().nullable(),
+  links: z.array(TripLinkSchema).default([]),
 });
 
 export const GearCategoryFieldSchema = z.object({
@@ -34,6 +40,7 @@ export const CreateTripBodySchema = z.object({
   place_label: z.string().nullable().optional(),
   welcome_message: z.string().min(1),
   signature: z.string().min(1),
+  links: z.array(TripLinkSchema).optional(),
   gear_categories: z.array(
     z.object({
       name: z.string(),
@@ -61,6 +68,7 @@ export const UpdateTripBodySchema = z.object({
   place_label: z.string().nullable().optional(),
   welcome_message: z.string().min(1).optional(),
   signature: z.string().min(1).optional(),
+  links: z.array(TripLinkSchema).optional(),
 });
 
 export const TripIndexEntrySchema = z.object({

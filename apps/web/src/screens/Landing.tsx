@@ -146,6 +146,28 @@ export default function Landing() {
                   </div>
                 </div>
               )}
+              {trip.links?.length > 0 && (
+                <div className="landing-fact">
+                  <span className="landing-fact__icon" aria-hidden="true">
+                    🔗
+                  </span>
+                  <div className="landing-fact__text">
+                    <span className="landing-fact__label">Links</span>
+                    <span className="landing-fact__detail landing-fact__links">
+                      {trip.links.map((l, i) => (
+                        <a
+                          key={i}
+                          href={l.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {l.name}
+                        </a>
+                      ))}
+                    </span>
+                  </div>
+                </div>
+              )}
               <div className="landing-fact">
                 <span className="landing-fact__icon" aria-hidden="true">
                   🧗

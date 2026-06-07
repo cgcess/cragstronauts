@@ -4,6 +4,7 @@
 import type { z } from "zod";
 import type {
   TripSchema,
+  TripLinkSchema,
   CreateTripResponseSchema,
   TripIndexEntrySchema,
   UserSchema,
@@ -15,6 +16,7 @@ import type {
 } from "@cragstronauts/contract";
 
 type Trip = z.infer<typeof TripSchema>;
+export type TripLink = z.infer<typeof TripLinkSchema>;
 type CreateTripResponse = z.infer<typeof CreateTripResponseSchema>;
 type TripIndexEntry = z.infer<typeof TripIndexEntrySchema>;
 type User = z.infer<typeof UserSchema>;
@@ -62,6 +64,7 @@ export const api = {
     place_label?: string | null;
     welcome_message: string;
     signature: string;
+    links?: { name: string; url: string }[];
     organizer_name: string;
     gear_categories: { name: string; fields: { key: string; label: string; type: string }[] }[];
   }) => req<CreateTripResponse>("POST", "/api/trips", data),

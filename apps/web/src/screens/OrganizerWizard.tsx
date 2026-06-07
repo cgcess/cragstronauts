@@ -3,6 +3,8 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router";
 import { api } from "../api";
 import { tripPath } from "../lib/tripUrl";
+import { cleanLinks } from "../lib/links";
+import LinksEditor from "../components/LinksEditor";
 import DateRangePicker from "../components/DateRangePicker";
 import { Button } from "../components/ui";
 
@@ -80,6 +82,7 @@ export default function OrganizerWizard() {
   const [pinLat, setPinLat] = useState<number | null>(null);
   const [pinLon, setPinLon] = useState<number | null>(null);
   const [placeLabel, setPlaceLabel] = useState<string | null>(null);
+  const [links, setLinks] = useState<{ name: string; url: string }[]>([]);
   const [geoResults, setGeoResults] = useState<GeoResult[]>([]);
   const [geoSearching, setGeoSearching] = useState(false);
   const [geoSearched, setGeoSearched] = useState(false);
@@ -162,6 +165,7 @@ export default function OrganizerWizard() {
         latitude: pinLat,
         longitude: pinLon,
         place_label: placeLabel,
+        links: cleanLinks(links),
         welcome_message: welcomeMessage.trim(),
         signature: signature.trim(),
         organizer_name: organizerName.trim(),
@@ -302,6 +306,14 @@ export default function OrganizerWizard() {
                     spot later.
                   </p>
                 )}
+              </motion.div>
+
+              <motion.div variants={item}>
+                <label>Useful links</label>
+                <LinksEditor links={links} onChange={setLinks} />
+                <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                  Crag page, Google Maps, topo, parking… Optional.
+                </p>
               </motion.div>
 
               <motion.div variants={item}>

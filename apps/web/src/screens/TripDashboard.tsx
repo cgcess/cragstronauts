@@ -2217,6 +2217,70 @@ function CarsBody({
   );
 }
 
+type DraftField = { key: string; label: string; type: string };
+
+/**
+ * Field-builder rows shared by the add- and edit-category forms. Mirrors the
+ * pattern used in OrganizerWizard so the two flows stay consistent. The key is
+ * derived from the label on first entry and then kept stable (`f.key ||`), so
+ * editing an existing category never orphans already-submitted contribution
+ * details keyed by the original key.
+ */
+function FieldRows({
+  fields,
+  onChange,
+}: {
+  fields: DraftField[];
+  onChange: (fields: DraftField[]) => void;
+}) {
+  return (
+    <div style={{ marginTop: 10 }}>
+      <label>Fields to ask</label>
+      {fields.map((f, fi) => (
+        <div className="field-builder-row" key={fi}>
+          <input
+            placeholder="Label (e.g. Length)"
+            value={f.label}
+            onChange={(e) => {
+              const next = [...fields];
+              next[fi] = {
+                ...f,
+                label: e.target.value,
+                key: f.key || e.target.value.toLowerCase().replace(/\s+/g, "_"),
+              };
+              onChange(next);
+            }}
+          />
+          <select
+            value={f.type}
+            onChange={(e) => {
+              const next = [...fields];
+              next[fi] = { ...f, type: e.target.value };
+              onChange(next);
+            }}
+          >
+            <option value="text">Text</option>
+            <option value="number">Number</option>
+          </select>
+          <button
+            className="th-btn th-btn--tertiary th-btn--icon th-btn--sm"
+            aria-label="Remove field"
+            onClick={() => onChange(fields.filter((_, i) => i !== fi))}
+          >
+            ✕
+          </button>
+        </div>
+      ))}
+      <button
+        className="th-btn th-btn--secondary"
+        onClick={() => onChange([...fields, { key: "", label: "", type: "text" }])}
+      >
+        + Add field
+      </button>
+    </div>
+  );
+}
+
 function GearBody({
   tripId,
   categories,
@@ -2239,16 +2303,46 @@ function GearBody({
   const [error, setError] = useState<string | null>(null);
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [newFields, setNewFields] = useState<DraftField[]>([]);
+  const [editingCategory, setEditingCategory] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editFields, setEditFields] = useState<DraftField[]>([]);
+
+  const resetAdd = () => {
+    setAddingCategory(false);
+    setNewCategoryName("");
+    setNewFields([]);
+  };
 
   const addCategory = async () => {
     setError(null);
     try {
       await api.addCategory(tripId, {
         name: newCategoryName.trim(),
-        fields: [],
+        fields: newFields.filter((f) => f.key.trim() && f.label.trim()),
       });
-      setNewCategoryName("");
-      setAddingCategory(false);
+      resetAdd();
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const startEdit = (cat: Category) => {
+    setEditingCategory(cat.id);
+    setEditName(cat.name);
+    setEditFields(cat.fields.map((f) => ({ ...f })));
+  };
+
+  const saveEdit = async () => {
+    if (editingCategory == null) return;
+    setError(null);
+    try {
+      await api.updateCategory(tripId, editingCategory, {
+        name: editName.trim(),
+        fields: editFields.filter((f) => f.key.trim() && f.label.trim()),
+      });
+      setEditingCategory(null);
       await onChanged();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -2308,11 +2402,48 @@ function GearBody({
 
       <div className="sheet-sections">
         {categories.map((cat) => (
+        editingCategory === cat.id ? (
+        <div className="card" key={cat.id}>
+          <label>Category name</label>
+          <input
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            placeholder="e.g. Helmets"
+            autoFocus
+          />
+          <FieldRows fields={editFields} onChange={setEditFields} />
+          <div className="row" style={{ marginTop: 10 }}>
+            <button
+              className="th-btn th-btn--secondary"
+              onClick={() => setEditingCategory(null)}
+            >
+              Cancel
+            </button>
+            <button
+              className="th-btn th-btn--primary"
+              style={{ flex: 1 }}
+              disabled={!editName.trim()}
+              onClick={saveEdit}
+            >
+              Save changes
+            </button>
+          </div>
+        </div>
+        ) : (
         <div className="card" key={cat.id}>
           <div className="row between">
             <div style={{ fontWeight: 600 }}>{cat.name}</div>
             <div className="row" style={{ gap: 6, alignItems: "center" }}>
               <Tag variant="neutral" size="sm" mono>{byCat[cat.id].length}</Tag>
+              {isOrganizer && (
+                <button
+                  className="th-btn th-btn--tertiary th-btn--icon th-btn--sm"
+                  onClick={() => startEdit(cat)}
+                  aria-label={`Edit ${cat.name} category`}
+                >
+                  ✎
+                </button>
+              )}
               {isOrganizer && (
                 <button
                   className="th-btn th-btn--tertiary th-btn--icon th-btn--sm"
@@ -2399,6 +2530,7 @@ function GearBody({
             </button>
           )}
         </div>
+        )
         ))}
       </div>
 
@@ -2412,13 +2544,11 @@ function GearBody({
               placeholder="e.g. Helmets"
               autoFocus
             />
+            <FieldRows fields={newFields} onChange={setNewFields} />
             <div className="row" style={{ marginTop: 10 }}>
               <button
                 className="th-btn th-btn--secondary"
-                onClick={() => {
-                  setAddingCategory(false);
-                  setNewCategoryName("");
-                }}
+                onClick={resetAdd}
               >
                 Cancel
               </button>

@@ -703,7 +703,8 @@ export default function TripDashboard() {
               const filled = c.passengers.length + 1;
               return (
                 <span key={c.id} className="dash-tile__chip">
-                  🚗 {c.driver_name} {filled}/{c.total_seats}
+                  🚗 <span className="dash-tile__chip-trunc">{c.driver_name}</span>{" "}
+                  {filled}/{c.total_seats}
                 </span>
               );
             })}
@@ -837,7 +838,8 @@ export default function TripDashboard() {
             {polls.slice(0, 4).map((p) => (
               <span key={p.id} className="dash-tile__chip">
                 {p.emoji ? `${p.emoji} ` : ""}
-                {p.question} · {answeredCount(p.id)}/{joining.length}
+                <span className="dash-tile__chip-trunc">{p.question}</span> ·{" "}
+                {answeredCount(p.id)}/{joining.length}
               </span>
             ))}
             {polls.length > 4 && (
@@ -2077,8 +2079,10 @@ function CarsBody({
         return (
           <div className="card" key={c.id}>
             <div className="row between">
-              <div>
-                <div style={{ fontWeight: 600 }}>{c.driver_name}&apos;s car</div>
+              <div className="ride-card__head">
+                <div style={{ fontWeight: 600 }} className="ride-card__title">
+                  {c.driver_name}&apos;s car
+                </div>
                 <div className="muted" style={{ fontSize: 13 }}>
                   {c.total_seats} seats · {passengerCount}/{passengerCapacity} passengers
                   {c.reserved_seats > 0 && ` · ${c.reserved_seats} reserved`}

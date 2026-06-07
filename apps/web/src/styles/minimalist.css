@@ -164,17 +164,16 @@ input:focus, textarea:focus, select:focus {
   box-shadow: none !important;
   border: 1px solid var(--min-line) !important;
 }
-/* Stack section cards as one tight group; tell each apart with a gently
-   alternating surface tint instead of elevation. */
+/* Stack section cards as one tight group. Every card gets the same filled
+   surface tint (no alternating stripe) so the treatment reads consistently
+   across all sheets — Gear, Rides, Polls, Expenses. */
 .sheet-sections > .card {
   margin: 0 0 8px !important;
   border-radius: 14px !important;
+  background: var(--min-surface-2) !important;
 }
 .sheet-sections > .card:last-child {
   margin-bottom: 0 !important;
-}
-.sheet-sections > .card:nth-child(even) {
-  background: var(--min-surface-2) !important;
 }
 /* Standalone card-level action buttons (e.g. "+ I'm bringing one") sit
    centered at hugging width rather than flush-left. */
@@ -722,6 +721,17 @@ input:focus, textarea:focus, select:focus {
 }
 .dash-tile__chip.is-on {
   color: var(--min-ink) !important;
+}
+/* Variable-length text inside a preview chip (poll question, driver name)
+   ellipsizes instead of stretching the chip past the tile edge. The trailing
+   count stays visible because only this inner span truncates. */
+.dash-tile__chip-trunc {
+  display: inline-block;
+  max-width: 16ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
 }
 .dash-tile__dot {
   font-size: 11px;

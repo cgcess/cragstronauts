@@ -6,6 +6,7 @@ export const UserSchema = z.object({
   joining: z.boolean(),
   is_organizer: z.boolean(),
   signup_completed: z.boolean(),
+  claimed: z.boolean(),
 });
 
 export const CreateUserBodySchema = z.object({

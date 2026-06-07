@@ -1824,3 +1824,36 @@ label {
   height: 1px;
   background: var(--fl-divider);
 }
+/* Muted explainer under the title in the duplicate-name confirm step. */
+.identity-identify__note {
+  margin: 0;
+  color: var(--fl-fg-mute);
+  font-size: 14px;
+  line-height: 1.4;
+}
+/* The collapsed "pick yourself" disclosure toggle, and the confirm "Back". */
+.identity-identify__toggle {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 6px 0;
+  color: var(--fl-fg-mute);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.identity-identify__toggle:hover:not(:disabled) {
+  color: var(--fl-fg);
+}
+.identity-identify__toggle:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+/* "in use" hint on a taken person in the pick-yourself list. */
+.identity-identify__lock {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.7;
+}

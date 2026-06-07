@@ -136,6 +136,7 @@ export class TripDO extends DurableObject<Env> {
         joining: 1,
         is_organizer: 1,
         signup_completed: 1,
+        claimed: 1,
       },
       ["id"]
     );
@@ -309,10 +310,23 @@ export class TripDO extends DurableObject<Env> {
 
     const row = this.db.insertReturning(
       user,
-      { name, joining: data.joining ? 1 : 0 },
-      ["id", "name", "joining", "is_organizer", "signup_completed"]
+      { name, joining: data.joining ? 1 : 0, claimed: 1 },
+      ["id", "name", "joining", "is_organizer", "signup_completed", "claimed"]
     );
     return formatUser(row);
+  }
+
+  // Mark a user as taken by a device. Adopting an existing identity
+  // (pick-yourself or the "that's me" confirm) flips this flag server-side so
+  // other devices see the slot as claimed.
+  async claimUser(userId: number): Promise<User> {
+    const row = this.db.get(user, { where: eq("id", userId) });
+    if (!row) throw new Error("User not found");
+
+    this.db.update(user, { claimed: 1 }, { where: eq("id", userId) });
+
+    const updated = this.db.get(user, { where: eq("id", userId) })!;
+    return formatUser(updated);
   }
 
   async deleteUser(userId: number): Promise<{ ok: boolean }> {
@@ -1119,6 +1133,7 @@ function formatUser(r: {
   joining: number;
   is_organizer: number;
   signup_completed: number;
+  claimed: number;
 }): User {
   return {
     id: r.id,
@@ -1126,6 +1141,7 @@ function formatUser(r: {
     joining: Boolean(r.joining),
     is_organizer: Boolean(r.is_organizer),
     signup_completed: Boolean(r.signup_completed),
+    claimed: Boolean(r.claimed),
   };
 }
 

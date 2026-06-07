@@ -89,6 +89,27 @@ export const completeSignupRoute = createRoute({
   },
 });
 
+export const claimUserRoute = createRoute({
+  method: "post",
+  path: "/api/trips/{trip_id}/users/{user_id}/claim",
+  summary: "Mark a user as claimed (taken) by a device",
+  request: { params: UserParamsSchema },
+  responses: {
+    200: {
+      content: { "application/json": { schema: UserSchema } },
+      description: "User claimed",
+    },
+    400: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Error",
+    },
+    404: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "User not found",
+    },
+  },
+});
+
 export const makeOrganizerRoute = createRoute({
   method: "post",
   path: "/api/trips/{trip_id}/users/{user_id}/make-organizer",

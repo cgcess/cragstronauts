@@ -6,6 +6,7 @@ import {
   createUserRoute,
   deleteUserRoute,
   completeSignupRoute,
+  claimUserRoute,
   makeOrganizerRoute,
   updateUserRoute,
 } from "@cragstronauts/contract";
@@ -54,6 +55,22 @@ userRoutes.openapi(completeSignupRoute, async (c) => {
   try {
     const stub = getTripDO(c.env, tripId);
     const user = await stub.completeSignup(userId);
+    return c.json(user, 200);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg === "User not found") {
+      return c.json({ detail: msg }, 404);
+    }
+    return c.json({ detail: msg }, 400);
+  }
+});
+
+userRoutes.openapi(claimUserRoute, async (c) => {
+  const { trip_id: tripId, user_id } = c.req.valid("param");
+  const userId = Number(user_id);
+  try {
+    const stub = getTripDO(c.env, tripId);
+    const user = await stub.claimUser(userId);
     return c.json(user, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

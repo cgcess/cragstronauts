@@ -10,6 +10,7 @@ import {
 import { api } from "../api";
 import type { User, Category, Poll } from "../context/TripContext";
 import { Button, Tag } from "../components/ui";
+import { findNameMatches } from "../lib/identity";
 
 /* ------------------------------------------------------------------ */
 /* IdentityFlow                                                        */
@@ -23,6 +24,18 @@ import { Button, Tag } from "../components/ui";
 /*                                                                     */
 /* It renders over the still-mounted board, so once it resolves the    */
 /* triggering action resumes exactly where it left off.                */
+/*                                                                     */
+/* Taken / claim model: identity is cooperative, not secured, but we    */
+/* add friction against accidental impersonation. A user is `claimed`   */
+/* (taken) the moment a device adopts it — every self-typed user is     */
+/* claimed at creation. The identify panel makes typing your name the   */
+/* prominent path and demotes "pick yourself" to a collapsed disclosure.*/
+/* If a typed name collides with an existing person we show a confirm:  */
+/* "that's me" re-claims that identity (api.claimUser) — the new-device  */
+/* / cleared-storage re-entry path — while "add a new {name}" creates a  */
+/* distinct person. Taken users in the disclosure can't be adopted in   */
+/* one tap; they route through the same confirm. Logout never releases  */
+/* a claim.                                                            */
 /* ------------------------------------------------------------------ */
 
 type Phase = "identify" | "questions";
@@ -83,8 +96,16 @@ export default function IdentityFlow({
     setPhase("questions");
   };
 
-  // Returning visitor tapped an existing person.
+  // Returning visitor adopted an existing person (pick-yourself or the
+  // "that's me" confirm). Claim the slot server-side so other devices see it
+  // as taken, then proceed — skipping the questionnaire if they're already set
+  // up.
   const pickExisting = async (id: number) => {
+    try {
+      await api.claimUser(tripId, id);
+    } catch {
+      // best-effort; adopting still works locally even if the claim flips fail
+    }
     await refresh();
     setUser(id);
     const u = users.find((x) => x.id === id);
@@ -192,29 +213,106 @@ function IdentifyPanel({
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // When the typed name collides with existing people, hold them here so the
+  // panel swaps to the "that's me vs. add new" confirm step.
+  const [matches, setMatches] = useState<User[] | null>(null);
+  // The collapsed "pick yourself" disclosure.
+  const [pickOpen, setPickOpen] = useState(false);
 
-  const submitNew = async () => {
-    if (!name.trim() || busy) return;
+  const guard = async (fn: () => Promise<void>) => {
+    if (busy) return;
     setError(null);
     setBusy(true);
     try {
-      await onCreate(name);
+      await fn();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setBusy(false);
     }
   };
 
-  const pick = async (id: number) => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      await onPick(id);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      setBusy(false);
+  // Submitting the name: a collision opens the confirm, otherwise create.
+  const submitName = () => {
+    if (!name.trim() || busy) return;
+    const found = findNameMatches(users, name);
+    if (found.length > 0) {
+      setError(null);
+      setMatches(found);
+      return;
     }
+    guard(() => onCreate(name));
   };
+
+  const create = () => guard(() => onCreate(name));
+  const pick = (id: number) => guard(() => onPick(id));
+
+  // Tapping a person in the disclosure. Un-taken users adopt in one tap;
+  // taken ones route through the confirm instead.
+  const tapExisting = (u: User) => {
+    if (busy) return;
+    if (u.claimed) {
+      setName(u.name);
+      setError(null);
+      setMatches([u]);
+      return;
+    }
+    pick(u.id);
+  };
+
+  const typed = name.trim();
+
+  // Confirm step: the typed name already belongs to someone.
+  if (matches) {
+    return (
+      <div className="content identity-identify">
+        <div className="identity-identify__inner">
+          <div className="identity-identify__head">
+            <h1 className="identity-identify__title">
+              {matches.length > 1 ? "Which one are you?" : "That you?"}
+            </h1>
+            <p className="identity-identify__note">
+              {matches.length > 1
+                ? `There are already people named ${typed} on this trip.`
+                : `There's already a ${typed} on this trip.`}
+            </p>
+            {error && <div className="error-banner">{error}</div>}
+            <div className="col">
+              {matches.map((u) => (
+                <Button
+                  key={u.id}
+                  variant="secondary"
+                  fullWidth
+                  disabled={busy}
+                  onClick={() => pick(u.id)}
+                >
+                  That's me — {u.name} {u.is_organizer && "👑"}
+                </Button>
+              ))}
+            </div>
+            <Button
+              variant="primary"
+              fullWidth
+              disabled={busy}
+              onClick={create}
+            >
+              {busy ? "One sec…" : `Add a new ${typed}`}
+            </Button>
+            <button
+              type="button"
+              className="identity-identify__toggle"
+              disabled={busy}
+              onClick={() => {
+                setMatches(null);
+                setError(null);
+              }}
+            >
+              ← Back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="content identity-identify">
@@ -226,7 +324,7 @@ function IdentifyPanel({
             placeholder="Your name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && submitNew()}
+            onKeyDown={(e) => e.key === "Enter" && submitName()}
             autoFocus
           />
           {error && <div className="error-banner">{error}</div>}
@@ -234,7 +332,7 @@ function IdentifyPanel({
             variant="primary"
             fullWidth
             disabled={!name.trim() || busy}
-            onClick={submitNew}
+            onClick={submitName}
           >
             {busy ? "One sec…" : "Continue →"}
           </Button>
@@ -242,22 +340,33 @@ function IdentifyPanel({
 
         {users.length > 0 && (
           <div className="identity-identify__list">
-            <div className="identity-identify__divider">
-              <span>or pick yourself</span>
-            </div>
-            <div className="col">
-              {users.map((u) => (
-                <Button
-                  key={u.id}
-                  variant="secondary"
-                  fullWidth
-                  disabled={busy}
-                  onClick={() => pick(u.id)}
-                >
-                  {u.name} {u.is_organizer && "👑"}
-                </Button>
-              ))}
-            </div>
+            <button
+              type="button"
+              className="identity-identify__toggle"
+              aria-expanded={pickOpen}
+              disabled={busy}
+              onClick={() => setPickOpen((v) => !v)}
+            >
+              Already added? Pick yourself {pickOpen ? "⌃" : "∨"}
+            </button>
+            {pickOpen && (
+              <div className="col">
+                {users.map((u) => (
+                  <Button
+                    key={u.id}
+                    variant="secondary"
+                    fullWidth
+                    disabled={busy}
+                    onClick={() => tapExisting(u)}
+                  >
+                    {u.name} {u.is_organizer && "👑"}
+                    {u.claimed && (
+                      <span className="identity-identify__lock">🔒 in use</span>
+                    )}
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

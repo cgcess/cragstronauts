@@ -23,6 +23,7 @@ export const user = table("user", {
   joining: column.integer().notNull().default(1),
   is_organizer: column.integer().notNull().default(0),
   signup_completed: column.integer().notNull().default(0),
+  claimed: column.integer().notNull().default(0),
 });
 
 export const poll = table("poll", {

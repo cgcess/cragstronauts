@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router";
-import { api } from "../api";
-import { useTripContext, type User } from "../context/TripContext";
+import { useTripContext } from "../context/TripContext";
 import { formatDateRange } from "../dateUtils";
 import { Button } from "../components/ui";
 import Markdown from "../components/Markdown";
+import Linkify from "../components/Linkify";
 
 const SIGNOFF_WORDS = [
   "Send it",
@@ -17,58 +17,65 @@ const SIGNOFF_WORDS = [
   "Keep sending",
 ];
 
+const ACCOM_META: Record<string, { icon: string; label: string }> = {
+  campsite: { icon: "⛺", label: "Campsite" },
+  airbnb: { icon: "🏠", label: "Airbnb" },
+  hotel: { icon: "🏨", label: "Hotel" },
+  hut: { icon: "🛖", label: "Hut / Refuge" },
+  other: { icon: "📍", label: "Other" },
+};
+function accomMeta(type: string | null | undefined) {
+  if (!type) return null;
+  return ACCOM_META[type] ?? { icon: "🏠", label: type };
+}
+
+/** Whole days from today until an ISO date (negative = in the past). */
+function daysUntil(dateStr: string | null): number | null {
+  if (!dateStr) return null;
+  const start = new Date(dateStr + "T00:00:00");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((start.getTime() - today.getTime()) / 86_400_000);
+}
+
 export default function Landing() {
-  const { tripId, trip, users, setUser, refresh } = useTripContext();
+  const { tripId, trip, users, currentUserId, ensureUser } = useTripContext();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"choose" | "new">("choose");
-  const [name, setName] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [signoffIndex, setSignoffIndex] = useState(0);
 
-  const pickExisting = (userId: number) => {
-    setUser(userId);
-    const me = users.find((u) => u.id === userId);
-    if (me?.signup_completed) {
-      navigate(`/trips/${tripId}/board`);
-    } else {
-      navigate(`/trips/${tripId}/signup`);
-    }
+  const joined = currentUserId != null;
+
+  // "Join trip" runs the identity flow; once the visitor establishes who they
+  // are, we drop them onto the board. Dismissing the flow keeps them here.
+  const joinTrip = async () => {
+    const id = await ensureUser();
+    if (id != null) navigate(`/trips/${tripId}/board`);
   };
 
-  const joinNew = async () => {
-    setError(null);
-    setBusy(true);
-    try {
-      const u = await api.createUser(tripId, name.trim());
-      await refresh();
-      setUser(u.id);
-      navigate(`/trips/${tripId}/signup`, { replace: true });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
+  const accom = accomMeta(trip.accommodation_type);
+  const joiningNames = users
+    .filter((u) => u.joining)
+    .map((u) => u.name + (u.is_organizer ? " 👑" : ""));
+  const rosterLabel =
+    joiningNames.length === 0
+      ? "Be the first to join"
+      : joiningNames.join(", ");
+  const dUntil = daysUntil(trip.start_date);
+  const hasDates = Boolean(trip.start_date || trip.end_date);
+  const countdownLabel =
+    dUntil == null
+      ? null
+      : dUntil > 0
+      ? `${dUntil} ${dUntil === 1 ? "day" : "days"} to go`
+      : dUntil === 0
+      ? "Happening today"
+      : `${Math.abs(dUntil)} ${Math.abs(dUntil) === 1 ? "day" : "days"} ago`;
 
   return (
     <div className="app-shell">
       <div className="fade-overlay fade-overlay--top" aria-hidden="true" />
       <div className="content">
-        <Button
-          variant="secondary"
-          pill
-          onClick={() => navigate("/", { replace: true })}
-          style={{ marginBottom: 8, position: "relative", zIndex: 6 }}
-        >
-          ← Trips
-        </Button>
         <div className="h1">🧗 {trip.location}</div>
-        {(trip.start_date || trip.end_date) && (
-          <p className="muted">
-            {formatDateRange(trip.start_date, trip.end_date)}
-          </p>
-        )}
 
         {trip.welcome_message && (
           <div
@@ -106,56 +113,96 @@ export default function Landing() {
           </div>
         )}
 
-        {mode === "choose" && (
-          <div className="col" style={{ marginTop: 20 }}>
-            <Button variant="primary" fullWidth onClick={() => setMode("new")}>
-              Join the trip →
-            </Button>
-            {users.length > 0 && (
-              <>
-                <p className="muted" style={{ marginTop: 16 }}>
-                  Or pick yourself if you&apos;ve been here before:
-                </p>
-                {users.map((u) => (
-                  <Button
-                    key={u.id}
-                    variant="secondary"
-                    fullWidth
-                    onClick={() => pickExisting(u.id)}
-                  >
-                    {u.name} {u.is_organizer && "👑"}
-                  </Button>
-                ))}
-              </>
-            )}
-          </div>
-        )}
-
-        {mode === "new" && (
-          <div className="col" style={{ marginTop: 20 }}>
-            <label>Your name</label>
-            <input
-              placeholder="e.g. Sam"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoFocus
-            />
-            {error && <div className="error-banner">{error}</div>}
-            <div className="row">
-              <Button variant="secondary" onClick={() => setMode("choose")}>
-                Back
-              </Button>
-              <Button
-                variant="primary"
-                disabled={!name.trim() || busy}
-                onClick={joinNew}
-                style={{ flex: 1 }}
-              >
-                {busy ? "Joining…" : "Let's go"}
-              </Button>
+        {/* At-a-glance details so visitors can decide before committing. */}
+        <div className="card" style={{ marginTop: 16, maxWidth: 560 }}>
+            <div className="col" style={{ gap: 14 }}>
+              <div className="landing-fact">
+                <span className="landing-fact__icon" aria-hidden="true">
+                  📅
+                </span>
+                <div className="landing-fact__text">
+                  <span className="landing-fact__label">When</span>
+                  <span className="landing-fact__detail">
+                    {hasDates
+                      ? formatDateRange(trip.start_date, trip.end_date)
+                      : "Dates TBD"}
+                    {countdownLabel && (
+                      <span className="muted"> · {countdownLabel}</span>
+                    )}
+                  </span>
+                </div>
+              </div>
+              {trip.place_label && (
+                <div className="landing-fact">
+                  <span className="landing-fact__icon" aria-hidden="true">
+                    📍
+                  </span>
+                  <div className="landing-fact__text">
+                    <span className="landing-fact__label">Where</span>
+                    <span className="landing-fact__detail">
+                      {trip.place_label}
+                    </span>
+                  </div>
+                </div>
+              )}
+              <div className="landing-fact">
+                <span className="landing-fact__icon" aria-hidden="true">
+                  🧗
+                </span>
+                <div className="landing-fact__text">
+                  <span className="landing-fact__label">Who</span>
+                  <span className="landing-fact__detail">{rosterLabel}</span>
+                </div>
+              </div>
+              {trip.accommodation_details && (
+                <div className="landing-fact">
+                  <span className="landing-fact__icon" aria-hidden="true">
+                    {accom?.icon ?? "🏠"}
+                  </span>
+                  <div className="landing-fact__text">
+                    <span className="landing-fact__label">
+                      {accom?.label ?? "Accommodation"}
+                    </span>
+                    <span className="landing-fact__detail">
+                      <Linkify>{trip.accommodation_details}</Linkify>
+                    </span>
+                  </div>
+                </div>
+              )}
+              {trip.notes && (
+                <div className="landing-fact">
+                  <span className="landing-fact__icon" aria-hidden="true">
+                    📝
+                  </span>
+                  <div className="landing-fact__text">
+                    <span className="landing-fact__label">Notes</span>
+                    <span
+                      className="landing-fact__detail"
+                      style={{ whiteSpace: "pre-wrap" }}
+                    >
+                      <Linkify>{trip.notes}</Linkify>
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+        </div>
+
+        <div className="col" style={{ marginTop: 20 }}>
+          {joined ? (
+            <Button
+              variant="primary"
+              fullWidth
+              onClick={() => navigate(`/trips/${tripId}/board`)}
+            >
+              View trip →
+            </Button>
+          ) : (
+            <Button variant="primary" fullWidth onClick={joinTrip}>
+              Join trip
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

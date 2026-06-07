@@ -33,4 +33,4 @@ These same checks run in CI on every push to main and on PRs.
 ## Resetting local state
 
 - Delete `apps/api/.wrangler/` to wipe the local database.
-- Clear `climbingTrip.userId` and `climbingTrip.signupDone.*` from localStorage to switch user.
+- Clear `climbingTrip.userId` from localStorage to switch user. The board is public; identity is established lazily on the first write (joining a car, adding gear, adding an expense) via the full-screen `IdentityFlow` overlay — type a name (or pick yourself), then the skippable swipe questionnaire — after which the original action resumes.

@@ -430,7 +430,7 @@ export class TripDO extends DurableObject<Env> {
           { where: eq("id", carId) }
         );
       }
-      throw new Error("Already signed up");
+      throw new Error("You're already in this car");
     }
 
     const updated = this.db.get(car, { where: eq("id", carId) })!;

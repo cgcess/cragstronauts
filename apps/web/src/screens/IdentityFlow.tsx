@@ -1,9 +1,256 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { animate, motion, useMotionValue, useTransform, AnimatePresence } from "framer-motion";
-import { useNavigate, Navigate } from "react-router";
+import { createPortal } from "react-dom";
+import {
+  animate,
+  motion,
+  useMotionValue,
+  useTransform,
+  AnimatePresence,
+} from "framer-motion";
 import { api } from "../api";
-import { useTripContext, type Category } from "../context/TripContext";
+import type { User, Category } from "../context/TripContext";
 import { Button, Tag } from "../components/ui";
+
+/* ------------------------------------------------------------------ */
+/* IdentityFlow                                                        */
+/*                                                                     */
+/* A full-screen overlay that establishes identity on demand. It is    */
+/* opened by TripContext.ensureUser() the first time an anonymous      */
+/* visitor tries to write. Two phases:                                 */
+/*                                                                     */
+/*   1. identify  — type your name (or pick an existing person)        */
+/*   2. questions — the swipe-deck questionnaire (skippable)           */
+/*                                                                     */
+/* It renders over the still-mounted board, so once it resolves the    */
+/* triggering action resumes exactly where it left off.                */
+/* ------------------------------------------------------------------ */
+
+type Phase = "identify" | "questions";
+
+interface IdentityFlowProps {
+  open: boolean;
+  tripId: string;
+  users: User[];
+  categories: Category[];
+  setUser: (id: number | null) => void;
+  refresh: () => Promise<void>;
+  /** Resolve the pending ensureUser() promise and close the overlay. */
+  onDone: (id: number | null) => void;
+}
+
+export default function IdentityFlow({
+  open,
+  tripId,
+  users,
+  categories,
+  setUser,
+  refresh,
+  onDone,
+}: IdentityFlowProps) {
+  const [phase, setPhase] = useState<Phase>("identify");
+  const [userId, setUserId] = useState<number | null>(null);
+
+  // Reset to a clean state every time the overlay opens.
+  useEffect(() => {
+    if (open) {
+      setPhase("identify");
+      setUserId(null);
+    }
+  }, [open]);
+
+  // New visitor typed a name → create them, then run the questionnaire.
+  const createAndContinue = async (name: string) => {
+    const u = await api.createUser(tripId, name.trim());
+    // Refresh before setUser so the self-heal guard in TripLayout sees the new
+    // user in the list and doesn't immediately clear the freshly-set id.
+    await refresh();
+    setUser(u.id);
+    setUserId(u.id);
+    setPhase("questions");
+  };
+
+  // Returning visitor tapped an existing person.
+  const pickExisting = async (id: number) => {
+    await refresh();
+    setUser(id);
+    const u = users.find((x) => x.id === id);
+    if (u?.signup_completed) {
+      onDone(id); // already set up — straight back to what they were doing
+    } else {
+      setUserId(id);
+      setPhase("questions");
+    }
+  };
+
+  // Finished or skipped the questionnaire.
+  const finishQuestions = async () => {
+    if (userId != null) {
+      try {
+        await api.completeSignup(tripId, userId);
+      } catch {
+        // best-effort; the user still exists and is signed in
+      }
+      await refresh();
+    }
+    onDone(userId);
+  };
+
+  // Swiped "no" on "Are you joining?" — undo the just-created user and abort.
+  const notJoining = async () => {
+    if (userId != null) {
+      try {
+        await api.deleteUser(tripId, userId);
+      } catch {
+        // ignore
+      }
+      setUser(null);
+      await refresh();
+    }
+    onDone(null);
+  };
+
+  // The top-right close button: abort during identify, skip during questions.
+  const dismiss = () => {
+    if (phase === "identify") onDone(null);
+    else finishQuestions();
+  };
+
+  return createPortal(
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          className="identity-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+        >
+          <div className="app-shell">
+            <button
+              type="button"
+              className="identity-overlay__close"
+              onClick={dismiss}
+              aria-label="Close"
+            >
+              ✕
+            </button>
+            {phase === "identify" ? (
+              <IdentifyPanel
+                users={users}
+                onCreate={createAndContinue}
+                onPick={pickExisting}
+              />
+            ) : (
+              <Questionnaire
+                tripId={tripId}
+                userId={userId!}
+                categories={categories}
+                onComplete={finishQuestions}
+                onNotJoining={notJoining}
+              />
+            )}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>,
+    document.body
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Phase 1 — identify                                                  */
+/* ------------------------------------------------------------------ */
+
+function IdentifyPanel({
+  users,
+  onCreate,
+  onPick,
+}: {
+  users: User[];
+  onCreate: (name: string) => Promise<void>;
+  onPick: (id: number) => Promise<void>;
+}) {
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submitNew = async () => {
+    if (!name.trim() || busy) return;
+    setError(null);
+    setBusy(true);
+    try {
+      await onCreate(name);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+    }
+  };
+
+  const pick = async (id: number) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await onPick(id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="content identity-identify">
+      <div className="identity-identify__inner">
+        <h1 className="identity-identify__title">Hop in 🧗</h1>
+        <p className="identity-identify__sub">
+          Pop in your name to join. A couple of quick questions next — skip them
+          if you like.
+        </p>
+        <input
+          className="identity-identify__input"
+          placeholder="Your name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && submitNew()}
+          autoFocus
+        />
+        {error && <div className="error-banner">{error}</div>}
+        <Button
+          variant="primary"
+          fullWidth
+          disabled={!name.trim() || busy}
+          onClick={submitNew}
+        >
+          {busy ? "One sec…" : "Continue →"}
+        </Button>
+
+        {users.length > 0 && (
+          <>
+            <div className="identity-identify__divider">
+              <span>or pick yourself</span>
+            </div>
+            <div className="col">
+              {users.map((u) => (
+                <Button
+                  key={u.id}
+                  variant="secondary"
+                  fullWidth
+                  disabled={busy}
+                  onClick={() => pick(u.id)}
+                >
+                  {u.name} {u.is_organizer && "👑"}
+                </Button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Phase 2 — questionnaire (swipe deck)                                */
+/* ------------------------------------------------------------------ */
 
 interface Question {
   id: string;
@@ -13,7 +260,6 @@ interface Question {
   category?: Category;
 }
 
-// Build the question list from gear categories
 function buildQuestions(categories: Category[]): Question[] {
   const qs: Question[] = [
     {
@@ -48,44 +294,33 @@ function buildQuestions(categories: Category[]): Question[] {
   return qs;
 }
 
-export default function SignupSwipe() {
-  const { tripId, categories, currentUserId: userId, switchUser, refresh } = useTripContext();
-  const navigate = useNavigate();
-
-  // Guard: need a user to do signup
-  if (!userId) {
-    return <Navigate to={`/trips/${tripId}`} replace />;
-  }
-
-  const onComplete = async () => {
-    if (userId) {
-      try {
-        await api.completeSignup(tripId, userId);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    await refresh();
-    navigate(`/trips/${tripId}/board`, { replace: true });
-  };
-
-  const onNotJoining = async () => {
-    switchUser();
-    await refresh();
-    navigate(`/trips/${tripId}`, { replace: true });
-  };
-
+function Questionnaire({
+  tripId,
+  userId,
+  categories,
+  onComplete,
+  onNotJoining,
+}: {
+  tripId: string;
+  userId: number;
+  categories: Category[];
+  onComplete: () => void;
+  onNotJoining: () => void;
+}) {
   const questions = useMemo(() => buildQuestions(categories), [categories]);
   const [idx, setIdx] = useState(0);
   const [details, setDetails] = useState<DetailState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [exitDir, setExitDir] = useState<"left" | "right" | null>(null);
-  const [answers] = useState({ joining: true, driving: null, gear: {} });
 
   const q = questions[idx];
 
-  const persistAnswer = async (qq: Question, yes: boolean, extra: Record<string, string> | null) => {
+  const persistAnswer = async (
+    qq: Question,
+    yes: boolean,
+    extra: Record<string, string> | null
+  ) => {
     setError(null);
     setSubmitting(true);
     try {
@@ -104,8 +339,6 @@ export default function SignupSwipe() {
         });
       }
       if (qq.kind === "lead-belay") {
-        // Persist both yes and no — the default is "no", so an explicit
-        // false here covers the case where a previous answer was true.
         await api.updateUser(tripId, userId, { can_lead_belay: yes });
       }
     } catch (e) {
@@ -117,11 +350,8 @@ export default function SignupSwipe() {
   };
 
   const next = () => {
-    if (idx + 1 >= questions.length) {
-      onComplete();
-    } else {
-      setIdx(idx + 1);
-    }
+    if (idx + 1 >= questions.length) onComplete();
+    else setIdx(idx + 1);
   };
 
   const handleAnswer = async (yes: boolean) => {
@@ -134,12 +364,6 @@ export default function SignupSwipe() {
       return;
     }
     if (q.id === "joining" && !yes) {
-      try {
-        await api.deleteUser(tripId, userId);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
-        return;
-      }
       onNotJoining();
       return;
     }
@@ -147,7 +371,9 @@ export default function SignupSwipe() {
     try {
       await persistAnswer(q, yes, null);
       next();
-    } catch {}
+    } catch {
+      /* error shown inline */
+    }
   };
 
   const submitDetails = async () => {
@@ -155,61 +381,63 @@ export default function SignupSwipe() {
       await persistAnswer(q, true, details!.values);
       setDetails(null);
       next();
-    } catch {}
+    } catch {
+      /* error shown inline */
+    }
   };
 
-  if (!q) {
-    return null;
-  }
+  if (!q) return null;
 
   return (
-    <div className="app-shell">
-      <div className="content content--swipe">
-        <div className="row between">
-          <Tag variant="neutral" mono>
-            {idx + 1} / {questions.length}
-          </Tag>
-          <Button variant="secondary" pill onClick={onComplete}>
-            Skip
-          </Button>
+    <div className="content content--swipe">
+      <div className="row between">
+        <Tag variant="neutral" mono>
+          {idx + 1} / {questions.length}
+        </Tag>
+        <Button variant="secondary" pill onClick={onComplete}>
+          Skip
+        </Button>
+      </div>
+
+      {error && (
+        <div className="error-banner" style={{ marginTop: 12 }}>
+          {error}
+        </div>
+      )}
+
+      <div className="deck">
+        <div className="deck-stage">
+          <AnimatePresence custom={exitDir} initial={false}>
+            {!details && (
+              <SwipeCard
+                key={q.id}
+                question={q}
+                onAnswer={handleAnswer}
+                exitDir={exitDir}
+                hint={idx === 0}
+              />
+            )}
+          </AnimatePresence>
         </div>
 
-        {error && <div className="error-banner" style={{ marginTop: 12 }}>{error}</div>}
-
-        <div className="deck">
-          <div className="deck-stage">
-            <AnimatePresence custom={exitDir} initial={false}>
-              {!details && (
-                <SwipeCard
-                  key={q.id}
-                  question={q}
-                  onAnswer={handleAnswer}
-                  exitDir={exitDir}
-                  hint={idx === 0}
-                />
-              )}
-            </AnimatePresence>
-          </div>
-
-          {!details && (
-            <SwipeActions
-              disabled={submitting}
-              onNo={() => handleAnswer(false)}
-              onYes={() => handleAnswer(true)}
-            />
-          )}
-        </div>
-
-        {details && (
-          <DetailForm
-            details={details}
-            setDetails={setDetails}
-            onCancel={() => setDetails(null)}
-            onSubmit={submitDetails}
-            submitting={submitting}
+        {!details && (
+          <SwipeActions
+            disabled={submitting}
+            onNo={() => handleAnswer(false)}
+            onYes={() => handleAnswer(true)}
           />
         )}
       </div>
+
+      {details && (
+        <DetailForm
+          details={details}
+          setDetails={setDetails}
+          onCancel={() => setDetails(null)}
+          onSubmit={submitDetails}
+          submitting={submitting}
+        />
+      )}
     </div>
   );
 }
@@ -307,7 +535,15 @@ function SwipeCard({ question, onAnswer, exitDir, hint }: SwipeCardProps) {
   );
 }
 
-function SwipeActions({ disabled, onNo, onYes }: { disabled: boolean; onNo: () => void; onYes: () => void }) {
+function SwipeActions({
+  disabled,
+  onNo,
+  onYes,
+}: {
+  disabled: boolean;
+  onNo: () => void;
+  onYes: () => void;
+}) {
   return (
     <div className="swipe-actions">
       <button
@@ -380,11 +616,19 @@ interface DetailFormProps {
   submitting: boolean;
 }
 
-function DetailForm({ details, setDetails, onCancel, onSubmit, submitting }: DetailFormProps) {
+function DetailForm({
+  details,
+  setDetails,
+  onCancel,
+  onSubmit,
+  submitting,
+}: DetailFormProps) {
   if (details.kind === "gear") {
     return (
       <div className="card" style={{ marginTop: 16 }}>
-        <div className="h2">Tell us about your {details.category.name.toLowerCase()}</div>
+        <div className="h2">
+          Tell us about your {details.category.name.toLowerCase()}
+        </div>
         <div className="col">
           {details.category.fields.map((f) => (
             <div key={f.key}>
@@ -406,7 +650,12 @@ function DetailForm({ details, setDetails, onCancel, onSubmit, submitting }: Det
           <button className="th-btn th-btn--secondary" onClick={onCancel}>
             Cancel
           </button>
-          <button className="th-btn th-btn--primary" onClick={onSubmit} disabled={submitting} style={{ flex: 1 }}>
+          <button
+            className="th-btn th-btn--primary"
+            onClick={onSubmit}
+            disabled={submitting}
+            style={{ flex: 1 }}
+          >
             {submitting ? "Saving…" : "Save"}
           </button>
         </div>
@@ -450,7 +699,12 @@ function DetailForm({ details, setDetails, onCancel, onSubmit, submitting }: Det
           <button className="th-btn th-btn--secondary" onClick={onCancel}>
             Cancel
           </button>
-          <button className="th-btn th-btn--primary" onClick={onSubmit} disabled={submitting} style={{ flex: 1 }}>
+          <button
+            className="th-btn th-btn--primary"
+            onClick={onSubmit}
+            disabled={submitting}
+            style={{ flex: 1 }}
+          >
             {submitting ? "Saving…" : "Save"}
           </button>
         </div>

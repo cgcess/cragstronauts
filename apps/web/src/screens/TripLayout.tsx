@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Outlet, useParams, useNavigate } from "react-router";
 import { api } from "../api";
 import { TripProvider, type Trip, type User, type Category } from "../context/TripContext";
+import IdentityFlow from "./IdentityFlow";
 
 const userKey = (tripId: string) => `climbingTrip.userId.${tripId}`;
 
@@ -21,6 +22,12 @@ export default function TripLayout() {
   const [currentUserId, setCurrentUserId] = useState<number | null>(() =>
     readNum(userKey(tripId!))
   );
+
+  // Lazy-identity sheet. `identityOpen` controls visibility; `resolverRef`
+  // holds the promise resolver from the in-flight ensureUser() call so the
+  // original write action can resume once the visitor identifies (or dismisses).
+  const [identityOpen, setIdentityOpen] = useState(false);
+  const resolverRef = useRef<((id: number | null) => void) | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -69,6 +76,23 @@ export default function TripLayout() {
     setCurrentUserId(null);
   };
 
+  const ensureUser = useCallback((): Promise<number | null> => {
+    const existing = readNum(userKey(tripId!));
+    if (existing != null) return Promise.resolve(existing);
+    return new Promise<number | null>((resolve) => {
+      resolverRef.current = resolve;
+      setIdentityOpen(true);
+    });
+  }, [tripId]);
+
+  // Resolve the pending ensureUser() promise (if any) and close the overlay.
+  const resolveIdentity = (id: number | null) => {
+    setIdentityOpen(false);
+    const resolve = resolverRef.current;
+    resolverRef.current = null;
+    resolve?.(id);
+  };
+
   const deleteTrip = async () => {
     await api.deleteTrip(tripId!);
     localStorage.removeItem(userKey(tripId!));
@@ -95,11 +119,21 @@ export default function TripLayout() {
         currentUserId,
         setUser,
         switchUser,
+        ensureUser,
         refresh,
         deleteTrip,
       }}
     >
       <Outlet />
+      <IdentityFlow
+        open={identityOpen}
+        tripId={tripId!}
+        users={users}
+        categories={categories}
+        setUser={setUser}
+        refresh={refresh}
+        onDone={resolveIdentity}
+      />
     </TripProvider>
   );
 }

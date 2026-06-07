@@ -7,7 +7,6 @@ import TripListing from "./screens/TripListing";
 import OrganizerWizard from "./screens/OrganizerWizard";
 import TripLayout from "./screens/TripLayout";
 import Landing from "./screens/Landing";
-import SignupSwipe from "./screens/SignupSwipe";
 import TripDashboard from "./screens/TripDashboard";
 import NotFound from "./screens/NotFound";
 import { partyDayActive } from "./lib/partyDay";
@@ -79,7 +78,6 @@ const router = createBrowserRouter([
         element: <TripLayout />,
         children: [
           { index: true, element: <Landing /> },
-          { path: "signup", element: <SignupSwipe /> },
           { path: "board", element: <TripDashboard /> },
         ],
       },

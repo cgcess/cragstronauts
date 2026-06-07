@@ -264,7 +264,10 @@ export default function TripListing() {
   }, [trips, today]);
 
   const onCreate = () => navigate("/trips/new");
-  const onSelect = (id: string) => navigate(`/trips/${id}/board`);
+  // Land on the public trip page (welcome + basics + Join). The board itself
+  // is members-only, so non-members enter through the landing's join flow;
+  // members tap straight through with "View trip".
+  const onSelect = (id: string) => navigate(`/trips/${id}`);
 
   if (!loaded) {
     return (

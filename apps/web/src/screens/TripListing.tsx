@@ -17,7 +17,6 @@ type Status = "upcoming" | "now" | "past" | "tbd";
 interface TripModel {
   status: Status;
   daysUntil: number;
-  code: string;
   dateLabel: string;
   dateMuted: boolean;
 }
@@ -42,30 +41,13 @@ function formatShortDate(d: Date): string {
   return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
 }
 
-function makeTripCode(location: string): string {
-  if (!location) return "XXXX";
-  const cleaned = location.replace(/[^A-Za-z\s]/g, " ").trim();
-  if (!cleaned) return "XXXX";
-  const words = cleaned.split(/\s+/).filter(Boolean);
-  let code = "";
-  if (words.length === 1) {
-    code = words[0].slice(0, 4).toUpperCase();
-  } else {
-    code = words.map((w) => w[0]).join("").slice(0, 4).toUpperCase();
-    if (code.length < 4) code = (code + words[0].slice(1)).slice(0, 4).toUpperCase();
-  }
-  while (code.length < 4) code += "X";
-  return code;
-}
-
 function modelFor(trip: TripEntry, todayStr: string): TripModel {
   const today = parseISODate(todayStr) ?? new Date();
   const start = parseISODate(trip.start_date);
   const end = parseISODate(trip.end_date) ?? start;
-  const code = makeTripCode(trip.location || "");
 
   if (!start) {
-    return { status: "tbd", daysUntil: 0, code, dateLabel: "Dates TBD", dateMuted: true };
+    return { status: "tbd", daysUntil: 0, dateLabel: "Dates TBD", dateMuted: true };
   }
 
   const daysUntil = Math.round((start.getTime() - today.getTime()) / MS_PER_DAY);
@@ -82,7 +64,7 @@ function modelFor(trip: TripEntry, todayStr: string): TripModel {
   else if (daysUntil < 0) status = "past";
   else status = "upcoming";
 
-  return { status, daysUntil, code, dateLabel, dateMuted: false };
+  return { status, daysUntil, dateLabel, dateMuted: false };
 }
 
 /* ---------- Hero card (weather-app top element) ---------- */
@@ -145,7 +127,6 @@ function HeroTripCard({
       <span className="fl-hero__accent-glow" aria-hidden="true" />
       <div className="fl-hero__top">
         <span aria-hidden="true">🧗</span>
-        <Tag variant="neutral" size="sm" mono>{model.code}</Tag>
         <span style={{ color: "var(--fl-fg-3)", letterSpacing: "0.14em" }}>
           {isPast ? "Last trip" : isNow ? "Happening now" : "Next trip"}
         </span>
@@ -214,9 +195,8 @@ function TripCard({
       <div className="fl-trip-card__details">
         <div className="fl-trip-card__meta">
           <span className="fl-trip-card__icon" aria-hidden="true">🧗</span>
-          <Tag variant="neutral" size="sm" mono>{model.code}</Tag>
+          <h3 className="fl-trip-card__title">{trip.location || "Untitled trip"}</h3>
         </div>
-        <h3 className="fl-trip-card__title">{trip.location || "Untitled trip"}</h3>
         <div className={"fl-trip-card__dates" + (model.dateMuted ? " fl-trip-card__dates--muted" : "")}>
           {model.dateLabel}
         </div>

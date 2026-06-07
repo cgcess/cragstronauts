@@ -723,15 +723,19 @@ input:focus, textarea:focus, select:focus {
   color: var(--min-ink) !important;
 }
 /* Variable-length text inside a preview chip (poll question, driver name)
-   ellipsizes instead of stretching the chip past the tile edge. The trailing
-   count stays visible because only this inner span truncates. */
+   ellipsizes to the tile width instead of stretching the chip past its edge.
+   Cap the chip at the tile width, then let only this span shrink below its
+   content size (min-width: 0) — the emoji + trailing count keep their
+   min-content width and stay fully visible. A fixed ch-based max-width was
+   too generous in a proportional font, so short questions never truncated. */
+.dash-tile__chip:has(.dash-tile__chip-trunc) {
+  max-width: 100%;
+}
 .dash-tile__chip-trunc {
-  display: inline-block;
-  max-width: 16ch;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  vertical-align: bottom;
 }
 .dash-tile__dot {
   font-size: 11px;

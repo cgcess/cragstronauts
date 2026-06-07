@@ -34,6 +34,7 @@ const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 /* ------------------------------------------------------------------ */
 
 type ShareableTrip = {
+  name: string;
   location: string;
   start_date: string | null;
   end_date: string | null;
@@ -95,7 +96,7 @@ function buildTripIcs(trip: ShareableTrip, url: string): string | null {
     "BEGIN:VEVENT",
     `UID:${uid}`,
     `DTSTAMP:${stamp}`,
-    `SUMMARY:${icsEscape("🧗 " + trip.location)}`,
+    `SUMMARY:${icsEscape("🧗 " + trip.name)}`,
     `DTSTART;VALUE=DATE:${icsDate(start)}`,
     `DTEND;VALUE=DATE:${icsDate(end)}`,
     `LOCATION:${icsEscape(place)}`,
@@ -363,12 +364,12 @@ export default function TripDashboard() {
   };
 
   const shareTrip = async () => {
-    const url = `${window.location.origin}${tripPath(trip.location, tripId)}`;
+    const url = `${window.location.origin}${tripPath(trip.name, tripId)}`;
     if (navigator.share) {
       try {
         await navigator.share({
-          title: trip.location,
-          text: `Join the "${trip.location}" climbing trip`,
+          title: trip.name,
+          text: `Join the "${trip.name}" climbing trip`,
           url,
         });
         return;
@@ -387,10 +388,10 @@ export default function TripDashboard() {
   };
 
   const addToCalendar = () => {
-    const url = `${window.location.origin}${tripPath(trip.location, tripId)}`;
+    const url = `${window.location.origin}${tripPath(trip.name, tripId)}`;
     const ics = buildTripIcs(trip, url);
     if (!ics) return;
-    openCalendarFile(`${slugify(trip.location) || "trip"}.ics`, ics);
+    openCalendarFile(`${slugify(trip.name) || "trip"}.ics`, ics);
   };
 
   const reload = async () => {
@@ -422,7 +423,7 @@ export default function TripDashboard() {
   // "Join trip" flow lives. Logging out also lands you here.
   useEffect(() => {
     if (currentUserId == null) {
-      navigate(tripPath(trip.location, tripId), { replace: true });
+      navigate(tripPath(trip.name, tripId), { replace: true });
     }
   }, [currentUserId, tripId, trip.location, navigate]);
 
@@ -731,7 +732,7 @@ export default function TripDashboard() {
                 variant="text"
                 onClick={() => {
                   switchUser();
-                  navigate(tripPath(trip.location, tripId));
+                  navigate(tripPath(trip.name, tripId));
                 }}
               >
                 Logout
@@ -777,7 +778,7 @@ export default function TripDashboard() {
                 : "Dates TBD"}
             </span>
           </div>
-          <h1 className="fl-detail-hero__title">{trip.location}</h1>
+          <h1 className="fl-detail-hero__title">{trip.name}</h1>
           <div className="fl-detail-hero__row">
             <div className="fl-detail-hero__count-col">
               {dUntil == null ? (
@@ -1416,6 +1417,7 @@ function HeroEdit({
   onSaved: () => Promise<void>;
   deleteTrip: () => Promise<void>;
 }) {
+  const [name, setName] = useState(trip.name);
   const [location, setLocation] = useState(trip.location);
   const [range, setRange] = useState<DateRange | undefined>(
     trip.start_date || trip.end_date
@@ -1441,6 +1443,7 @@ function HeroEdit({
     setSaving(true);
     try {
       await api.updateTrip(tripId, {
+        name: name.trim(),
         location: location.trim(),
         start_date: dateToIso(range?.from),
         end_date: dateToIso(range?.to ?? range?.from),
@@ -1468,8 +1471,8 @@ function HeroEdit({
       </div>
       <input
         className="fl-detail-hero__title-input"
-        value={location}
-        onChange={(e) => setLocation(e.target.value)}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
         placeholder="Trip name"
         aria-label="Trip name"
       />
@@ -1478,6 +1481,14 @@ function HeroEdit({
       </div>
 
       <div className="col" style={{ gap: 12 }}>
+        <div>
+          <label>Location</label>
+          <input
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="e.g. Yosemite Valley"
+          />
+        </div>
         <div>
           <label>Accommodation</label>
           <select value={accomType} onChange={(e) => setAccomType(e.target.value)}>
@@ -1531,13 +1542,13 @@ function HeroEdit({
           <button
             className="th-btn th-btn--primary"
             onClick={save}
-            disabled={!location.trim() || saving}
+            disabled={!name.trim() || !location.trim() || saving}
             style={{ flex: 1 }}
           >
             {saving ? "Saving…" : "Save changes"}
           </button>
         </div>
-        <DangerZone tripLocation={trip.location} onDelete={deleteTrip} />
+        <DangerZone tripLocation={trip.name} onDelete={deleteTrip} />
       </div>
     </div>
   );

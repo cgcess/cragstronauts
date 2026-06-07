@@ -26,10 +26,11 @@ export class TripIndexDO extends DurableObject<Env> {
 
   async registerTrip(
     id: string,
-    data: { location: string; start_date: string | null; end_date: string | null }
+    data: { name: string; location: string; start_date: string | null; end_date: string | null }
   ): Promise<void> {
     this.db.insert(tripIndex, {
       id,
+      name: data.name,
       location: data.location,
       start_date: data.start_date,
       end_date: data.end_date,
@@ -42,11 +43,11 @@ export class TripIndexDO extends DurableObject<Env> {
 
   async updateTrip(
     id: string,
-    data: { location: string; start_date: string | null; end_date: string | null }
+    data: { name: string; location: string; start_date: string | null; end_date: string | null }
   ): Promise<void> {
     this.db.update(
       tripIndex,
-      { location: data.location, start_date: data.start_date, end_date: data.end_date },
+      { name: data.name, location: data.location, start_date: data.start_date, end_date: data.end_date },
       { where: eq("id", id) }
     );
   }

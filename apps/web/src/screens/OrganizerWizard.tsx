@@ -75,6 +75,7 @@ const userKey = (tripId: string) => `climbingTrip.userId.${tripId}`;
 export default function OrganizerWizard() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
+  const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const [pinLat, setPinLat] = useState<number | null>(null);
   const [pinLon, setPinLon] = useState<number | null>(null);
@@ -151,6 +152,7 @@ export default function OrganizerWizard() {
     setSubmitting(true);
     try {
       const res = await api.createTrip({
+        name: name.trim(),
         location: location.trim(),
         start_date: startDate || null,
         end_date: endDate || null,
@@ -171,7 +173,7 @@ export default function OrganizerWizard() {
           })),
       });
       localStorage.setItem(userKey(res.trip_id), String(res.organizer_user_id));
-      navigate(tripPath(location.trim(), res.trip_id, "board"), { replace: true });
+      navigate(tripPath(name.trim(), res.trip_id, "board"), { replace: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -231,6 +233,14 @@ export default function OrganizerWizard() {
               animate="show"
               exit={reduceMotion ? undefined : { opacity: 0, x: -24, transition: { duration: 0.2 } }}
             >
+              <motion.div variants={item}>
+                <label>What's the trip called? *</label>
+                <input
+                  placeholder="e.g. Spring send mission"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </motion.div>
               <motion.div variants={item}>
                 <label>Where are we climbing? *</label>
                 <div className="row" style={{ gap: 6 }}>
@@ -336,7 +346,7 @@ export default function OrganizerWizard() {
               <motion.button
                 variants={item}
                 className="th-btn th-btn--primary th-btn--full"
-                disabled={!location.trim() || !datesValid}
+                disabled={!name.trim() || !location.trim() || !datesValid}
                 onClick={() => setStep(1)}
                 whileTap={reduceMotion ? undefined : { scale: 0.97 }}
               >

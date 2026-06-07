@@ -12,11 +12,11 @@ export function slugify(value: string | null | undefined): string {
  * the link stays valid even after the trip's name changes.
  */
 export function tripPath(
-  location: string | null | undefined,
+  name: string | null | undefined,
   id: string,
   sub?: "board"
 ): string {
-  const slug = slugify(location);
+  const slug = slugify(name);
   const stem = slug ? `${slug}-${id}` : id;
   return sub ? `/trips/${stem}/${sub}` : `/trips/${stem}`;
 }

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { Fragment, useState } from "react";
 import { useNavigate } from "react-router";
 import { useTripContext } from "../context/TripContext";
 import { tripPath } from "../lib/tripUrl";
@@ -155,14 +155,23 @@ export default function Landing() {
                     <span className="landing-fact__label">Links</span>
                     <span className="landing-fact__detail landing-fact__links">
                       {trip.links.map((l, i) => (
-                        <a
-                          key={i}
-                          href={l.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          {l.name}
-                        </a>
+                        <Fragment key={i}>
+                          {i > 0 && (
+                            <span
+                              className="landing-fact__links-sep"
+                              aria-hidden="true"
+                            >
+                              ·
+                            </span>
+                          )}
+                          <a
+                            href={l.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {l.name}
+                          </a>
+                        </Fragment>
                       ))}
                     </span>
                   </div>

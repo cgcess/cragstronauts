@@ -114,6 +114,26 @@
   background: color-mix(in srgb, var(--text) 12%, transparent);
 }
 
+/* ---- text: no border, no fill — reads as a plain text link.
+   Deliberately has NO hover state on any device: hover only adds noise
+   and there's no equivalent on touch. We also pin background:none on
+   :hover to override the global `button:hover` background. Press feedback
+   (a 1px nudge) is kept since it's a real touch affordance. ---- */
+.th-btn--text {
+  height: auto;
+  padding: 6px 4px;
+  background: none;
+  color: var(--text-muted);
+}
+.th-btn--text:hover {
+  background: none;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.th-btn--text:active {
+  transform: translateY(1px);
+}
+
 /* ---- danger ---- */
 .th-btn--danger {
   background: var(--danger);

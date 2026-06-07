@@ -745,49 +745,12 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
 .fl-detail-hero__actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: space-between;
   gap: 10px;
   margin-top: 20px;
   padding-top: 18px;
   border-top: 1px solid var(--fl-divider);
 }
-/* Text-only actions: no border, no fill, no box — just an icon + label that
-   read as quiet inline links beside the page's primary buttons. Hover/active
-   are expressed through the text itself (color + underline), never a box. */
-.fl-hero-action {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 0;
-  border: none;
-  background: transparent;
-  color: var(--fl-fg-2);
-  font-family: var(--fl-font-body);
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  cursor: pointer;
-  transition: color 160ms var(--fl-ease-out),
-    transform 120ms var(--fl-ease-out);
-}
-@media (hover: hover) {
-  .fl-hero-action:hover {
-    color: var(--fl-fg);
-    text-decoration: underline;
-    text-underline-offset: 3px;
-  }
-}
-.fl-hero-action:active {
-  transform: translateY(1px);
-}
-.fl-hero-action.is-copied {
-  color: var(--fl-accent);
-}
-.fl-hero-action__icon {
-  font-size: 16px;
-  line-height: 1;
-}
-
 /* Past trips read weathered — lower the glow + warmth. */
 .fl-detail-hero--past {
   background:

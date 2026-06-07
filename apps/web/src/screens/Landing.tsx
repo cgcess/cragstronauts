@@ -16,10 +16,37 @@ const SIGNOFF_WORDS = [
   "Keep sending",
 ];
 
+const ACCOM_META: Record<string, { icon: string; label: string }> = {
+  campsite: { icon: "⛺", label: "Campsite" },
+  airbnb: { icon: "🏠", label: "Airbnb" },
+  hotel: { icon: "🏨", label: "Hotel" },
+  hut: { icon: "🛖", label: "Hut / Refuge" },
+  other: { icon: "📍", label: "Other" },
+};
+function accomMeta(type: string | null | undefined) {
+  if (!type) return null;
+  return ACCOM_META[type] ?? { icon: "🏠", label: type };
+}
+
 export default function Landing() {
-  const { tripId, trip } = useTripContext();
+  const { tripId, trip, currentUserId, ensureUser } = useTripContext();
   const navigate = useNavigate();
   const [signoffIndex, setSignoffIndex] = useState(0);
+
+  const joined = currentUserId != null;
+
+  // "Join trip" runs the identity flow; once the visitor establishes who they
+  // are, we drop them onto the board. Dismissing the flow keeps them here.
+  const joinTrip = async () => {
+    const id = await ensureUser();
+    if (id != null) navigate(`/trips/${tripId}/board`);
+  };
+
+  const accom = accomMeta(trip.accommodation_type);
+  const hasBasics =
+    Boolean(trip.place_label) ||
+    Boolean(trip.accommodation_details) ||
+    Boolean(trip.notes);
 
   return (
     <div className="app-shell">
@@ -76,14 +103,75 @@ export default function Landing() {
           </div>
         )}
 
-        <div className="col" style={{ marginTop: 20 }}>
-          <Button
-            variant="primary"
-            fullWidth
-            onClick={() => navigate(`/trips/${tripId}/board`)}
+        {/* At-a-glance details so visitors can decide before committing. */}
+        {hasBasics && (
+          <div
+            className="card"
+            style={{ marginTop: 16, maxWidth: 560 }}
           >
-            View trip →
-          </Button>
+            <div className="col" style={{ gap: 14 }}>
+              {trip.place_label && (
+                <div className="landing-fact">
+                  <span className="landing-fact__icon" aria-hidden="true">
+                    📍
+                  </span>
+                  <div className="landing-fact__text">
+                    <span className="landing-fact__label">Where</span>
+                    <span className="landing-fact__detail">
+                      {trip.place_label}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {trip.accommodation_details && (
+                <div className="landing-fact">
+                  <span className="landing-fact__icon" aria-hidden="true">
+                    {accom?.icon ?? "🏠"}
+                  </span>
+                  <div className="landing-fact__text">
+                    <span className="landing-fact__label">
+                      {accom?.label ?? "Accommodation"}
+                    </span>
+                    <span className="landing-fact__detail">
+                      <Linkify>{trip.accommodation_details}</Linkify>
+                    </span>
+                  </div>
+                </div>
+              )}
+              {trip.notes && (
+                <div className="landing-fact">
+                  <span className="landing-fact__icon" aria-hidden="true">
+                    📝
+                  </span>
+                  <div className="landing-fact__text">
+                    <span className="landing-fact__label">Notes</span>
+                    <span
+                      className="landing-fact__detail"
+                      style={{ whiteSpace: "pre-wrap" }}
+                    >
+                      <Linkify>{trip.notes}</Linkify>
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="col" style={{ marginTop: 20 }}>
+          {joined ? (
+            <Button
+              variant="primary"
+              fullWidth
+              onClick={() => navigate(`/trips/${tripId}/board`)}
+            >
+              View trip →
+            </Button>
+          ) : (
+            <Button variant="primary" fullWidth onClick={joinTrip}>
+              Join trip
+            </Button>
+          )}
         </div>
       </div>
     </div>

@@ -396,6 +396,15 @@ export default function TripDashboard() {
     reload();
   }, [tripId]);
 
+  // The board is members-only. Anyone who hasn't joined (no established
+  // identity for this trip) is bounced back to the landing page, where the
+  // "Join trip" flow lives. Logging out also lands you here.
+  useEffect(() => {
+    if (currentUserId == null) {
+      navigate(`/trips/${tripId}`, { replace: true });
+    }
+  }, [currentUserId, tripId, navigate]);
+
   const weather = useWeather(
     trip.latitude,
     trip.longitude,
@@ -403,9 +412,6 @@ export default function TripDashboard() {
     trip.end_date
   );
 
-  // No guards: the board is the default, fully-interactive view for everyone.
-  // `me`/`currentUserId` may be null (anonymous visitor). Write actions run
-  // ensureUser() to lazily establish identity on first interaction.
 
   // ---- Derived state for priority ----
   const joining = users.filter((u) => u.joining);
@@ -652,6 +658,10 @@ export default function TripDashboard() {
   // Tiles open into a bottom sheet; no auto-open on mount.
   const selectedCard = cards.find((c) => c.id === expandedId) ?? null;
 
+  // Guard fires the redirect above; render nothing while it takes effect so
+  // the members-only board never flashes for a non-member.
+  if (currentUserId == null) return null;
+
   return (
     <div className="app-shell">
       <div className="topbar">
@@ -676,11 +686,7 @@ export default function TripDashboard() {
                 Logout
               </Button>
             </>
-          ) : (
-            <Button variant="secondary" pill onClick={() => ensureUser()}>
-              Sign in
-            </Button>
-          )}
+          ) : null}
         </div>
       </div>
 

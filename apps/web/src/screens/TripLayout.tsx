@@ -74,7 +74,7 @@ export default function TripLayout() {
   // never invalidates a previously shared link.
   useEffect(() => {
     if (loading || !trip) return;
-    const slug = slugify(trip.location);
+    const slug = slugify(trip.name);
     const stem = slug ? `${slug}-${tripId}` : tripId;
     if (tripParam === stem) return;
     const sub = routeLocation.pathname.endsWith("/board") ? "/board" : "";

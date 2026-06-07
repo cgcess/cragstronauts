@@ -88,10 +88,11 @@ create_trip() {
       --arg notes "$notes" \
       --arg organizer "$organizer" \
       --argjson gear "$GEAR_JSON" \
-      '{location: $location, start_date: $start, end_date: $end, accommodation_type: $atype, accommodation_details: $adet, notes: $notes, organizer_name: $organizer, gear_categories: $gear}')
+      '{name: $location, location: $location, start_date: $start, end_date: $end, accommodation_type: $atype, accommodation_details: $adet, notes: $notes, organizer_name: $organizer, gear_categories: $gear}')
   else
     payload=$(cat <<JSON
 {
+  "name": "$label",
   "location": "$label",
   "start_date": "$start",
   "end_date": "$end",

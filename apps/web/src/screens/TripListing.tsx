@@ -133,7 +133,7 @@ function HeroTripCard({
         </span>
       </div>
       <div className="fl-hero__countdown">{countNode}</div>
-      <h2 className="fl-hero__title">{trip.location || "Untitled trip"}</h2>
+      <h2 className="fl-hero__title">{trip.name || "Untitled trip"}</h2>
       <div className={"fl-hero__dates" + (model.dateMuted ? " fl-trip-card__dates--muted" : "")}>
         {model.dateLabel}
       </div>
@@ -196,7 +196,7 @@ function TripCard({
       <div className="fl-trip-card__details">
         <div className="fl-trip-card__meta">
           <span className="fl-trip-card__icon" aria-hidden="true">🧗</span>
-          <h3 className="fl-trip-card__title">{trip.location || "Untitled trip"}</h3>
+          <h3 className="fl-trip-card__title">{trip.name || "Untitled trip"}</h3>
         </div>
         <div className={"fl-trip-card__dates" + (model.dateMuted ? " fl-trip-card__dates--muted" : "")}>
           {model.dateLabel}
@@ -248,8 +248,8 @@ export default function TripListing() {
   // Land on the public trip page (welcome + basics + Join). The board itself
   // is members-only, so non-members enter through the landing's join flow;
   // members tap straight through with "View trip".
-  const onSelect = (trip: { id: string; location: string }) =>
-    navigate(tripPath(trip.location, trip.id));
+  const onSelect = (trip: { id: string; name: string }) =>
+    navigate(tripPath(trip.name, trip.id));
 
   if (!loaded) {
     return (

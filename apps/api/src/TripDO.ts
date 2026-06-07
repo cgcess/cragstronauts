@@ -53,6 +53,7 @@ export class TripDO extends DurableObject<Env> {
   }
 
   async initialize(data: {
+    name: string;
     location: string;
     start_date: string | null;
     end_date: string | null;
@@ -72,6 +73,7 @@ export class TripDO extends DurableObject<Env> {
   }): Promise<{ organizer_user_id: number }> {
     this.db.insert(trip, {
       id: 1,
+      name: data.name,
       location: data.location,
       start_date: data.start_date,
       end_date: data.end_date,
@@ -111,6 +113,7 @@ export class TripDO extends DurableObject<Env> {
   }
 
   async updateTrip(data: {
+    name?: string;
     location?: string;
     start_date?: string | null;
     end_date?: string | null;
@@ -126,6 +129,9 @@ export class TripDO extends DurableObject<Env> {
     const row = this.db.get(trip, { where: eq("id", 1) });
     if (!row) throw new Error("Trip not found");
 
+    const name = data.name !== undefined ? data.name.trim() : row.name;
+    if (!name) throw new Error("Name required");
+
     const location =
       data.location !== undefined ? data.location.trim() : row.location;
     if (!location) throw new Error("Location required");
@@ -137,6 +143,7 @@ export class TripDO extends DurableObject<Env> {
     this.db.update(
       trip,
       {
+        name,
         location,
         start_date:
           data.start_date !== undefined ? data.start_date : row.start_date,
@@ -767,6 +774,7 @@ export class TripDO extends DurableObject<Env> {
 
 function formatTrip(r: {
   id: number;
+  name: string;
   location: string;
   start_date: string | null;
   end_date: string | null;
@@ -780,6 +788,7 @@ function formatTrip(r: {
   signature?: string | null;
 }): Trip {
   return {
+    name: r.name,
     location: r.location,
     start_date: r.start_date,
     end_date: r.end_date,

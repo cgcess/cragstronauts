@@ -50,7 +50,7 @@ export default function Landing() {
   // are, we drop them onto the board. Dismissing the flow keeps them here.
   const joinTrip = async () => {
     const id = await ensureUser();
-    if (id != null) navigate(tripPath(trip.location, tripId, "board"));
+    if (id != null) navigate(tripPath(trip.name, tripId, "board"));
   };
 
   const accom = accomMeta(trip.accommodation_type);
@@ -76,7 +76,7 @@ export default function Landing() {
     <div className="app-shell">
       <div className="fade-overlay fade-overlay--top" aria-hidden="true" />
       <div className="content">
-        <div className="h1">🧗 {trip.location}</div>
+        <div className="h1">🧗 {trip.name}</div>
 
         {trip.welcome_message && (
           <div
@@ -194,7 +194,7 @@ export default function Landing() {
             <Button
               variant="primary"
               fullWidth
-              onClick={() => navigate(tripPath(trip.location, tripId, "board"))}
+              onClick={() => navigate(tripPath(trip.name, tripId, "board"))}
             >
               View trip →
             </Button>

@@ -50,6 +50,7 @@ export const api = {
   // Trips
   listTrips: () => req<TripIndexEntry[]>("GET", "/api/trips"),
   createTrip: (data: {
+    name: string;
     location: string;
     start_date: string | null;
     end_date: string | null;

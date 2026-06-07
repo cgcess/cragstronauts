@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const TripSchema = z.object({
+  name: z.string(),
   location: z.string(),
   start_date: z.string().nullable(),
   end_date: z.string().nullable(),
@@ -21,6 +22,7 @@ export const GearCategoryFieldSchema = z.object({
 });
 
 export const CreateTripBodySchema = z.object({
+  name: z.string().min(1),
   location: z.string().min(1),
   start_date: z.string().nullable(),
   end_date: z.string().nullable(),
@@ -47,6 +49,7 @@ export const CreateTripResponseSchema = z.object({
 });
 
 export const UpdateTripBodySchema = z.object({
+  name: z.string().min(1).optional(),
   location: z.string().optional(),
   start_date: z.string().nullable().optional(),
   end_date: z.string().nullable().optional(),
@@ -62,6 +65,7 @@ export const UpdateTripBodySchema = z.object({
 
 export const TripIndexEntrySchema = z.object({
   id: z.string(),
+  name: z.string(),
   location: z.string(),
   start_date: z.string().nullable(),
   end_date: z.string().nullable(),

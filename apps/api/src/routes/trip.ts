@@ -27,6 +27,7 @@ tripRoutes.openapi(createTripRoute, async (c) => {
 
     const index = getTripIndexDO(c.env);
     await index.registerTrip(tripId, {
+      name: body.name,
       location: body.location,
       start_date: body.start_date ?? null,
       end_date: body.end_date ?? null,
@@ -56,6 +57,7 @@ tripRoutes.openapi(updateTripRoute, async (c) => {
     // Keep the listing index in sync — location/dates power the trip list.
     const index = getTripIndexDO(c.env);
     await index.updateTrip(tripId, {
+      name: trip.name,
       location: trip.location,
       start_date: trip.start_date,
       end_date: trip.end_date,

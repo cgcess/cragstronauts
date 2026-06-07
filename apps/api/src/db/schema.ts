@@ -69,4 +69,13 @@ export const expenseSplit = table("expense_split", {
   amount_cents: column.integer(),
 });
 
+export const feedback = table("feedback", {
+  id: column.integer().notNull().primaryKey().autoIncrement(),
+  // Null when anonymous, or if the author later leaves the trip.
+  user_id: column.integer().references(ref(user, "id")),
+  body: column.text().notNull(),
+  anonymous: column.integer().notNull().default(0),
+  created_at: column.text().notNull(),
+});
+
 

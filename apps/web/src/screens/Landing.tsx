@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router";
 import { useTripContext } from "../context/TripContext";
+import { tripPath } from "../lib/tripUrl";
 import { formatDateRange } from "../dateUtils";
 import { Button } from "../components/ui";
 import Markdown from "../components/Markdown";
@@ -49,7 +50,7 @@ export default function Landing() {
   // are, we drop them onto the board. Dismissing the flow keeps them here.
   const joinTrip = async () => {
     const id = await ensureUser();
-    if (id != null) navigate(`/trips/${tripId}/board`);
+    if (id != null) navigate(tripPath(trip.location, tripId, "board"));
   };
 
   const accom = accomMeta(trip.accommodation_type);
@@ -193,7 +194,7 @@ export default function Landing() {
             <Button
               variant="primary"
               fullWidth
-              onClick={() => navigate(`/trips/${tripId}/board`)}
+              onClick={() => navigate(tripPath(trip.location, tripId, "board"))}
             >
               View trip →
             </Button>

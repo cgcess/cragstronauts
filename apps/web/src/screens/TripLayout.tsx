@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { Outlet, useParams, useNavigate } from "react-router";
+import { Outlet, useParams, useNavigate, useLocation } from "react-router";
 import { api } from "../api";
 import { TripProvider, type Trip, type User, type Category } from "../context/TripContext";
+import { extractTripId, slugify } from "../lib/tripUrl";
 import IdentityFlow from "./IdentityFlow";
 
 const userKey = (tripId: string) => `climbingTrip.userId.${tripId}`;
@@ -12,15 +13,20 @@ function readNum(key: string): number | null {
 }
 
 export default function TripLayout() {
-  const { tripId } = useParams<{ tripId: string }>();
+  // The URL param carries a cosmetic slug prefix (`moab-<id>`); the canonical
+  // id is just the trailing 64-char hex. Everything downstream — API calls,
+  // localStorage keys, context — uses this stable id, never the slug.
+  const { tripId: tripParam } = useParams<{ tripId: string }>();
+  const tripId = extractTripId(tripParam ?? "");
   const navigate = useNavigate();
+  const routeLocation = useLocation();
 
   const [trip, setTrip] = useState<Trip | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<number | null>(() =>
-    readNum(userKey(tripId!))
+    readNum(userKey(tripId))
   );
 
   // Lazy-identity sheet. `identityOpen` controls visibility; `resolverRef`
@@ -31,11 +37,11 @@ export default function TripLayout() {
 
   const refresh = useCallback(async () => {
     try {
-      const t = await api.getTrip(tripId!);
+      const t = await api.getTrip(tripId);
       setTrip(t);
       const [u, c] = await Promise.all([
-        api.listUsers(tripId!),
-        api.listCategories(tripId!),
+        api.listUsers(tripId),
+        api.listCategories(tripId),
       ]);
       setUsers(u);
       setCategories(c);
@@ -48,7 +54,7 @@ export default function TripLayout() {
 
   useEffect(() => {
     setLoading(true);
-    setCurrentUserId(readNum(userKey(tripId!)));
+    setCurrentUserId(readNum(userKey(tripId)));
     refresh();
   }, [tripId, refresh]);
 
@@ -57,27 +63,40 @@ export default function TripLayout() {
     if (loading || !currentUserId) return;
     const found = users.find((u) => u.id === currentUserId);
     if (!found) {
-      localStorage.removeItem(userKey(tripId!));
+      localStorage.removeItem(userKey(tripId));
       setCurrentUserId(null);
     }
   }, [loading, currentUserId, users, tripId]);
 
+  // Keep the address bar showing the trip's current, recognizable slug.
+  // Bare-id links and stale slugs (after a rename) get rewritten in place.
+  // Lookup only ever uses the trailing id, so this is purely cosmetic and
+  // never invalidates a previously shared link.
+  useEffect(() => {
+    if (loading || !trip) return;
+    const slug = slugify(trip.location);
+    const stem = slug ? `${slug}-${tripId}` : tripId;
+    if (tripParam === stem) return;
+    const sub = routeLocation.pathname.endsWith("/board") ? "/board" : "";
+    navigate(`/trips/${stem}${sub}`, { replace: true });
+  }, [loading, trip, tripId, tripParam, routeLocation.pathname, navigate]);
+
   const setUser = (userId: number | null) => {
     if (userId == null) {
-      localStorage.removeItem(userKey(tripId!));
+      localStorage.removeItem(userKey(tripId));
     } else {
-      localStorage.setItem(userKey(tripId!), String(userId));
+      localStorage.setItem(userKey(tripId), String(userId));
     }
     setCurrentUserId(userId);
   };
 
   const switchUser = () => {
-    localStorage.removeItem(userKey(tripId!));
+    localStorage.removeItem(userKey(tripId));
     setCurrentUserId(null);
   };
 
   const ensureUser = useCallback((): Promise<number | null> => {
-    const existing = readNum(userKey(tripId!));
+    const existing = readNum(userKey(tripId));
     if (existing != null) return Promise.resolve(existing);
     return new Promise<number | null>((resolve) => {
       resolverRef.current = resolve;
@@ -94,8 +113,8 @@ export default function TripLayout() {
   };
 
   const deleteTrip = async () => {
-    await api.deleteTrip(tripId!);
-    localStorage.removeItem(userKey(tripId!));
+    await api.deleteTrip(tripId);
+    localStorage.removeItem(userKey(tripId));
     navigate("/", { replace: true });
   };
 
@@ -112,7 +131,7 @@ export default function TripLayout() {
   return (
     <TripProvider
       value={{
-        tripId: tripId!,
+        tripId: tripId,
         trip,
         users,
         categories,
@@ -127,7 +146,7 @@ export default function TripLayout() {
       <Outlet />
       <IdentityFlow
         open={identityOpen}
-        tripId={tripId!}
+        tripId={tripId}
         users={users}
         categories={categories}
         setUser={setUser}

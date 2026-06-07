@@ -5,6 +5,8 @@ dist/
 *.db
 __pycache__/
 claude_instructions.md
-.claude/
+# Ignore personal Claude settings, but share slash commands with the crew.
+.claude/*
+!.claude/commands/
 .pnpm-store
 .DS_Store

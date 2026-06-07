@@ -1,0 +1,44 @@
+name: 💬 Feedback
+description: Report a bug or share an idea for Cragstronauts
+title: "[Feedback]: "
+labels: ["status:triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the feedback! Keep it short — we'll triage from here.
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      options:
+        - Bug — something's broken
+        - Idea — improvement or feature
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What's the feedback?
+      description: Plain words are fine. For a bug, what happened vs. what you expected.
+      placeholder: e.g. On the trip details page, "Add to calendar" does nothing on my iPhone.
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Where in the app?
+      placeholder: e.g. Trip details · Signup swipe · Landing
+  - type: dropdown
+    id: reporter
+    attributes:
+      label: Who's reporting?
+      options:
+        - Nick
+        - Juan
+        - Colin
+        - Tobi
+        - Someone else
+    validations:
+      required: true

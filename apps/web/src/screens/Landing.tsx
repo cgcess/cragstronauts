@@ -57,7 +57,7 @@ export default function Landing() {
     .map((u) => u.name + (u.is_organizer ? " 👑" : ""));
   const rosterLabel =
     joiningNames.length === 0
-      ? "No one in yet — be the first"
+      ? "Be the first to join"
       : joiningNames.join(", ");
   const dUntil = daysUntil(trip.start_date);
   const hasDates = Boolean(trip.start_date || trip.end_date);

@@ -1214,6 +1214,23 @@ label {
   border-color: var(--brown-500);
   color: var(--brown-700);
 }
+.seat-adj {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--stone-300);
+  border-radius: 6px;
+  background: var(--stone-50, #fafaf9);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  color: inherit;
+}
+.seat-adj:disabled { opacity: 0.3; cursor: default; }
 
 .field-builder-row {
   display: grid;

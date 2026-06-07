@@ -2079,13 +2079,13 @@ function CarsBody({
         const iAmIn =
           isDriver ||
           c.passengers.some((p) => p.user_id === currentUserId);
-        const setReserved = async (next: number) => {
+        const updateCar = async (patch: { total_seats?: number; reserved_seats?: number }) => {
           setError(null);
           try {
             await api.createCar(tripId, {
               driver_user_id: c.driver_user_id,
-              total_seats: c.total_seats,
-              reserved_seats: next,
+              total_seats: patch.total_seats ?? c.total_seats,
+              reserved_seats: patch.reserved_seats ?? c.reserved_seats,
               notes: c.notes,
             });
             onChanged();
@@ -2100,9 +2100,29 @@ function CarsBody({
                 <div style={{ fontWeight: 600 }} className="ride-card__title">
                   {c.driver_name}&apos;s car
                 </div>
-                <div className="muted" style={{ fontSize: 13 }}>
-                  {c.total_seats} seats · {passengerCount}/{passengerCapacity} passengers
-                  {c.reserved_seats > 0 && ` · ${c.reserved_seats} reserved`}
+                <div className="muted" style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+                  {isDriver ? (
+                    <>
+                      <button
+                        type="button"
+                        className="seat-adj"
+                        disabled={c.total_seats <= 1 + passengerCount + c.reserved_seats}
+                        onClick={() => updateCar({ total_seats: c.total_seats - 1 })}
+                        aria-label="Remove a seat"
+                      >−</button>
+                      <span>{c.total_seats} seats</span>
+                      <button
+                        type="button"
+                        className="seat-adj"
+                        onClick={() => updateCar({ total_seats: c.total_seats + 1 })}
+                        aria-label="Add a seat"
+                      >+</button>
+                    </>
+                  ) : (
+                    <span>{c.total_seats} seats</span>
+                  )}
+                  <span>· {passengerCount}/{passengerCapacity} passengers</span>
+                  {c.reserved_seats > 0 && <span>· {c.reserved_seats} reserved</span>}
                 </div>
               </div>
               {isDriver && (
@@ -2154,7 +2174,7 @@ function CarsBody({
                   aria-label={isDriver ? "Release reserved seat" : undefined}
                   onClick={async () => {
                     if (isDriver) {
-                      setReserved(c.reserved_seats - 1);
+                      updateCar({ reserved_seats: c.reserved_seats - 1 });
                       return;
                     }
                     if (iAmIn) return;
@@ -2187,7 +2207,7 @@ function CarsBody({
                   aria-label={isDriver ? "Reserve a seat" : undefined}
                   onClick={async () => {
                     if (isDriver) {
-                      setReserved(c.reserved_seats + 1);
+                      updateCar({ reserved_seats: c.reserved_seats + 1 });
                       return;
                     }
                     setError(null);

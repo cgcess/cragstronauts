@@ -75,14 +75,6 @@ export default function Landing() {
     <div className="app-shell">
       <div className="fade-overlay fade-overlay--top" aria-hidden="true" />
       <div className="content">
-        <Button
-          variant="secondary"
-          pill
-          onClick={() => navigate("/", { replace: true })}
-          style={{ marginBottom: 8, position: "relative", zIndex: 6 }}
-        >
-          ← Trips
-        </Button>
         <div className="h1">🧗 {trip.location}</div>
 
         {trip.welcome_message && (

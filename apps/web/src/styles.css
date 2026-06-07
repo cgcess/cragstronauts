@@ -1145,8 +1145,12 @@ label {
   gap: 4px 10px;
   width: 100%;
   text-align: left;
-  background: white;
-  border: 1.5px solid var(--stone-200);
+  /* --surface (not --surface-2/3) so the pill stays distinct from the poll
+     card behind it in every theme: the card uses --min-surface-2, which
+     collides with surface-2 in dark and surface-3 in light. --surface reads
+     darker than the card on dark themes and lighter (paper) on light. */
+  background: var(--surface);
+  border: 1.5px solid var(--border);
   border-radius: 12px;
   padding: 10px 14px;
   cursor: pointer;
@@ -1155,7 +1159,7 @@ label {
 .poll-tally:hover { border-color: var(--grass-500); }
 .poll-tally.is-mine {
   border-color: var(--grass-500);
-  background: rgba(90, 143, 61, 0.08);
+  background: var(--primary-soft);
 }
 .poll-tally__label { font-weight: 600; color: var(--brown-900); }
 .poll-tally__count {
@@ -1178,6 +1182,16 @@ label {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
+}
+
+/* Ride card heading: let the driver name ellipsize so a long name (e.g.
+   "Nic the strongest climber in 10715 🧗's car") can't push the Remove
+   button off-screen. The head flexes to fill the space left of the button. */
+.ride-card__head { min-width: 0; flex: 1; }
+.ride-card__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .seat-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }

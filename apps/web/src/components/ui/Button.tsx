@@ -1,7 +1,12 @@
 import React from "react";
 import "./Button.css";
 
-export type ButtonVariant = "primary" | "secondary" | "tertiary" | "danger";
+export type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "tertiary"
+  | "text"
+  | "danger";
 export type ButtonSize = "md" | "lg";
 
 export interface ButtonProps

@@ -8,6 +8,7 @@ import OrganizerWizard from "./screens/OrganizerWizard";
 import TripLayout from "./screens/TripLayout";
 import Landing from "./screens/Landing";
 import TripDashboard from "./screens/TripDashboard";
+import UIKit from "./screens/UIKit";
 import NotFound from "./screens/NotFound";
 import { partyDayActive } from "./lib/partyDay";
 
@@ -72,6 +73,7 @@ const router = createBrowserRouter([
     element: <App />,
     children: [
       { index: true, element: <TripListing /> },
+      { path: "ui-kit", element: <UIKit /> },
       { path: "trips/new", element: <OrganizerWizard /> },
       {
         path: "trips/:tripId",

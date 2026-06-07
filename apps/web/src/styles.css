@@ -1762,20 +1762,45 @@ label {
 .identity-identify {
   display: flex;
   flex-direction: column;
-  justify-content: center;
 }
 .identity-identify__inner {
   width: 100%;
   max-width: 380px;
-  margin: 0 auto;
+  /* auto margins center the card when there's room but collapse to 0 when the
+     keyboard shrinks the viewport, so the top never gets clipped. */
+  margin: auto;
   background: var(--fl-surface);
   border: 1px solid var(--fl-divider);
   border-radius: 24px;
   padding: 28px 24px calc(28px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  /* Cap to the visible area so the name list scrolls *inside* the card while
+     the head (title + input + Continue) stays pinned. */
+  min-height: 0;
+  max-height: 100%;
   box-shadow: 0 24px 48px -16px rgba(0, 0, 0, 0.45);
+}
+/* Persistent top region — never shrinks or scrolls, so the input and Continue
+   button are always visible. */
+.identity-identify__head {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: none;
+}
+/* The only scroller: the "pick yourself" list scrolls beneath the pinned head. */
+.identity-identify__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  min-height: 0;
+  margin-top: 14px;
+  scrollbar-width: none;
+}
+.identity-identify__list::-webkit-scrollbar {
+  display: none;
 }
 .identity-identify__title {
   font-family: var(--font-display);

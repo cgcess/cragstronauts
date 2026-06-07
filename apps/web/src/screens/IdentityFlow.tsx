@@ -219,31 +219,33 @@ function IdentifyPanel({
   return (
     <div className="content identity-identify">
       <div className="identity-identify__inner">
-        <h1 className="identity-identify__title">Hop in 🧗</h1>
-        <p className="identity-identify__sub">
-          Pop in your name to join. A couple of quick questions next — skip them
-          if you like.
-        </p>
-        <input
-          className="identity-identify__input"
-          placeholder="Your name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && submitNew()}
-          autoFocus
-        />
-        {error && <div className="error-banner">{error}</div>}
-        <Button
-          variant="primary"
-          fullWidth
-          disabled={!name.trim() || busy}
-          onClick={submitNew}
-        >
-          {busy ? "One sec…" : "Continue →"}
-        </Button>
+        <div className="identity-identify__head">
+          <h1 className="identity-identify__title">Hop in 🧗</h1>
+          <p className="identity-identify__sub">
+            Pop in your name to join. A couple of quick questions next — skip
+            them if you like.
+          </p>
+          <input
+            className="identity-identify__input"
+            placeholder="Your name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submitNew()}
+            autoFocus
+          />
+          {error && <div className="error-banner">{error}</div>}
+          <Button
+            variant="primary"
+            fullWidth
+            disabled={!name.trim() || busy}
+            onClick={submitNew}
+          >
+            {busy ? "One sec…" : "Continue →"}
+          </Button>
+        </div>
 
         {users.length > 0 && (
-          <>
+          <div className="identity-identify__list">
             <div className="identity-identify__divider">
               <span>or pick yourself</span>
             </div>
@@ -260,7 +262,7 @@ function IdentifyPanel({
                 </Button>
               ))}
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>

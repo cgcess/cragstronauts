@@ -88,6 +88,7 @@ export class TripDO extends DurableObject<Env> {
     gear_categories: {
       name: string;
       fields: { key: string; label: string; type: string }[];
+      summary_mode?: "people" | "total";
     }[];
     polls?: PollInput[];
     organizer_name: string;
@@ -117,6 +118,7 @@ export class TripDO extends DurableObject<Env> {
       this.db.insert(gearCategory, {
         name: cat.name.trim(),
         fields: JSON.stringify(fields),
+        summary_mode: cat.summary_mode ?? "people",
       });
     }
 
@@ -393,12 +395,13 @@ export class TripDO extends DurableObject<Env> {
     data: {
       name: string;
       fields: { key: string; label: string; type: string }[];
+      summary_mode?: "people" | "total";
     }
   ): Promise<Category> {
     const row = this.db.insertReturning(
       gearCategory,
-      { name: data.name, fields: JSON.stringify(data.fields) },
-      ["id", "name", "fields"]
+      { name: data.name, fields: JSON.stringify(data.fields), summary_mode: data.summary_mode ?? "people" },
+      ["id", "name", "fields", "summary_mode"]
     );
     return formatCategory(row);
   }
@@ -408,12 +411,13 @@ export class TripDO extends DurableObject<Env> {
     data: {
       name?: string;
       fields?: { key: string; label: string; type: string }[];
+      summary_mode?: "people" | "total";
     }
   ): Promise<Category> {
     const row = this.db.get(gearCategory, { where: eq("id", catId) });
     if (!row) throw new Error("Category not found");
 
-    const patch: { name?: string; fields?: string } = {};
+    const patch: { name?: string; fields?: string; summary_mode?: string } = {};
     if (data.name !== undefined) {
       const trimmed = data.name.trim();
       if (!trimmed) throw new Error("Name cannot be empty");
@@ -421,6 +425,9 @@ export class TripDO extends DurableObject<Env> {
     }
     if (data.fields !== undefined) {
       patch.fields = JSON.stringify(data.fields);
+    }
+    if (data.summary_mode !== undefined) {
+      patch.summary_mode = data.summary_mode;
     }
 
     this.db.update(gearCategory, patch, { where: eq("id", catId) });
@@ -1126,10 +1133,12 @@ function formatCategory(r: {
   id: number;
   name: string;
   fields: string;
+  summary_mode?: string;
 }): Category {
   return {
     id: r.id,
     name: r.name,
     fields: typeof r.fields === "string" ? JSON.parse(r.fields) : r.fields,
+    summary_mode: (r.summary_mode as "people" | "total") ?? "people",
   };
 }

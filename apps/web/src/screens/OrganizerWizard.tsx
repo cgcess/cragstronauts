@@ -17,6 +17,7 @@ interface CategoryField {
 interface CategoryDraft {
   name: string;
   fields: CategoryField[];
+  summary_mode: "people" | "total";
 }
 
 interface GeoResult {
@@ -34,10 +35,12 @@ const defaultCategories: CategoryDraft[] = [
       { key: "length", label: "Length (m)", type: "number" },
       { key: "diameter", label: "Diameter (mm)", type: "number" },
     ],
+    summary_mode: "total",
   },
   {
     name: "Quickdraws",
     fields: [{ key: "count", label: "How many", type: "number" }],
+    summary_mode: "total",
   },
 ];
 
@@ -174,6 +177,7 @@ export default function OrganizerWizard() {
           .map((c) => ({
             name: c.name.trim(),
             fields: c.fields.filter((f) => f.key.trim() && f.label.trim()),
+            summary_mode: c.summary_mode,
           })),
       });
       localStorage.setItem(userKey(res.trip_id), String(res.organizer_user_id));
@@ -470,13 +474,27 @@ export default function OrganizerWizard() {
                       + Add field
                     </button>
                   </div>
+                  <div style={{ marginTop: 10 }}>
+                    <label>Summary shows</label>
+                    <select
+                      value={cat.summary_mode}
+                      onChange={(e) => {
+                        const next = [...categories];
+                        next[ci] = { ...cat, summary_mode: e.target.value as "people" | "total" };
+                        setCategories(next);
+                      }}
+                    >
+                      <option value="people">Number of people</option>
+                      <option value="total">Total items</option>
+                    </select>
+                  </div>
                 </motion.div>
               ))}
               <motion.button
                 variants={item}
                 className="th-btn th-btn--secondary"
                 onClick={() =>
-                  setCategories([...categories, { name: "", fields: [] }])
+                  setCategories([...categories, { name: "", fields: [], summary_mode: "people" }])
                 }
               >
                 + Add category

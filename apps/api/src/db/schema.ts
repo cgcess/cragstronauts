@@ -52,6 +52,7 @@ export const gearCategory = table("gear_category", {
   id: column.integer().notNull().primaryKey().autoIncrement(),
   name: column.text().notNull(),
   fields: column.text().notNull(),
+  summary_mode: column.text().notNull().default("people"),
 });
 
 export const car = table("car", {

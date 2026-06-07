@@ -5,16 +5,19 @@ export const GearCategorySchema = z.object({
   id: z.number(),
   name: z.string(),
   fields: z.array(GearCategoryFieldSchema),
+  summary_mode: z.enum(["people", "total"]),
 });
 
 export const AddGearCategoryBodySchema = z.object({
   name: z.string().min(1),
   fields: z.array(GearCategoryFieldSchema),
+  summary_mode: z.enum(["people", "total"]).optional(),
 });
 
 export const UpdateGearCategoryBodySchema = z.object({
   name: z.string().min(1).optional(),
   fields: z.array(GearCategoryFieldSchema).optional(),
+  summary_mode: z.enum(["people", "total"]).optional(),
 });
 
 export const GearContributionSchema = z.object({

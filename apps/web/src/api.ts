@@ -105,12 +105,12 @@ export const api = {
   // Gear categories
   listCategories: (tripId: string) =>
     req<Category[]>("GET", `/api/trips/${tripId}/gear-categories`),
-  addCategory: (tripId: string, data: { name: string; fields: { key: string; label: string; type: string }[] }) =>
+  addCategory: (tripId: string, data: { name: string; fields: { key: string; label: string; type: string }[]; summary_mode?: "people" | "total" }) =>
     req<Category>("POST", `/api/trips/${tripId}/gear-categories`, data),
   updateCategory: (
     tripId: string,
     id: number,
-    data: { name?: string; fields?: { key: string; label: string; type: string }[] }
+    data: { name?: string; fields?: { key: string; label: string; type: string }[]; summary_mode?: "people" | "total" }
   ) => req<Category>("PATCH", `/api/trips/${tripId}/gear-categories/${id}`, data),
   deleteCategory: (tripId: string, id: number) =>
     req<Ok>("DELETE", `/api/trips/${tripId}/gear-categories/${id}`),

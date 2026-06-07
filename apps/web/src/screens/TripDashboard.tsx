@@ -767,18 +767,29 @@ export default function TripDashboard() {
     badge: categories.length ? `${coveredCats}/${categories.length}` : undefined,
     summary: (() => {
       if (categories.length === 0) return "No gear set up";
-      // Count distinct people bringing each category (the "are you bringing one?"
-      // signup is a single yes/no per person, so this maps to people-count).
       const peopleByCat: Record<number, Set<number>> = {};
+      const totalByCat: Record<number, number> = {};
+      const numFieldByCategory: Record<number, string | undefined> = {};
+      for (const cat of categories) {
+        const numField = cat.fields.find((f) => f.type === "number");
+        numFieldByCategory[cat.id] = numField?.key;
+      }
       for (const g of gear) {
         if (!peopleByCat[g.category_id]) peopleByCat[g.category_id] = new Set();
         peopleByCat[g.category_id].add(g.user_id);
+        if (!totalByCat[g.category_id]) totalByCat[g.category_id] = 0;
+        const numKey = numFieldByCategory[g.category_id];
+        const val = numKey ? Number(g.details[numKey]) : NaN;
+        totalByCat[g.category_id] += Number.isFinite(val) && val > 0 ? val : 1;
       }
       return (
         <span className="dash-tile__chips">
           {categories.slice(0, 6).map((cat) => {
-            const n = peopleByCat[cat.id]?.size ?? 0;
-            const covered = n > 0;
+            const people = peopleByCat[cat.id]?.size ?? 0;
+            const covered = people > 0;
+            const n = cat.summary_mode === "total"
+              ? (totalByCat[cat.id] ?? 0)
+              : people;
             return (
               <span
                 key={cat.id}
@@ -2405,14 +2416,17 @@ function GearBody({
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newFields, setNewFields] = useState<DraftField[]>([]);
+  const [newSummaryMode, setNewSummaryMode] = useState<"people" | "total">("people");
   const [editingCategory, setEditingCategory] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
   const [editFields, setEditFields] = useState<DraftField[]>([]);
+  const [editSummaryMode, setEditSummaryMode] = useState<"people" | "total">("people");
 
   const resetAdd = () => {
     setAddingCategory(false);
     setNewCategoryName("");
     setNewFields([]);
+    setNewSummaryMode("people");
   };
 
   const addCategory = async () => {
@@ -2421,6 +2435,7 @@ function GearBody({
       await api.addCategory(tripId, {
         name: newCategoryName.trim(),
         fields: newFields.filter((f) => f.key.trim() && f.label.trim()),
+        summary_mode: newSummaryMode,
       });
       resetAdd();
       await onChanged();
@@ -2433,6 +2448,7 @@ function GearBody({
     setEditingCategory(cat.id);
     setEditName(cat.name);
     setEditFields(cat.fields.map((f) => ({ ...f })));
+    setEditSummaryMode(cat.summary_mode ?? "people");
   };
 
   const saveEdit = async () => {
@@ -2442,6 +2458,7 @@ function GearBody({
       await api.updateCategory(tripId, editingCategory, {
         name: editName.trim(),
         fields: editFields.filter((f) => f.key.trim() && f.label.trim()),
+        summary_mode: editSummaryMode,
       });
       setEditingCategory(null);
       await onChanged();
@@ -2513,6 +2530,14 @@ function GearBody({
             autoFocus
           />
           <FieldRows fields={editFields} onChange={setEditFields} />
+          <label style={{ marginTop: 10 }}>Summary shows</label>
+          <select
+            value={editSummaryMode}
+            onChange={(e) => setEditSummaryMode(e.target.value as "people" | "total")}
+          >
+            <option value="people">Number of people</option>
+            <option value="total">Total items</option>
+          </select>
           <div className="row" style={{ marginTop: 10 }}>
             <button
               className="th-btn th-btn--secondary"
@@ -2535,7 +2560,17 @@ function GearBody({
           <div className="row between">
             <div style={{ fontWeight: 600 }}>{cat.name}</div>
             <div className="row" style={{ gap: 6, alignItems: "center" }}>
-              <Tag variant="neutral" size="sm" mono>{byCat[cat.id].length}</Tag>
+              <Tag variant="neutral" size="sm" mono>
+                {cat.summary_mode === "total"
+                  ? (() => {
+                      const numField = cat.fields.find((f) => f.type === "number");
+                      return byCat[cat.id].reduce((sum, g) => {
+                        const val = numField ? Number(g.details[numField.key]) : NaN;
+                        return sum + (Number.isFinite(val) && val > 0 ? val : 1);
+                      }, 0);
+                    })()
+                  : new Set(byCat[cat.id].map((g) => g.user_id)).size}
+              </Tag>
               {isOrganizer && (
                 <button
                   className="th-btn th-btn--tertiary th-btn--icon th-btn--sm"
@@ -2646,6 +2681,14 @@ function GearBody({
               autoFocus
             />
             <FieldRows fields={newFields} onChange={setNewFields} />
+            <label style={{ marginTop: 10 }}>Summary shows</label>
+            <select
+              value={newSummaryMode}
+              onChange={(e) => setNewSummaryMode(e.target.value as "people" | "total")}
+            >
+              <option value="people">Number of people</option>
+              <option value="total">Total items</option>
+            </select>
             <div className="row" style={{ marginTop: 10 }}>
               <button
                 className="th-btn th-btn--secondary"

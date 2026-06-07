@@ -681,6 +681,10 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
 .landing-fact__links a:hover {
   text-decoration: underline;
 }
+.landing-fact__links-sep {
+  color: var(--fl-fg-3);
+  font-weight: 600;
+}
 
 /* Landing-page at-a-glance facts (location / accommodation / notes) so a
    visitor can size up the trip before joining. Mirrors the hero logistics. */

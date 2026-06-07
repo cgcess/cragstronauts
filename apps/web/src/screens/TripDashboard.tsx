@@ -8,7 +8,12 @@ import { api } from "../api";
 import { tripPath, slugify } from "../lib/tripUrl";
 import { cleanLinks } from "../lib/links";
 import LinksEditor from "../components/LinksEditor";
-import { useTripContext, type Category } from "../context/TripContext";
+import {
+  useTripContext,
+  type Category,
+  type Poll,
+  type PollAnswer,
+} from "../context/TripContext";
 import { formatDateRange } from "../dateUtils";
 import Linkify from "../components/Linkify";
 import Markdown from "../components/Markdown";
@@ -517,6 +522,8 @@ export default function TripDashboard() {
     trip,
     users,
     categories,
+    polls,
+    pollAnswers,
     currentUserId,
     switchUser,
     ensureUser,
@@ -781,7 +788,6 @@ export default function TripDashboard() {
   const rosterNames = rosterVisible
     .map((u) => u.name + (u.is_organizer ? " 👑" : ""))
     .join(", ");
-  const leadBelayers = joining.filter((u) => u.can_lead_belay).length;
   cards.push({
     id: "roster",
     score: 40,
@@ -792,16 +798,10 @@ export default function TripDashboard() {
       joining.length === 0 ? (
         "No one joining yet"
       ) : (
-        <>
-          <span>
-            🛡 {leadBelayers}{" "}
-            {leadBelayers === 1 ? "lead belayer" : "lead belayers"}
-          </span>
-          <span className="dash-tile__sub">
-            {rosterNames}
-            {rosterMore > 0 ? ` +${rosterMore}` : ""}
-          </span>
-        </>
+        <span className="dash-tile__sub">
+          {rosterNames}
+          {rosterMore > 0 ? ` +${rosterMore}` : ""}
+        </span>
       ),
     body: (
       <RosterBody
@@ -813,6 +813,52 @@ export default function TripDashboard() {
       />
     ),
   });
+
+  // Polls — organizer-defined questions (lead belay, BBQ headcount, …).
+  {
+    const joiningIds = new Set(joining.map((u) => u.id));
+    const answeredCount = (pollId: number) =>
+      new Set(
+        pollAnswers
+          .filter((a) => a.poll_id === pollId && joiningIds.has(a.user_id))
+          .map((a) => a.user_id)
+      ).size;
+    cards.push({
+      id: "polls",
+      score: 35,
+      icon: "🗳️",
+      title: "Polls",
+      badge: polls.length ? `${polls.length}` : undefined,
+      summary:
+        polls.length === 0 ? (
+          "No polls yet"
+        ) : (
+          <span className="dash-tile__chips">
+            {polls.slice(0, 4).map((p) => (
+              <span key={p.id} className="dash-tile__chip">
+                {p.emoji ? `${p.emoji} ` : ""}
+                {p.question} · {answeredCount(p.id)}/{joining.length}
+              </span>
+            ))}
+            {polls.length > 4 && (
+              <span className="dash-tile__chip">+{polls.length - 4}</span>
+            )}
+          </span>
+        ),
+      body: (
+        <PollsBody
+          tripId={tripId}
+          polls={polls}
+          pollAnswers={pollAnswers}
+          joining={joining}
+          currentUserId={currentUserId}
+          ensureUser={ensureUser}
+          isOrganizer={isOrganizer}
+          onChanged={reload}
+        />
+      ),
+    });
+  }
 
   // Expenses
   const myExpenses = expenses.filter((e) => e.payer_user_id === currentUserId);
@@ -1828,17 +1874,6 @@ function RosterBody({
   const [error, setError] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
 
-  // Lead-belay is never prompted; it's an optional self-toggle on your own row.
-  const toggleLeadBelay = async (userId: number, next: boolean) => {
-    setError(null);
-    try {
-      await api.updateUser(tripId, userId, { can_lead_belay: next });
-      await onChanged();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  };
-
   // Members the organizer can hand off to: anyone joining who isn't already organizer.
   const transferTargets = joining.filter((u) => !u.is_organizer);
 
@@ -1886,26 +1921,8 @@ function RosterBody({
         <span>
           {u.name} {u.is_organizer && "👑"}
           {isSelf && <span className="muted"> (you)</span>}
-          {u.can_lead_belay && (
-            <Tag variant="moss" size="sm" style={{ marginLeft: 8 }} title="Lead belayer">
-              🛡 Lead belay
-            </Tag>
-          )}
         </span>
         <div className="row" style={{ gap: 6, alignItems: "center" }}>
-          {isSelf && (
-            <button
-              type="button"
-              role="switch"
-              aria-checked={u.can_lead_belay}
-              className={`split-chip ${u.can_lead_belay ? "is-on" : ""}`}
-              onClick={() => toggleLeadBelay(u.id, !u.can_lead_belay)}
-              title="Toggle whether you can lead belay"
-            >
-              <span className="split-chip__box" aria-hidden="true">✓</span>
-              🛡 I can lead belay
-            </button>
-          )}
           {canRemove && (
             <button
               className="th-btn th-btn--danger th-btn--sm"
@@ -2572,6 +2589,393 @@ function GearBody({
           </button>
         )
       )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Polls                                                              */
+/* ------------------------------------------------------------------ */
+
+type PollOptionDraft = { id?: number; label: string; emoji: string };
+type PollDraft = {
+  question: string;
+  description: string;
+  emoji: string;
+  options: PollOptionDraft[];
+};
+
+const emptyPollDraft = (): PollDraft => ({
+  question: "",
+  description: "",
+  emoji: "",
+  options: [
+    { label: "", emoji: "" },
+    { label: "", emoji: "" },
+  ],
+});
+
+function draftToInput(d: PollDraft) {
+  return {
+    question: d.question.trim(),
+    description: d.description.trim() || null,
+    emoji: d.emoji.trim() || null,
+    options: d.options
+      .filter((o) => o.label.trim())
+      .map((o) => ({
+        id: o.id,
+        label: o.label.trim(),
+        emoji: o.emoji.trim() || null,
+      })),
+  };
+}
+
+function PollsBody({
+  tripId,
+  polls,
+  pollAnswers,
+  joining,
+  currentUserId,
+  ensureUser,
+  isOrganizer,
+  onChanged,
+}: {
+  tripId: string;
+  polls: Poll[];
+  pollAnswers: PollAnswer[];
+  joining: { id: number }[];
+  currentUserId: number | null;
+  ensureUser: () => Promise<number | null>;
+  isOrganizer: boolean;
+  onChanged: () => Promise<void>;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<number | null>(null);
+  const [draft, setDraft] = useState<PollDraft>(emptyPollDraft);
+
+  const joiningIds = new Set(joining.map((u) => u.id));
+
+  const pick = async (poll: Poll, optionId: number) => {
+    setError(null);
+    try {
+      const uid = await ensureUser();
+      if (uid == null) return;
+      await api.setPollAnswer(tripId, {
+        user_id: uid,
+        poll_id: poll.id,
+        option_ids: [optionId],
+      });
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const submitAdd = async () => {
+    setError(null);
+    try {
+      await api.addPoll(tripId, draftToInput(draft));
+      setAdding(false);
+      setDraft(emptyPollDraft());
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const startEdit = (p: Poll) => {
+    setAdding(false);
+    setEditing(p.id);
+    setDraft({
+      question: p.question,
+      description: p.description ?? "",
+      emoji: p.emoji ?? "",
+      options: p.options.map((o) => ({
+        id: o.id,
+        label: o.label,
+        emoji: o.emoji ?? "",
+      })),
+    });
+  };
+
+  const submitEdit = async () => {
+    if (editing == null) return;
+    setError(null);
+    try {
+      await api.updatePoll(tripId, editing, draftToInput(draft));
+      setEditing(null);
+      setDraft(emptyPollDraft());
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const remove = async (p: Poll) => {
+    if (!confirm(`Delete the poll “${p.question}”? All answers will be lost.`))
+      return;
+    setError(null);
+    try {
+      await api.deletePoll(tripId, p.id);
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  return (
+    <div className="sheet-flat">
+      {error && <div className="error-banner">{error}</div>}
+      {polls.length === 0 && (
+        <p className="muted">
+          {isOrganizer
+            ? "No polls yet. Add one below — e.g. who's in for the BBQ."
+            : "No polls yet. The organizer can add some."}
+        </p>
+      )}
+
+      <div className="sheet-sections">
+        {polls.map((poll) =>
+          editing === poll.id ? (
+            <div className="card" key={poll.id}>
+              <PollForm draft={draft} setDraft={setDraft} />
+              <div className="row" style={{ marginTop: 10 }}>
+                <button
+                  className="th-btn th-btn--secondary"
+                  onClick={() => setEditing(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="th-btn th-btn--primary"
+                  style={{ flex: 1 }}
+                  disabled={
+                    !draft.question.trim() ||
+                    draft.options.filter((o) => o.label.trim()).length < 2
+                  }
+                  onClick={submitEdit}
+                >
+                  Save changes
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="card" key={poll.id}>
+              <div className="row between">
+                <div style={{ fontWeight: 600 }}>
+                  {poll.emoji ? `${poll.emoji} ` : ""}
+                  {poll.question}
+                </div>
+                {isOrganizer && (
+                  <div className="row" style={{ gap: 6, alignItems: "center" }}>
+                    <button
+                      className="th-btn th-btn--tertiary th-btn--icon th-btn--sm"
+                      onClick={() => startEdit(poll)}
+                      aria-label={`Edit poll`}
+                    >
+                      ✎
+                    </button>
+                    <button
+                      className="th-btn th-btn--tertiary th-btn--icon th-btn--sm"
+                      style={{ color: "var(--danger)" }}
+                      onClick={() => remove(poll)}
+                      aria-label={`Delete poll`}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+              </div>
+              {poll.description && (
+                <p
+                  className="muted"
+                  style={{ fontSize: 14, whiteSpace: "pre-wrap", marginTop: 4 }}
+                >
+                  {poll.description}
+                </p>
+              )}
+
+              <div className="poll-tallies">
+                {poll.options.map((o) => {
+                  const voters = pollAnswers.filter(
+                    (a) =>
+                      a.poll_id === poll.id &&
+                      a.option_id === o.id &&
+                      joiningIds.has(a.user_id)
+                  );
+                  const mine = pollAnswers.some(
+                    (a) =>
+                      a.poll_id === poll.id &&
+                      a.option_id === o.id &&
+                      a.user_id === currentUserId
+                  );
+                  return (
+                    <button
+                      key={o.id}
+                      type="button"
+                      className={`poll-tally${mine ? " is-mine" : ""}`}
+                      onClick={() => pick(poll, o.id)}
+                      title="Tap to choose this option"
+                    >
+                      <span className="poll-tally__label">
+                        {o.emoji ? `${o.emoji} ` : ""}
+                        {o.label}
+                      </span>
+                      <span className="poll-tally__count">{voters.length}</span>
+                      {voters.length > 0 && (
+                        <span className="poll-tally__who">
+                          {voters.map((v) => v.user_name).join(", ")}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              {(() => {
+                const answered = new Set(
+                  pollAnswers
+                    .filter(
+                      (a) => a.poll_id === poll.id && joiningIds.has(a.user_id)
+                    )
+                    .map((a) => a.user_id)
+                ).size;
+                const unanswered = Math.max(0, joining.length - answered);
+                return (
+                  <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>
+                    {answered}/{joining.length} answered
+                    {unanswered > 0 ? ` · ${unanswered} to go` : ""}
+                  </p>
+                );
+              })()}
+            </div>
+          )
+        )}
+      </div>
+
+      {isOrganizer &&
+        (adding ? (
+          <div className="card">
+            <PollForm draft={draft} setDraft={setDraft} />
+            <div className="row" style={{ marginTop: 10 }}>
+              <button
+                className="th-btn th-btn--secondary"
+                onClick={() => {
+                  setAdding(false);
+                  setDraft(emptyPollDraft());
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="th-btn th-btn--primary"
+                style={{ flex: 1 }}
+                disabled={
+                  !draft.question.trim() ||
+                  draft.options.filter((o) => o.label.trim()).length < 2
+                }
+                onClick={submitAdd}
+              >
+                Add poll
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            className="th-btn th-btn--primary th-btn--full"
+            onClick={() => {
+              setEditing(null);
+              setDraft(emptyPollDraft());
+              setAdding(true);
+            }}
+            style={{ marginTop: 10 }}
+          >
+            + Add poll
+          </button>
+        ))}
+    </div>
+  );
+}
+
+function PollForm({
+  draft,
+  setDraft,
+}: {
+  draft: PollDraft;
+  setDraft: (d: PollDraft) => void;
+}) {
+  const setOption = (i: number, patch: Partial<PollOptionDraft>) => {
+    const options = draft.options.map((o, idx) =>
+      idx === i ? { ...o, ...patch } : o
+    );
+    setDraft({ ...draft, options });
+  };
+  return (
+    <div className="col">
+      <div className="row" style={{ gap: 6 }}>
+        <input
+          style={{ width: 64 }}
+          placeholder="🍖"
+          value={draft.emoji}
+          onChange={(e) => setDraft({ ...draft, emoji: e.target.value })}
+          aria-label="Poll emoji (optional)"
+        />
+        <input
+          style={{ flex: 1 }}
+          placeholder="Question (e.g. Do you eat meat?)"
+          value={draft.question}
+          onChange={(e) => setDraft({ ...draft, question: e.target.value })}
+          autoFocus
+        />
+      </div>
+      <textarea
+        rows={3}
+        placeholder="Add context — e.g. We're firing up the BBQ Saturday night, let us know what you eat so we can shop."
+        value={draft.description}
+        onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+      />
+      <label>Options</label>
+      {draft.options.map((o, i) => (
+        <div className="row" style={{ gap: 6 }} key={i}>
+          <input
+            style={{ width: 64 }}
+            placeholder="🥩"
+            value={o.emoji}
+            onChange={(e) => setOption(i, { emoji: e.target.value })}
+            aria-label="Option emoji (optional)"
+          />
+          <input
+            style={{ flex: 1 }}
+            placeholder={`Option ${i + 1}`}
+            value={o.label}
+            onChange={(e) => setOption(i, { label: e.target.value })}
+          />
+          <button
+            className="th-btn th-btn--tertiary th-btn--icon th-btn--sm"
+            aria-label="Remove option"
+            disabled={draft.options.length <= 2}
+            onClick={() =>
+              setDraft({
+                ...draft,
+                options: draft.options.filter((_, idx) => idx !== i),
+              })
+            }
+          >
+            ✕
+          </button>
+        </div>
+      ))}
+      <button
+        className="th-btn th-btn--secondary"
+        onClick={() =>
+          setDraft({
+            ...draft,
+            options: [...draft.options, { label: "", emoji: "" }],
+          })
+        }
+      >
+        + Add option
+      </button>
     </div>
   );
 }

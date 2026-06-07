@@ -4,6 +4,7 @@ export * from "./schemas/trip";
 export * from "./schemas/user";
 export * from "./schemas/car";
 export * from "./schemas/gear";
+export * from "./schemas/poll";
 export * from "./schemas/expense";
 export * from "./schemas/feedback";
 
@@ -12,5 +13,6 @@ export * from "./routes/trips";
 export * from "./routes/users";
 export * from "./routes/cars";
 export * from "./routes/gear";
+export * from "./routes/poll";
 export * from "./routes/expenses";
 export * from "./routes/feedback";

@@ -1,7 +1,14 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Outlet, useParams, useNavigate, useLocation } from "react-router";
 import { api } from "../api";
-import { TripProvider, type Trip, type User, type Category } from "../context/TripContext";
+import {
+  TripProvider,
+  type Trip,
+  type User,
+  type Category,
+  type Poll,
+  type PollAnswer,
+} from "../context/TripContext";
 import { extractTripId, slugify } from "../lib/tripUrl";
 import IdentityFlow from "./IdentityFlow";
 
@@ -24,6 +31,8 @@ export default function TripLayout() {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [polls, setPolls] = useState<Poll[]>([]);
+  const [pollAnswers, setPollAnswers] = useState<PollAnswer[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<number | null>(() =>
     readNum(userKey(tripId))
@@ -39,12 +48,16 @@ export default function TripLayout() {
     try {
       const t = await api.getTrip(tripId);
       setTrip(t);
-      const [u, c] = await Promise.all([
+      const [u, c, p, pa] = await Promise.all([
         api.listUsers(tripId),
         api.listCategories(tripId),
+        api.listPolls(tripId),
+        api.listPollAnswers(tripId),
       ]);
       setUsers(u);
       setCategories(c);
+      setPolls(p);
+      setPollAnswers(pa);
     } catch {
       // Trip was deleted or doesn't exist — bounce to listing
       navigate("/", { replace: true });
@@ -135,6 +148,8 @@ export default function TripLayout() {
         trip,
         users,
         categories,
+        polls,
+        pollAnswers,
         currentUserId,
         setUser,
         switchUser,
@@ -149,6 +164,7 @@ export default function TripLayout() {
         tripId={tripId}
         users={users}
         categories={categories}
+        polls={polls}
         setUser={setUser}
         refresh={refresh}
         onDone={resolveIdentity}

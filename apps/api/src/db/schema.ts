@@ -23,7 +23,29 @@ export const user = table("user", {
   joining: column.integer().notNull().default(1),
   is_organizer: column.integer().notNull().default(0),
   signup_completed: column.integer().notNull().default(0),
-  can_lead_belay: column.integer().notNull().default(0),
+});
+
+export const poll = table("poll", {
+  id: column.integer().notNull().primaryKey().autoIncrement(),
+  question: column.text().notNull(),
+  description: column.text(),
+  emoji: column.text(),
+  position: column.integer().notNull().default(0),
+});
+
+export const pollOption = table("poll_option", {
+  id: column.integer().notNull().primaryKey().autoIncrement(),
+  poll_id: column.integer().notNull().references(ref(poll, "id")),
+  label: column.text().notNull(),
+  emoji: column.text(),
+  position: column.integer().notNull().default(0),
+});
+
+export const pollAnswer = table("poll_answer", {
+  id: column.integer().notNull().primaryKey().autoIncrement(),
+  poll_id: column.integer().notNull().references(ref(poll, "id")),
+  option_id: column.integer().notNull().references(ref(pollOption, "id")),
+  user_id: column.integer().notNull().references(ref(user, "id")),
 });
 
 export const gearCategory = table("gear_category", {

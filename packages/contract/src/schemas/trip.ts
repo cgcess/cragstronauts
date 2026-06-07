@@ -47,6 +47,23 @@ export const CreateTripBodySchema = z.object({
       fields: z.array(GearCategoryFieldSchema),
     })
   ),
+  polls: z
+    .array(
+      z.object({
+        question: z.string().min(1),
+        description: z.string().nullable().optional(),
+        emoji: z.string().nullable().optional(),
+        options: z
+          .array(
+            z.object({
+              label: z.string().min(1),
+              emoji: z.string().nullable().optional(),
+            })
+          )
+          .min(2),
+      })
+    )
+    .optional(),
   organizer_name: z.string().min(1),
 });
 

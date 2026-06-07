@@ -8,7 +8,7 @@ import {
   AnimatePresence,
 } from "framer-motion";
 import { api } from "../api";
-import type { User, Category } from "../context/TripContext";
+import type { User, Category, Poll } from "../context/TripContext";
 import { Button, Tag } from "../components/ui";
 
 /* ------------------------------------------------------------------ */
@@ -32,6 +32,7 @@ interface IdentityFlowProps {
   tripId: string;
   users: User[];
   categories: Category[];
+  polls: Poll[];
   setUser: (id: number | null) => void;
   refresh: () => Promise<void>;
   /** Resolve the pending ensureUser() promise and close the overlay. */
@@ -43,6 +44,7 @@ export default function IdentityFlow({
   tripId,
   users,
   categories,
+  polls,
   setUser,
   refresh,
   onDone,
@@ -145,6 +147,7 @@ export default function IdentityFlow({
                 tripId={tripId}
                 userId={userId!}
                 categories={categories}
+                polls={polls}
                 onComplete={finishQuestions}
                 onNotJoining={notJoining}
               />
@@ -256,24 +259,28 @@ interface Question {
   id: string;
   title: string;
   sub: string;
-  kind?: "gear" | "driving" | "lead-belay";
+  kind?: "gear" | "driving" | "poll";
   category?: Category;
+  poll?: Poll;
 }
 
-function buildQuestions(categories: Category[]): Question[] {
+function buildQuestions(categories: Category[], polls: Poll[]): Question[] {
   const qs: Question[] = [
     {
       id: "joining",
       title: "Are you joining the trip?",
       sub: "Swipe right for yes, left for no.",
     },
-    {
-      id: "lead-belay",
-      title: "Can you lead belay?",
-      sub: "Swipe right if you're comfortable catching lead falls.",
-      kind: "lead-belay",
-    },
   ];
+  for (const p of polls) {
+    qs.push({
+      id: `poll:${p.id}`,
+      title: p.question,
+      sub: p.description ?? "Tap the option that fits you.",
+      kind: "poll",
+      poll: p,
+    });
+  }
   for (const c of categories) {
     qs.push({
       id: `gear:${c.id}`,
@@ -298,16 +305,21 @@ function Questionnaire({
   tripId,
   userId,
   categories,
+  polls,
   onComplete,
   onNotJoining,
 }: {
   tripId: string;
   userId: number;
   categories: Category[];
+  polls: Poll[];
   onComplete: () => void;
   onNotJoining: () => void;
 }) {
-  const questions = useMemo(() => buildQuestions(categories), [categories]);
+  const questions = useMemo(
+    () => buildQuestions(categories, polls),
+    [categories, polls]
+  );
   const [idx, setIdx] = useState(0);
   const [details, setDetails] = useState<DetailState | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -337,9 +349,6 @@ function Questionnaire({
           total_seats: Number(extra?.seats || 1),
           notes: extra?.notes || null,
         });
-      }
-      if (qq.kind === "lead-belay") {
-        await api.updateUser(tripId, userId, { can_lead_belay: yes });
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -386,7 +395,28 @@ function Questionnaire({
     }
   };
 
+  // Polls aren't yes/no, so they record the chosen option and advance.
+  const answerPoll = async (optionId: number) => {
+    setError(null);
+    setSubmitting(true);
+    try {
+      await api.setPollAnswer(tripId, {
+        user_id: userId,
+        poll_id: q.poll!.id,
+        option_ids: [optionId],
+      });
+      setExitDir("right");
+      next();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (!q) return null;
+
+  const isPoll = q.kind === "poll";
 
   return (
     <div className="content content--swipe">
@@ -405,29 +435,38 @@ function Questionnaire({
         </div>
       )}
 
-      <div className="deck">
-        <div className="deck-stage">
-          <AnimatePresence custom={exitDir} initial={false}>
-            {!details && (
-              <SwipeCard
-                key={q.id}
-                question={q}
-                onAnswer={handleAnswer}
-                exitDir={exitDir}
-                hint={idx === 0}
-              />
-            )}
-          </AnimatePresence>
-        </div>
+      {isPoll ? (
+        <PollCard
+          key={q.id}
+          poll={q.poll!}
+          disabled={submitting}
+          onPick={answerPoll}
+        />
+      ) : (
+        <div className="deck">
+          <div className="deck-stage">
+            <AnimatePresence custom={exitDir} initial={false}>
+              {!details && (
+                <SwipeCard
+                  key={q.id}
+                  question={q}
+                  onAnswer={handleAnswer}
+                  exitDir={exitDir}
+                  hint={idx === 0}
+                />
+              )}
+            </AnimatePresence>
+          </div>
 
-        {!details && (
-          <SwipeActions
-            disabled={submitting}
-            onNo={() => handleAnswer(false)}
-            onYes={() => handleAnswer(true)}
-          />
-        )}
-      </div>
+          {!details && (
+            <SwipeActions
+              disabled={submitting}
+              onNo={() => handleAnswer(false)}
+              onYes={() => handleAnswer(true)}
+            />
+          )}
+        </div>
+      )}
 
       {details && (
         <DetailForm
@@ -439,6 +478,51 @@ function Questionnaire({
         />
       )}
     </div>
+  );
+}
+
+function PollCard({
+  poll,
+  disabled,
+  onPick,
+}: {
+  poll: Poll;
+  disabled: boolean;
+  onPick: (optionId: number) => void;
+}) {
+  return (
+    <motion.div
+      className="poll-card"
+      initial={{ scale: 0.96, opacity: 0, y: 8 }}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      transition={{ type: "spring", stiffness: 320, damping: 32 }}
+    >
+      <div className="poll-card__head">
+        {poll.emoji && (
+          <div className="poll-card__emoji" aria-hidden="true">
+            {poll.emoji}
+          </div>
+        )}
+        <div className="q-title">{poll.question}</div>
+        {poll.description && (
+          <div className="poll-card__desc">{poll.description}</div>
+        )}
+      </div>
+      <div className="poll-card__options">
+        {poll.options.map((o) => (
+          <button
+            key={o.id}
+            type="button"
+            className="poll-option"
+            disabled={disabled}
+            onClick={() => onPick(o.id)}
+          >
+            {o.emoji && <span aria-hidden="true">{o.emoji} </span>}
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </motion.div>
   );
 }
 

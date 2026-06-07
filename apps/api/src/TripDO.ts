@@ -12,6 +12,9 @@ import {
   expense,
   expenseSplit,
   feedback,
+  poll,
+  pollOption,
+  pollAnswer,
 } from "./db/schema";
 import type { z } from "zod";
 import type {
@@ -24,6 +27,8 @@ import type {
   ExpenseSchema,
   SettlementSchema,
   FeedbackSchema,
+  PollSchema,
+  PollAnswerSchema,
 } from "@cragstronauts/contract";
 import { computeSimplifiedBalances, distributeEqual } from "./lib/balances";
 
@@ -36,6 +41,15 @@ type Car = z.infer<typeof CarSchema>;
 type Contribution = z.infer<typeof GearContributionSchema>;
 type Expense = z.infer<typeof ExpenseSchema>;
 type Settlement = z.infer<typeof SettlementSchema>;
+type Poll = z.infer<typeof PollSchema>;
+type PollAnswer = z.infer<typeof PollAnswerSchema>;
+
+type PollInput = {
+  question: string;
+  description?: string | null;
+  emoji?: string | null;
+  options: { id?: number; label: string; emoji?: string | null }[];
+};
 
 export class TripDO extends DurableObject<Env> {
   db: Database;
@@ -75,6 +89,7 @@ export class TripDO extends DurableObject<Env> {
       name: string;
       fields: { key: string; label: string; type: string }[];
     }[];
+    polls?: PollInput[];
     organizer_name: string;
   }): Promise<{ organizer_user_id: number }> {
     this.db.insert(trip, {
@@ -103,6 +118,13 @@ export class TripDO extends DurableObject<Env> {
         name: cat.name.trim(),
         fields: JSON.stringify(fields),
       });
+    }
+
+    // The "Can you lead belay?" poll is seeded by the migration, so it exists
+    // on every trip. Here we only append the organizer's custom polls.
+    let pollPos = 1;
+    for (const p of data.polls ?? []) {
+      this.seedPoll(p, pollPos++);
     }
 
     const userRow = this.db.insertReturning(
@@ -256,6 +278,9 @@ export class TripDO extends DurableObject<Env> {
     this.db.raw("DELETE FROM feedback", []);
     this.db.raw("DELETE FROM expense_split", []);
     this.db.raw("DELETE FROM expense", []);
+    this.db.raw("DELETE FROM poll_answer", []);
+    this.db.raw("DELETE FROM poll_option", []);
+    this.db.raw("DELETE FROM poll", []);
     this.db.raw("DELETE FROM gear_contribution", []);
     this.db.raw("DELETE FROM car_signup", []);
     this.db.raw("DELETE FROM car", []);
@@ -283,7 +308,7 @@ export class TripDO extends DurableObject<Env> {
     const row = this.db.insertReturning(
       user,
       { name, joining: data.joining ? 1 : 0 },
-      ["id", "name", "joining", "is_organizer", "signup_completed", "can_lead_belay"]
+      ["id", "name", "joining", "is_organizer", "signup_completed"]
     );
     return formatUser(row);
   }
@@ -337,7 +362,7 @@ export class TripDO extends DurableObject<Env> {
 
   async updateUser(
     userId: number,
-    data: { name?: string; joining?: boolean; can_lead_belay?: boolean }
+    data: { name?: string; joining?: boolean }
   ): Promise<User> {
     const row = this.db.get(user, { where: eq("id", userId) });
     if (!row) throw new Error("User not found");
@@ -347,14 +372,10 @@ export class TripDO extends DurableObject<Env> {
     if (!newName) throw new Error("Name cannot be empty");
     const newJoining =
       data.joining !== undefined ? (data.joining ? 1 : 0) : row.joining;
-    const newLeadBelay =
-      data.can_lead_belay !== undefined
-        ? (data.can_lead_belay ? 1 : 0)
-        : row.can_lead_belay;
 
     this.db.update(
       user,
-      { name: newName, joining: newJoining, can_lead_belay: newLeadBelay },
+      { name: newName, joining: newJoining },
       { where: eq("id", userId) }
     );
 
@@ -566,6 +587,209 @@ export class TripDO extends DurableObject<Env> {
   async deleteGear(contribId: number): Promise<{ ok: boolean }> {
     this.db.delete(gearContribution, { where: eq("id", contribId) });
     return { ok: true };
+  }
+
+  // ---- Polls ----
+
+  async listPolls(): Promise<Poll[]> {
+    return this.db
+      .all(poll)
+      .sort((a, b) => a.position - b.position)
+      .map((r) => this.formatPoll(r));
+  }
+
+  async addPoll(data: PollInput): Promise<Poll> {
+    if (data.options.filter((o) => o.label?.trim()).length < 2) {
+      throw new Error("A poll needs at least two options");
+    }
+    const maxPos = this.db
+      .all(poll)
+      .reduce((m, p) => Math.max(m, p.position), -1);
+    const id = this.seedPoll(data, maxPos + 1);
+    return this.formatPoll(this.db.get(poll, { where: eq("id", id) })!);
+  }
+
+  async updatePoll(
+    pollId: number,
+    data: {
+      question?: string;
+      description?: string | null;
+      emoji?: string | null;
+      options?: { id?: number; label: string; emoji?: string | null }[];
+    }
+  ): Promise<Poll> {
+    const row = this.db.get(poll, { where: eq("id", pollId) });
+    if (!row) throw new Error("Poll not found");
+
+    const patch: {
+      question?: string;
+      description?: string | null;
+      emoji?: string | null;
+    } = {};
+    if (data.question !== undefined) {
+      const q = data.question.trim();
+      if (!q) throw new Error("Question cannot be empty");
+      patch.question = q;
+    }
+    if (data.description !== undefined)
+      patch.description = data.description?.trim() || null;
+    if (data.emoji !== undefined) patch.emoji = data.emoji?.trim() || null;
+    if (Object.keys(patch).length)
+      this.db.update(poll, patch, { where: eq("id", pollId) });
+
+    if (data.options !== undefined) {
+      const incoming = data.options.filter((o) => o.label?.trim());
+      if (incoming.length < 2)
+        throw new Error("A poll needs at least two options");
+      const existing = this.db
+        .all(pollOption)
+        .filter((o) => o.poll_id === pollId);
+      const keepIds = new Set(
+        incoming.filter((o) => o.id != null).map((o) => o.id as number)
+      );
+      // Options dropped from the list are removed; their answers cascade away.
+      for (const ex of existing) {
+        if (!keepIds.has(ex.id))
+          this.db.delete(pollOption, { where: eq("id", ex.id) });
+      }
+      // Keep/rename existing options and create new ones, preserving order.
+      let pos = 0;
+      for (const o of incoming) {
+        if (o.id != null && existing.some((ex) => ex.id === o.id)) {
+          this.db.update(
+            pollOption,
+            { label: o.label.trim(), emoji: o.emoji?.trim() || null, position: pos },
+            { where: eq("id", o.id) }
+          );
+        } else {
+          this.db.insert(pollOption, {
+            poll_id: pollId,
+            label: o.label.trim(),
+            emoji: o.emoji?.trim() || null,
+            position: pos,
+          });
+        }
+        pos++;
+      }
+    }
+
+    return this.formatPoll(this.db.get(poll, { where: eq("id", pollId) })!);
+  }
+
+  async deletePoll(pollId: number): Promise<{ ok: boolean }> {
+    this.db.delete(poll, { where: eq("id", pollId) });
+    return { ok: true };
+  }
+
+  async listPollAnswers(): Promise<PollAnswer[]> {
+    return this.db.all(pollAnswer).map((r) => {
+      const u = this.db.get(user, { where: eq("id", r.user_id) });
+      return {
+        id: r.id,
+        poll_id: r.poll_id,
+        option_id: r.option_id,
+        user_id: r.user_id,
+        user_name: u ? u.name : "(unknown)",
+      };
+    });
+  }
+
+  async setPollAnswer(data: {
+    user_id: number;
+    poll_id: number;
+    option_ids: number[];
+  }): Promise<PollAnswer[]> {
+    const u = this.db.get(user, { where: eq("id", data.user_id) });
+    if (!u) throw new Error("User not found");
+    const p = this.db.get(poll, { where: eq("id", data.poll_id) });
+    if (!p) throw new Error("Poll not found");
+
+    const validIds = new Set(
+      this.db
+        .all(pollOption)
+        .filter((o) => o.poll_id === data.poll_id)
+        .map((o) => o.id)
+    );
+    for (const oid of data.option_ids) {
+      if (!validIds.has(oid))
+        throw new Error("Option does not belong to this poll");
+    }
+
+    // Replace the user's answers for this poll with exactly `option_ids`.
+    // Single-select sends one id; multi-select can send many — no change here.
+    this.db.raw("DELETE FROM poll_answer WHERE poll_id = ? AND user_id = ?", [
+      data.poll_id,
+      data.user_id,
+    ]);
+    for (const oid of data.option_ids) {
+      this.db.insert(pollAnswer, {
+        poll_id: data.poll_id,
+        option_id: oid,
+        user_id: data.user_id,
+      });
+    }
+
+    return this.db
+      .all(pollAnswer)
+      .filter((r) => r.poll_id === data.poll_id && r.user_id === data.user_id)
+      .map((r) => ({
+        id: r.id,
+        poll_id: r.poll_id,
+        option_id: r.option_id,
+        user_id: r.user_id,
+        user_name: u.name,
+      }));
+  }
+
+  private seedPoll(input: PollInput, position: number): number {
+    const pollRow = this.db.insertReturning(
+      poll,
+      {
+        question: input.question.trim(),
+        description: input.description?.trim() || null,
+        emoji: input.emoji?.trim() || null,
+        position,
+      },
+      ["id"]
+    );
+    let optPos = 0;
+    for (const o of input.options) {
+      if (!o.label?.trim()) continue;
+      this.db.insert(pollOption, {
+        poll_id: pollRow.id,
+        label: o.label.trim(),
+        emoji: o.emoji?.trim() || null,
+        position: optPos++,
+      });
+    }
+    return pollRow.id;
+  }
+
+  private formatPoll(r: {
+    id: number;
+    question: string;
+    description: string | null;
+    emoji: string | null;
+    position: number;
+  }): Poll {
+    const options = this.db
+      .all(pollOption)
+      .filter((o) => o.poll_id === r.id)
+      .sort((a, b) => a.position - b.position)
+      .map((o) => ({
+        id: o.id,
+        label: o.label,
+        emoji: o.emoji ?? null,
+        position: o.position,
+      }));
+    return {
+      id: r.id,
+      question: r.question,
+      description: r.description ?? null,
+      emoji: r.emoji ?? null,
+      position: r.position,
+      options,
+    };
   }
 
   // ---- Expenses ----
@@ -888,7 +1112,6 @@ function formatUser(r: {
   joining: number;
   is_organizer: number;
   signup_completed: number;
-  can_lead_belay?: number;
 }): User {
   return {
     id: r.id,
@@ -896,7 +1119,6 @@ function formatUser(r: {
     joining: Boolean(r.joining),
     is_organizer: Boolean(r.is_organizer),
     signup_completed: Boolean(r.signup_completed),
-    can_lead_belay: Boolean(r.can_lead_belay),
   };
 }
 

@@ -11,6 +11,8 @@ import type {
   CarSchema,
   GearCategorySchema,
   GearContributionSchema,
+  PollSchema,
+  PollAnswerSchema,
   ExpenseSchema,
   SettlementSchema,
   FeedbackSchema,
@@ -24,6 +26,14 @@ type User = z.infer<typeof UserSchema>;
 type Car = z.infer<typeof CarSchema>;
 type Category = z.infer<typeof GearCategorySchema>;
 type Contribution = z.infer<typeof GearContributionSchema>;
+type Poll = z.infer<typeof PollSchema>;
+type PollAnswer = z.infer<typeof PollAnswerSchema>;
+type PollInput = {
+  question: string;
+  description?: string | null;
+  emoji?: string | null;
+  options: { id?: number; label: string; emoji?: string | null }[];
+};
 type Expense = z.infer<typeof ExpenseSchema>;
 type Settlement = z.infer<typeof SettlementSchema>;
 type Feedback = z.infer<typeof FeedbackSchema>;
@@ -69,6 +79,7 @@ export const api = {
     links?: { name: string; url: string }[];
     organizer_name: string;
     gear_categories: { name: string; fields: { key: string; label: string; type: string }[] }[];
+    polls?: { question: string; description?: string | null; emoji?: string | null; options: { label: string; emoji?: string | null }[] }[];
   }) => req<CreateTripResponse>("POST", "/api/trips", data),
   getTrip: (tripId: string) => req<Trip>("GET", `/api/trips/${tripId}`),
   updateTrip: (tripId: string, data: Record<string, unknown>) =>
@@ -82,7 +93,7 @@ export const api = {
   updateUser: (
     tripId: string,
     id: number,
-    data: { name?: string; joining?: boolean; can_lead_belay?: boolean }
+    data: { name?: string; joining?: boolean }
   ) => req<User>("PATCH", `/api/trips/${tripId}/users/${id}`, data),
   deleteUser: (tripId: string, id: number) =>
     req<Ok>("DELETE", `/api/trips/${tripId}/users/${id}`),
@@ -121,6 +132,21 @@ export const api = {
     req<Contribution>("POST", `/api/trips/${tripId}/gear`, data),
   deleteGear: (tripId: string, id: number) =>
     req<Ok>("DELETE", `/api/trips/${tripId}/gear/${id}`),
+
+  // Polls
+  listPolls: (tripId: string) => req<Poll[]>("GET", `/api/trips/${tripId}/polls`),
+  addPoll: (tripId: string, data: PollInput) =>
+    req<Poll>("POST", `/api/trips/${tripId}/polls`, data),
+  updatePoll: (tripId: string, id: number, data: Partial<PollInput>) =>
+    req<Poll>("PATCH", `/api/trips/${tripId}/polls/${id}`, data),
+  deletePoll: (tripId: string, id: number) =>
+    req<Ok>("DELETE", `/api/trips/${tripId}/polls/${id}`),
+  listPollAnswers: (tripId: string) =>
+    req<PollAnswer[]>("GET", `/api/trips/${tripId}/poll-answers`),
+  setPollAnswer: (
+    tripId: string,
+    data: { user_id: number; poll_id: number; option_ids: number[] }
+  ) => req<PollAnswer[]>("POST", `/api/trips/${tripId}/poll-answers`, data),
 
   // Expenses
   listExpenses: (tripId: string) =>

@@ -1,16 +1,26 @@
 import { createContext, useContext, type ReactNode } from "react";
 import type { z } from "zod";
-import type { TripSchema, UserSchema, GearCategorySchema } from "@cragstronauts/contract";
+import type {
+  TripSchema,
+  UserSchema,
+  GearCategorySchema,
+  PollSchema,
+  PollAnswerSchema,
+} from "@cragstronauts/contract";
 
 export type Trip = z.infer<typeof TripSchema>;
 export type User = z.infer<typeof UserSchema>;
 export type Category = z.infer<typeof GearCategorySchema>;
+export type Poll = z.infer<typeof PollSchema>;
+export type PollAnswer = z.infer<typeof PollAnswerSchema>;
 
 export interface TripContextValue {
   tripId: string;
   trip: Trip;
   users: User[];
   categories: Category[];
+  polls: Poll[];
+  pollAnswers: PollAnswer[];
   currentUserId: number | null;
   setUser: (userId: number | null) => void;
   switchUser: () => void;

@@ -28,8 +28,17 @@ function accomMeta(type: string | null | undefined) {
   return ACCOM_META[type] ?? { icon: "🏠", label: type };
 }
 
+/** Whole days from today until an ISO date (negative = in the past). */
+function daysUntil(dateStr: string | null): number | null {
+  if (!dateStr) return null;
+  const start = new Date(dateStr + "T00:00:00");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((start.getTime() - today.getTime()) / 86_400_000);
+}
+
 export default function Landing() {
-  const { tripId, trip, currentUserId, ensureUser } = useTripContext();
+  const { tripId, trip, users, currentUserId, ensureUser } = useTripContext();
   const navigate = useNavigate();
   const [signoffIndex, setSignoffIndex] = useState(0);
 
@@ -43,10 +52,21 @@ export default function Landing() {
   };
 
   const accom = accomMeta(trip.accommodation_type);
-  const hasBasics =
-    Boolean(trip.place_label) ||
-    Boolean(trip.accommodation_details) ||
-    Boolean(trip.notes);
+  const joiningCount = users.filter((u) => u.joining).length;
+  const dUntil = daysUntil(trip.start_date);
+  const hasDates = Boolean(trip.start_date || trip.end_date);
+  const countdownLabel =
+    dUntil == null
+      ? null
+      : dUntil > 0
+      ? `${dUntil} ${dUntil === 1 ? "day" : "days"} to go`
+      : dUntil === 0
+      ? "Happening today"
+      : `${Math.abs(dUntil)} ${Math.abs(dUntil) === 1 ? "day" : "days"} ago`;
+  const rosterLabel =
+    joiningCount === 0
+      ? "No one in yet — be the first"
+      : `${joiningCount} ${joiningCount === 1 ? "climber" : "climbers"} in`;
 
   return (
     <div className="app-shell">
@@ -61,11 +81,6 @@ export default function Landing() {
           ← Trips
         </Button>
         <div className="h1">🧗 {trip.location}</div>
-        {(trip.start_date || trip.end_date) && (
-          <p className="muted">
-            {formatDateRange(trip.start_date, trip.end_date)}
-          </p>
-        )}
 
         {trip.welcome_message && (
           <div
@@ -104,12 +119,24 @@ export default function Landing() {
         )}
 
         {/* At-a-glance details so visitors can decide before committing. */}
-        {hasBasics && (
-          <div
-            className="card"
-            style={{ marginTop: 16, maxWidth: 560 }}
-          >
+        <div className="card" style={{ marginTop: 16, maxWidth: 560 }}>
             <div className="col" style={{ gap: 14 }}>
+              <div className="landing-fact">
+                <span className="landing-fact__icon" aria-hidden="true">
+                  📅
+                </span>
+                <div className="landing-fact__text">
+                  <span className="landing-fact__label">When</span>
+                  <span className="landing-fact__detail">
+                    {hasDates
+                      ? formatDateRange(trip.start_date, trip.end_date)
+                      : "Dates TBD"}
+                    {countdownLabel && (
+                      <span className="muted"> · {countdownLabel}</span>
+                    )}
+                  </span>
+                </div>
+              </div>
               {trip.place_label && (
                 <div className="landing-fact">
                   <span className="landing-fact__icon" aria-hidden="true">
@@ -123,6 +150,15 @@ export default function Landing() {
                   </div>
                 </div>
               )}
+              <div className="landing-fact">
+                <span className="landing-fact__icon" aria-hidden="true">
+                  🧗
+                </span>
+                <div className="landing-fact__text">
+                  <span className="landing-fact__label">Who</span>
+                  <span className="landing-fact__detail">{rosterLabel}</span>
+                </div>
+              </div>
               {trip.accommodation_details && (
                 <div className="landing-fact">
                   <span className="landing-fact__icon" aria-hidden="true">
@@ -155,8 +191,7 @@ export default function Landing() {
                 </div>
               )}
             </div>
-          </div>
-        )}
+        </div>
 
         <div className="col" style={{ marginTop: 20 }}>
           {joined ? (

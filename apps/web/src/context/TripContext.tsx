@@ -31,6 +31,12 @@ export interface TripContextValue {
    * after lazily creating/selecting a user.
    */
   ensureUser: () => Promise<number | null>;
+  /**
+   * Open the polls-only deck for the current user, pre-filtered to the polls
+   * they still need to answer. Used by the dashboard nudge card. No-op if
+   * nobody is identified yet.
+   */
+  openQuestions: (polls: Poll[]) => void;
   refresh: () => Promise<void>;
   deleteTrip: () => Promise<void>;
 }

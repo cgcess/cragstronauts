@@ -44,6 +44,10 @@ export default function TripLayout() {
   const [identityOpen, setIdentityOpen] = useState(false);
   const resolverRef = useRef<((id: number | null) => void) | null>(null);
 
+  // Polls-only nudge deck (dashboard "finish your polls" card). Holds the
+  // pre-filtered poll list while open; null means closed.
+  const [questionPolls, setQuestionPolls] = useState<Poll[] | null>(null);
+
   const refresh = useCallback(async () => {
     try {
       const t = await api.getTrip(tripId);
@@ -117,6 +121,15 @@ export default function TripLayout() {
     });
   }, [tripId]);
 
+  const openQuestions = useCallback(
+    (polls: Poll[]) => {
+      // Only meaningful once we know who the user is.
+      if (currentUserId == null || polls.length === 0) return;
+      setQuestionPolls(polls);
+    },
+    [currentUserId]
+  );
+
   // Resolve the pending ensureUser() promise (if any) and close the overlay.
   const resolveIdentity = (id: number | null) => {
     setIdentityOpen(false);
@@ -154,6 +167,7 @@ export default function TripLayout() {
         setUser,
         switchUser,
         ensureUser,
+        openQuestions,
         refresh,
         deleteTrip,
       }}
@@ -168,6 +182,20 @@ export default function TripLayout() {
         setUser={setUser}
         refresh={refresh}
         onDone={resolveIdentity}
+      />
+      {/* Polls-only deck for the dashboard nudge: already-identified user,
+          pre-filtered to their unanswered polls. */}
+      <IdentityFlow
+        open={questionPolls != null}
+        mode="questions"
+        questionUserId={currentUserId}
+        tripId={tripId}
+        users={users}
+        categories={categories}
+        polls={questionPolls ?? []}
+        setUser={setUser}
+        refresh={refresh}
+        onDone={() => setQuestionPolls(null)}
       />
     </TripProvider>
   );

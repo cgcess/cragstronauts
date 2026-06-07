@@ -4,6 +4,8 @@ Climbing trip coordination app. Organizer creates a trip, participants join via 
 
 Polls are organizer-defined multiple-choice questions (e.g. "Can you lead belay?", "Do you eat meat?") with a question, optional context/description, an emoji, and 2+ options. Each participant picks one option for now; the model (a `poll_answer` row per selected option) is built to allow multiple selections later without changes. Lead-belay is itself a seeded poll. Answers are captured in the signup deck and editable from the dashboard Polls card, which tallies each option plus who's still unanswered.
 
+When the identified user still has unanswered polls, a horizontal nudge card appears between the dashboard hero and the mosaic tiles. Tapping it reopens the swipe deck filtered to just that user's outstanding polls (no joining/gear/driving cards, and it leaves `signup_completed` untouched). The card self-clears once they've answered everything. Gear questions are intentionally not part of this nudge yet — that pending state will be reworked later.
+
 ## Stack
 
 pnpm workspaces + turborepo monorepo with three packages:

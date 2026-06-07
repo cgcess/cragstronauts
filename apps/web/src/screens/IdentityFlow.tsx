@@ -37,6 +37,14 @@ interface IdentityFlowProps {
   refresh: () => Promise<void>;
   /** Resolve the pending ensureUser() promise and close the overlay. */
   onDone: (id: number | null) => void;
+  /**
+   * "identify" (default) runs the full name → questionnaire flow for an
+   * anonymous visitor. "questions" skips straight to a polls-only deck for an
+   * already-identified user (`questionUserId`) — used by the dashboard nudge to
+   * mop up unanswered polls without touching signup state.
+   */
+  mode?: "identify" | "questions";
+  questionUserId?: number | null;
 }
 
 export default function IdentityFlow({
@@ -48,17 +56,21 @@ export default function IdentityFlow({
   setUser,
   refresh,
   onDone,
+  mode = "identify",
+  questionUserId = null,
 }: IdentityFlowProps) {
+  const pollsOnly = mode === "questions";
   const [phase, setPhase] = useState<Phase>("identify");
   const [userId, setUserId] = useState<number | null>(null);
 
-  // Reset to a clean state every time the overlay opens.
+  // Reset to a clean state every time the overlay opens. In questions mode the
+  // user is already known, so jump straight to the deck.
   useEffect(() => {
     if (open) {
-      setPhase("identify");
-      setUserId(null);
+      setPhase(pollsOnly ? "questions" : "identify");
+      setUserId(pollsOnly ? questionUserId : null);
     }
-  }, [open]);
+  }, [open, pollsOnly, questionUserId]);
 
   // New visitor typed a name → create them, then run the questionnaire.
   const createAndContinue = async (name: string) => {
@@ -84,13 +96,16 @@ export default function IdentityFlow({
     }
   };
 
-  // Finished or skipped the questionnaire.
+  // Finished or skipped the questionnaire. The polls-only nudge deck isn't the
+  // signup flow, so it leaves signup_completed alone and just refreshes.
   const finishQuestions = async () => {
     if (userId != null) {
-      try {
-        await api.completeSignup(tripId, userId);
-      } catch {
-        // best-effort; the user still exists and is signed in
+      if (!pollsOnly) {
+        try {
+          await api.completeSignup(tripId, userId);
+        } catch {
+          // best-effort; the user still exists and is signed in
+        }
       }
       await refresh();
     }
@@ -148,6 +163,7 @@ export default function IdentityFlow({
                 userId={userId!}
                 categories={categories}
                 polls={polls}
+                pollsOnly={pollsOnly}
                 onComplete={finishQuestions}
                 onNotJoining={notJoining}
               />
@@ -264,14 +280,22 @@ interface Question {
   poll?: Poll;
 }
 
-function buildQuestions(categories: Category[], polls: Poll[]): Question[] {
-  const qs: Question[] = [
-    {
-      id: "joining",
-      title: "Are you joining the trip?",
-      sub: "Swipe right for yes, left for no.",
-    },
-  ];
+function buildQuestions(
+  categories: Category[],
+  polls: Poll[],
+  pollsOnly = false
+): Question[] {
+  // The nudge deck only mops up unanswered polls — skip the joining, gear and
+  // driving cards entirely.
+  const qs: Question[] = pollsOnly
+    ? []
+    : [
+        {
+          id: "joining",
+          title: "Are you joining the trip?",
+          sub: "Swipe right for yes, left for no.",
+        },
+      ];
   for (const p of polls) {
     qs.push({
       id: `poll:${p.id}`,
@@ -281,6 +305,7 @@ function buildQuestions(categories: Category[], polls: Poll[]): Question[] {
       poll: p,
     });
   }
+  if (pollsOnly) return qs;
   for (const c of categories) {
     qs.push({
       id: `gear:${c.id}`,
@@ -306,6 +331,7 @@ function Questionnaire({
   userId,
   categories,
   polls,
+  pollsOnly = false,
   onComplete,
   onNotJoining,
 }: {
@@ -313,12 +339,13 @@ function Questionnaire({
   userId: number;
   categories: Category[];
   polls: Poll[];
+  pollsOnly?: boolean;
   onComplete: () => void;
   onNotJoining: () => void;
 }) {
   const questions = useMemo(
-    () => buildQuestions(categories, polls),
-    [categories, polls]
+    () => buildQuestions(categories, polls, pollsOnly),
+    [categories, polls, pollsOnly]
   );
   const [idx, setIdx] = useState(0);
   const [details, setDetails] = useState<DetailState | null>(null);

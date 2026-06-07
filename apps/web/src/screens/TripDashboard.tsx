@@ -7,6 +7,7 @@ import type { CarSchema, GearContributionSchema, ExpenseSchema, SettlementSchema
 import { api } from "../api";
 import { tripPath, slugify } from "../lib/tripUrl";
 import { cleanLinks } from "../lib/links";
+import { unansweredPolls } from "../lib/remaining";
 import LinksEditor from "../components/LinksEditor";
 import {
   useTripContext,
@@ -331,6 +332,34 @@ function DashTile({
   );
 }
 
+/**
+ * Horizontal nudge between the hero and the mosaic: tells the current user how
+ * many polls they still owe an answer and reopens the deck (filtered to just
+ * those) on tap. Self-clears once they're caught up, so the dashboard only
+ * shows it when there's something outstanding.
+ */
+function NudgeCard({ count, onClick }: { count: number; onClick: () => void }) {
+  return (
+    <motion.button
+      type="button"
+      className="dash-nudge"
+      onClick={onClick}
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ type: "spring", stiffness: 380, damping: 28 }}
+    >
+      <span className="dash-nudge__icon" aria-hidden="true">🗳️</span>
+      <span className="dash-nudge__text">
+        <span className="dash-nudge__title">
+          {count} {count === 1 ? "question needs" : "questions need"} your answer
+        </span>
+        <span className="dash-nudge__sub">Tap to finish</span>
+      </span>
+      <span className="dash-nudge__chevron" aria-hidden="true">→</span>
+    </motion.button>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /* Feedback                                                            */
 /* ------------------------------------------------------------------ */
@@ -527,6 +556,7 @@ export default function TripDashboard() {
     currentUserId,
     switchUser,
     ensureUser,
+    openQuestions,
     refresh,
     deleteTrip,
   } = useTripContext();
@@ -925,6 +955,12 @@ export default function TripDashboard() {
   // Tiles open into a bottom sheet; no auto-open on mount.
   const selectedCard = cards.find((c) => c.id === expandedId) ?? null;
 
+  // Polls this identified user still owes an answer — drives the nudge card.
+  const myUnansweredPolls =
+    me != null
+      ? unansweredPolls({ polls, pollAnswers, userId: currentUserId! })
+      : [];
+
   // Guard fires the redirect above; render nothing while it takes effect so
   // the members-only board never flashes for a non-member.
   if (currentUserId == null) return null;
@@ -1192,6 +1228,13 @@ export default function TripDashboard() {
             )}
           </div>
         </div>
+        )}
+
+        {myUnansweredPolls.length > 0 && (
+          <NudgeCard
+            count={myUnansweredPolls.length}
+            onClick={() => openQuestions(myUnansweredPolls)}
+          />
         )}
 
         <div className="dash-grid">

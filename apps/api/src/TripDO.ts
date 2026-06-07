@@ -11,6 +11,7 @@ import {
   gearContribution,
   expense,
   expenseSplit,
+  feedback,
 } from "./db/schema";
 import type { z } from "zod";
 import type {
@@ -22,12 +23,14 @@ import type {
   GearContributionSchema,
   ExpenseSchema,
   SettlementSchema,
+  FeedbackSchema,
 } from "@cragstronauts/contract";
 import { computeSimplifiedBalances, distributeEqual } from "./lib/balances";
 
 type Trip = z.infer<typeof TripSchema>;
 type TripLink = z.infer<typeof TripLinkSchema>;
 type User = z.infer<typeof UserSchema>;
+type Feedback = z.infer<typeof FeedbackSchema>;
 type Category = z.infer<typeof GearCategorySchema>;
 type Car = z.infer<typeof CarSchema>;
 type Contribution = z.infer<typeof GearContributionSchema>;
@@ -182,8 +185,75 @@ export class TripDO extends DurableObject<Env> {
     return formatTrip(updated);
   }
 
+  /* -------------------------- Feedback -------------------------- */
+
+  /** True if the given user is the trip's organizer. */
+  async isOrganizer(userId: number): Promise<boolean> {
+    const u = this.db.get(user, { where: eq("id", userId) });
+    return !!u && !!u.is_organizer;
+  }
+
+  /** All feedback, newest first. Caller (route) gates this to the organizer. */
+  async listFeedback(): Promise<Feedback[]> {
+    const rows = this.db.all(feedback);
+    return rows
+      .map((r) => this.formatFeedback(r))
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+  }
+
+  async createFeedback(data: {
+    user_id: number;
+    body: string;
+    anonymous?: boolean;
+  }): Promise<Feedback> {
+    const body = data.body.trim();
+    if (!body) throw new Error("Feedback can't be empty");
+    // Validate the submitter is a real member even when posting anonymously.
+    const author = this.db.get(user, { where: eq("id", data.user_id) });
+    if (!author) throw new Error("User not found");
+    const anon = data.anonymous ? 1 : 0;
+    // Anonymous → don't store the author link at all, so it stays untraceable.
+    const storedUserId = anon ? null : data.user_id;
+    const now = new Date().toISOString();
+    const row = this.db.insertReturning(
+      feedback,
+      { user_id: storedUserId, body, anonymous: anon, created_at: now },
+      ["id"]
+    );
+    return this.formatFeedback({
+      id: row.id,
+      user_id: storedUserId,
+      body,
+      anonymous: anon,
+      created_at: now,
+    });
+  }
+
+  private formatFeedback(r: {
+    id: number;
+    user_id: number | null;
+    body: string;
+    anonymous: number;
+    created_at: string;
+  }): Feedback {
+    const anon = !!r.anonymous;
+    const author =
+      !anon && r.user_id != null
+        ? this.db.get(user, { where: eq("id", r.user_id) })
+        : null;
+    return {
+      id: r.id,
+      user_id: r.user_id ?? null,
+      author_name: anon ? "Anonymous" : author?.name ?? "Former member",
+      body: r.body,
+      anonymous: anon,
+      created_at: r.created_at,
+    };
+  }
+
   async destroy(): Promise<{ ok: boolean }> {
     // Wipe all tables — order matters for foreign keys
+    this.db.raw("DELETE FROM feedback", []);
     this.db.raw("DELETE FROM expense_split", []);
     this.db.raw("DELETE FROM expense", []);
     this.db.raw("DELETE FROM gear_contribution", []);

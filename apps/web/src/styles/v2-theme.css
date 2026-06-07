@@ -760,6 +760,57 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
 }
 .md hr { border: none; border-top: 1px solid var(--fl-divider); margin: 10px 0; }
 
+/* Toggle switch — sliding on/off control (e.g. "submit anonymously"). */
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--fl-fg-2);
+  font-family: var(--fl-font-body);
+  font-size: 14px;
+  -webkit-tap-highlight-color: transparent;
+}
+.switch__track {
+  position: relative;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--fl-surface-3);
+  box-shadow: inset 0 0 0 1px var(--fl-divider);
+  transition: background 160ms var(--fl-ease-out);
+}
+.switch__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--fl-fg);
+  transition: transform 160ms var(--fl-ease-out);
+}
+.switch.is-on {
+  color: var(--fl-fg);
+}
+.switch.is-on .switch__track {
+  background: var(--fl-accent);
+  box-shadow: none;
+}
+.switch.is-on .switch__thumb {
+  transform: translateX(16px);
+}
+.switch:focus-visible {
+  outline: none;
+}
+.switch:focus-visible .switch__track {
+  box-shadow: 0 0 0 2px var(--fl-accent-ring);
+}
+
 /* Read-mode actions — share + add-to-calendar, available to everyone. */
 .fl-detail-hero__actions {
   display: flex;

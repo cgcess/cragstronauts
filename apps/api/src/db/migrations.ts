@@ -9,5 +9,6 @@ import m0007 from './migrations/0007_trip_welcome_message.sql';
 import m0008 from './migrations/0008_car_reserved_seats.sql';
 import m0009 from './migrations/0009_trip_name.sql';
 import m0010 from './migrations/0010_trip_links.sql';
+import m0011 from './migrations/0011_feedback.sql';
 
-export const migrations = { m0000, m0001, m0002, m0003, m0004, m0005, m0006, m0007, m0008, m0009, m0010 };
+export const migrations = { m0000, m0001, m0002, m0003, m0004, m0005, m0006, m0007, m0008, m0009, m0010, m0011 };

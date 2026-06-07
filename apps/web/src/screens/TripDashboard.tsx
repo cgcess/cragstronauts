@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import type { DateRange } from "react-day-picker";
 import type { z } from "zod";
-import type { CarSchema, GearContributionSchema, ExpenseSchema, SettlementSchema } from "@cragstronauts/contract";
+import type { CarSchema, GearContributionSchema, ExpenseSchema, SettlementSchema, FeedbackSchema } from "@cragstronauts/contract";
 import { api } from "../api";
 import { tripPath, slugify } from "../lib/tripUrl";
 import { cleanLinks } from "../lib/links";
@@ -323,6 +323,187 @@ function DashTile({
         <span className="dash-tile__summary">{summary}</span>
       )}
     </motion.button>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Feedback                                                            */
+/* ------------------------------------------------------------------ */
+
+type Feedback = z.infer<typeof FeedbackSchema>;
+
+/**
+ * Bottom-of-board feedback: anyone can leave a note; the organizer also sees
+ * everyone's feedback. Stored server-side (per-trip Durable Object).
+ */
+function FeedbackSection({
+  tripId,
+  userId,
+  isOrganizer,
+}: {
+  tripId: string;
+  userId: number;
+  isOrganizer: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [anon, setAnon] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [list, setList] = useState<Feedback[] | null>(null);
+
+  const loadList = async () => {
+    if (!isOrganizer) return;
+    try {
+      setList(await api.listFeedback(tripId, userId));
+    } catch {
+      /* organizer-only; ignore transient errors */
+    }
+  };
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadList();
+  }, [isOrganizer, tripId]);
+
+  const submit = async () => {
+    const body = text.trim();
+    if (!body) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await api.createFeedback(tripId, { user_id: userId, body, anonymous: anon });
+      setText("");
+      setAnon(false);
+      setOpen(false);
+      setSent(true);
+      loadList();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="card" style={{ marginTop: 16 }}>
+      <div
+        className="muted"
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          marginBottom: 12,
+        }}
+      >
+        Feedback
+      </div>
+
+      {!open && (
+        <div className="row" style={{ alignItems: "center", gap: 10 }}>
+          <Button variant="secondary" onClick={() => { setSent(false); setOpen(true); }}>
+            {sent ? "Add more feedback" : "Give feedback"}
+          </Button>
+          {sent && (
+            <span className="muted" style={{ fontSize: 13 }}>
+              Thanks for the feedback! 🙌
+            </span>
+          )}
+        </div>
+      )}
+
+      {open && (
+        <div className="col" style={{ gap: 10 }}>
+          <textarea
+            rows={4}
+            placeholder="What worked, what didn't, ideas for next time…"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            autoFocus
+          />
+          {err && <div className="error-banner">{err}</div>}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={anon}
+            className={"switch" + (anon ? " is-on" : "")}
+            onClick={() => setAnon((v) => !v)}
+          >
+            <span className="switch__track" aria-hidden="true">
+              <span className="switch__thumb" />
+            </span>
+            Submit anonymously
+          </button>
+          <div className="row" style={{ gap: 8, justifyContent: "flex-end" }}>
+            <Button
+              variant="text"
+              onClick={() => {
+                setOpen(false);
+                setText("");
+                setAnon(false);
+                setErr(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              disabled={!text.trim() || busy}
+              onClick={submit}
+            >
+              {busy ? "Sending…" : "Submit feedback"}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {isOrganizer && (
+        <div style={{ marginTop: 16 }}>
+          <div
+            className="muted"
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              marginBottom: 10,
+            }}
+          >
+            All feedback{list ? ` (${list.length})` : ""}
+          </div>
+          {list == null ? (
+            <p className="muted" style={{ fontSize: 13 }}>Loading…</p>
+          ) : list.length === 0 ? (
+            <p className="muted" style={{ fontSize: 13 }}>
+              No feedback yet — you'll see everyone's notes here.
+            </p>
+          ) : (
+            <div className="col" style={{ gap: 10 }}>
+              {list.map((f) => (
+                <div
+                  key={f.id}
+                  className="card"
+                  style={{ padding: "10px 12px" }}
+                >
+                  <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
+                    {f.body}
+                  </div>
+                  <div
+                    className="muted"
+                    style={{ fontSize: 12, marginTop: 6 }}
+                  >
+                    — {f.author_name} ·{" "}
+                    {new Date(f.created_at).toLocaleDateString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -961,6 +1142,12 @@ export default function TripDashboard() {
             />
           ))}
         </div>
+
+        <FeedbackSection
+          tripId={tripId}
+          userId={currentUserId}
+          isOrganizer={isOrganizer}
+        />
       </div>
 
       <BottomSheet

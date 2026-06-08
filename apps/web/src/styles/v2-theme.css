@@ -463,6 +463,17 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   text-transform: uppercase; font-weight: 700;
   margin-bottom: 14px;
 }
+/* Tappable date line — strip button chrome, keep the meta typography. */
+.fl-detail-hero__meta--btn {
+  appearance: none;
+  font-family: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  transition: opacity 160ms var(--fl-ease-out);
+}
 .fl-detail-hero__title {
   font-family: var(--fl-font-display);
   font-weight: 800;
@@ -587,6 +598,81 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   font-size: 13px; font-weight: 600;
   letter-spacing: 0.16em; text-transform: uppercase;
   color: var(--fl-fg-3);
+}
+/* Tappable countdown — strip button chrome, keep the count layout. */
+.fl-detail-hero__count-col--btn {
+  appearance: none;
+  font-family: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: opacity 160ms var(--fl-ease-out);
+}
+
+/* Neutralise the global button{} background (incl. its :hover) so these
+   text-only hero triggers never flash a filled background. Opacity carries
+   the hover/active feedback instead. */
+.fl-detail-hero__meta--btn,
+.fl-detail-hero__count-col--btn {
+  background: none;
+}
+@media (hover: hover) {
+  .fl-detail-hero__meta--btn:hover,
+  .fl-detail-hero__count-col--btn:hover {
+    background: none;
+    opacity: 0.78;
+  }
+}
+.fl-detail-hero__meta--btn:active,
+.fl-detail-hero__count-col--btn:active {
+  background: none;
+  opacity: 0.6;
+}
+
+/* Calendar drawer body */
+.cal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.cal-body__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.cal-body__stat {
+  flex: 1 1 auto;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--fl-divider);
+  background: rgba(255, 255, 255, 0.03);
+}
+.cal-body__stat-value {
+  font-family: var(--fl-font-display);
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+  color: var(--fl-fg);
+}
+.cal-body__stat-label {
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--fl-fg-3);
+}
+.cal-body__picker {
+  display: flex;
+  justify-content: center;
+}
+/* Read-only visualisation: days aren't selectable (only month nav works),
+   so kill pointer interaction on the day cells to avoid a dead hover/click. */
+.cal-body__picker .rdp-day_button {
+  pointer-events: none;
+  cursor: default;
 }
 
 /* Read-mode logistics — accommodation + notes shown beneath the countdown. */

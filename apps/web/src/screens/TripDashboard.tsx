@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import type { DateRange } from "react-day-picker";
+import { DayPicker, type DateRange } from "react-day-picker";
 import type { z } from "zod";
 import type { CarSchema, GearContributionSchema, ExpenseSchema, SettlementSchema, FeedbackSchema } from "@cragstronauts/contract";
 import { api } from "../api";
@@ -572,6 +572,7 @@ export default function TripDashboard() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingHero, setEditingHero] = useState(false);
   const [weatherSheetOpen, setWeatherSheetOpen] = useState(false);
+  const [calendarSheetOpen, setCalendarSheetOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
   // Expenses drawer navigation (list ⇄ add/edit/settle). Direction drives the
@@ -1041,35 +1042,52 @@ export default function TripDashboard() {
               <PencilIcon />
             </button>
           )}
-          <div className="fl-detail-hero__meta">
-            <span aria-hidden="true">🧗</span>
-            <span>
-              {trip.start_date || trip.end_date
-                ? formatDateRange(trip.start_date, trip.end_date)
-                : "Dates TBD"}
-            </span>
-          </div>
+          {trip.start_date || trip.end_date ? (
+            <button
+              type="button"
+              className="fl-detail-hero__meta fl-detail-hero__meta--btn"
+              onClick={() => setCalendarSheetOpen(true)}
+              aria-label="Open trip calendar"
+            >
+              <span aria-hidden="true">🧗</span>
+              <span>{formatDateRange(trip.start_date, trip.end_date)}</span>
+            </button>
+          ) : (
+            <div className="fl-detail-hero__meta">
+              <span aria-hidden="true">🧗</span>
+              <span>Dates TBD</span>
+            </div>
+          )}
           <h1 className="fl-detail-hero__title">{trip.name}</h1>
           <div className="fl-detail-hero__row">
-            <div className="fl-detail-hero__count-col">
-              {dUntil == null ? (
+            {dUntil == null ? (
+              <div className="fl-detail-hero__count-col">
                 <span className="fl-detail-hero__count-label">Dates TBD</span>
-              ) : dUntil > 0 ? (
-                <>
-                  <span className="fl-detail-hero__count">{dUntil}</span>
-                  <span className="fl-detail-hero__count-label">
-                    {dUntil === 1 ? "Day to go" : "Days to go"}
-                  </span>
-                </>
-              ) : dUntil === 0 ? (
-                <Tag variant="ember" dot>On Now</Tag>
-              ) : (
-                <>
-                  <span className="fl-detail-hero__count">{Math.abs(dUntil)}</span>
-                  <span className="fl-detail-hero__count-label">Days ago</span>
-                </>
-              )}
-            </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="fl-detail-hero__count-col fl-detail-hero__count-col--btn"
+                onClick={() => setCalendarSheetOpen(true)}
+                aria-label="Open trip calendar"
+              >
+                {dUntil > 0 ? (
+                  <>
+                    <span className="fl-detail-hero__count">{dUntil}</span>
+                    <span className="fl-detail-hero__count-label">
+                      {dUntil === 1 ? "Day to go" : "Days to go"}
+                    </span>
+                  </>
+                ) : dUntil === 0 ? (
+                  <Tag variant="ember" dot>On Now</Tag>
+                ) : (
+                  <>
+                    <span className="fl-detail-hero__count">{Math.abs(dUntil)}</span>
+                    <span className="fl-detail-hero__count-label">Days ago</span>
+                  </>
+                )}
+              </button>
+            )}
             <HeroWeatherChip
               weather={weather}
               isOrganizer={isOrganizer}
@@ -1228,15 +1246,6 @@ export default function TripDashboard() {
             >
               {copied ? "Link copied!" : "Share trip"}
             </Button>
-            {(trip.start_date || trip.end_date) && (
-              <Button
-                variant="text"
-                onClick={addToCalendar}
-                leadingIcon={<CalendarIcon />}
-              >
-                Add to calendar
-              </Button>
-            )}
           </div>
         </div>
         )}
@@ -1281,6 +1290,19 @@ export default function TripDashboard() {
           tripId={tripId}
           isOrganizer={isOrganizer}
           onChanged={reload}
+        />
+      </BottomSheet>
+
+      <BottomSheet
+        open={calendarSheetOpen}
+        onClose={() => setCalendarSheetOpen(false)}
+        title="Calendar"
+        subtitle={formatDateRange(trip.start_date, trip.end_date)}
+      >
+        <CalendarBody
+          trip={trip}
+          dUntil={dUntil}
+          onAddToCalendar={addToCalendar}
         />
       </BottomSheet>
 
@@ -1494,6 +1516,88 @@ function WeatherBody({
           ✎ Edit location
         </button>
       )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Calendar drawer                                                     */
+/* ------------------------------------------------------------------ */
+
+/** Human-friendly countdown phrase from a signed day delta. */
+function countdownPhrase(dUntil: number | null): string {
+  if (dUntil == null) return "Dates TBD";
+  if (dUntil > 0) return dUntil === 1 ? "1 day to go" : `${dUntil} days to go`;
+  if (dUntil === 0) return "On now";
+  const ago = Math.abs(dUntil);
+  return ago === 1 ? "1 day ago" : `${ago} days ago`;
+}
+
+/** Trip span as "3 days · 2 nights", or null when there are no dates. */
+function tripLength(
+  startStr: string | null,
+  endStr: string | null
+): string | null {
+  const start = startStr || endStr;
+  if (!start) return null;
+  const end = endStr || start;
+  const s = new Date(start + "T00:00:00");
+  const e = new Date(end + "T00:00:00");
+  const days = Math.round((e.getTime() - s.getTime()) / DAY_MS) + 1;
+  const nights = Math.max(0, days - 1);
+  const dayLabel = `${days} ${days === 1 ? "day" : "days"}`;
+  const nightLabel = `${nights} ${nights === 1 ? "night" : "nights"}`;
+  return `${dayLabel} \u00b7 ${nightLabel}`;
+}
+
+function CalendarBody({
+  trip,
+  dUntil,
+  onAddToCalendar,
+}: {
+  trip: ShareableTrip;
+  dUntil: number | null;
+  onAddToCalendar: () => void;
+}) {
+  const from = isoToDate(trip.start_date);
+  const to = isoToDate(trip.end_date);
+  const selected: DateRange | undefined = from
+    ? { from, to: to ?? from }
+    : undefined;
+  const length = tripLength(trip.start_date, trip.end_date);
+
+  return (
+    <div className="cal-body">
+      <div className="cal-body__stats">
+        <div className="cal-body__stat">
+          <span className="cal-body__stat-value">{countdownPhrase(dUntil)}</span>
+          <span className="cal-body__stat-label">Countdown</span>
+        </div>
+        {length && (
+          <div className="cal-body__stat">
+            <span className="cal-body__stat-value">{length}</span>
+            <span className="cal-body__stat-label">Duration</span>
+          </div>
+        )}
+      </div>
+      {selected && (
+        <div className="cal-body__picker">
+          <DayPicker
+            mode="range"
+            selected={selected}
+            defaultMonth={selected.from}
+            showOutsideDays
+            weekStartsOn={1}
+          />
+        </div>
+      )}
+      <Button
+        variant="text"
+        onClick={onAddToCalendar}
+        leadingIcon={<CalendarIcon />}
+      >
+        Add to calendar
+      </Button>
     </div>
   );
 }

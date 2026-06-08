@@ -307,7 +307,18 @@ button:disabled:active { transform: none; }
 /* Primary action mounted directly under the welcome note: personal first,
    then the join. */
 .landing-cta {
-  margin: 16px 0;
+  margin: 0;
+}
+
+/* Body groups the welcome note, CTA, and facts in one shared-width column so
+   all three line up on both edges — the fullWidth CTA used to overhang the
+   narrower cards. Single column at every width, same as mobile. */
+.landing-body {
+  margin-top: 20px;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 /* Sticky twin of the hero CTA, mounted once the hero button scrolls out of

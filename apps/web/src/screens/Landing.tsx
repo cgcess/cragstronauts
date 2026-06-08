@@ -104,13 +104,13 @@ export default function Landing() {
           </div>
         </div>
 
+        <div className="landing-body">
+
         {trip.welcome_message && (
           <div
             className="card"
             style={{
-              marginTop: 20,
               lineHeight: 1.6,
-              maxWidth: 560,
               whiteSpace: "pre-wrap",
             }}
           >
@@ -159,7 +159,7 @@ export default function Landing() {
         </div>
 
         {/* At-a-glance details so visitors can decide before committing. */}
-        <div className="card" style={{ marginTop: 16, maxWidth: 560 }}>
+        <div className="card">
             <div className="col" style={{ gap: 14 }}>
               <div className="landing-fact">
                 <span className="landing-fact__icon" aria-hidden="true">
@@ -262,6 +262,7 @@ export default function Landing() {
                 </div>
               )}
             </div>
+        </div>
         </div>
 
         {showStickyCta && (

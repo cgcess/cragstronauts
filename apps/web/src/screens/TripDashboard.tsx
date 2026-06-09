@@ -8,6 +8,7 @@ import { api } from "../api";
 import { tripPath, slugify } from "../lib/tripUrl";
 import { cleanLinks } from "../lib/links";
 import { unansweredPolls } from "../lib/remaining";
+import { summarizeSplit } from "../lib/expense-summary";
 import LinksEditor from "../components/LinksEditor";
 import {
   useTripContext,
@@ -3508,6 +3509,7 @@ function ExpensesBody({
   const [settleAmount, setSettleAmount] = useState("");
   const [settleBusy, setSettleBusy] = useState(false);
   const [simplifyInfoOpen, setSimplifyInfoOpen] = useState(false);
+  const [expandedExpenses, setExpandedExpenses] = useState<Set<number>>(new Set());
   const [error, setError] = useState<string | null>(null);
 
   const settleTarget = view.kind === "settle" ? view.target : null;
@@ -3662,19 +3664,22 @@ function ExpensesBody({
         </div>
       )}
       {realExpenses.map((exp) => {
-        const isCustom = exp.splits.some((s) => s.amount_cents != null);
+        const summary = summarizeSplit(exp, currentUserId);
+        const isExpanded = expandedExpenses.has(exp.id);
+        const splitLabel =
+          summary.kind === "equal"
+            ? `Split equally · ${summary.count} ${summary.count === 1 ? "person" : "people"}`
+            : `Custom split · ${summary.count} ${summary.count === 1 ? "person" : "people"}`;
+        const equalShare = Math.round(exp.amount_cents / Math.max(exp.splits.length, 1));
         return (
-          <div className="list-item" key={exp.id} style={{ flexDirection: "column", alignItems: "stretch", gap: 4 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <div style={{ fontWeight: 500 }}>{exp.description}</div>
-                <div className="muted" style={{ fontSize: 13 }}>
-                  {exp.payer_name} paid {formatCents(exp.amount_cents)} ·{" "}
-                  {isCustom ? "custom split" : `split ${exp.splits.length} way${exp.splits.length !== 1 ? "s" : ""}`}
-                </div>
+          <div className="exp-item" key={exp.id}>
+            <div className="exp-item__head">
+              <div className="exp-item__title">
+                <div className="exp-item__name">{exp.description}</div>
+                <div className="exp-item__total">{formatCents(exp.amount_cents)}</div>
               </div>
               {exp.payer_user_id === currentUserId && (
-                <div className="row" style={{ gap: 4 }}>
+                <div className="row" style={{ gap: 4, flexShrink: 0 }}>
                   <button
                     className="th-btn th-btn--tertiary th-btn--icon th-btn--sm"
                     onClick={() => onNav({ kind: "edit", expense: exp })}
@@ -3696,12 +3701,41 @@ function ExpensesBody({
                 </div>
               )}
             </div>
-            {isCustom && (
-              <div className="muted" style={{ fontSize: 12, display: "flex", flexWrap: "wrap", gap: 6 }}>
+            <div className="exp-item__meta">
+              Paid by {exp.payer_name} · {splitLabel}
+            </div>
+            {summary.yourShareCents != null && (
+              <div className="exp-item__share">
+                Your share <strong>{formatCents(summary.yourShareCents)}</strong>
+              </div>
+            )}
+            <button
+              type="button"
+              className="exp-item__toggle"
+              aria-expanded={isExpanded}
+              onClick={() =>
+                setExpandedExpenses((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(exp.id)) next.delete(exp.id);
+                  else next.add(exp.id);
+                  return next;
+                })
+              }
+            >
+              {isExpanded ? "Hide breakdown" : "Show breakdown"}
+            </button>
+            {isExpanded && (
+              <div className="exp-breakdown">
                 {exp.splits.map((s) => (
-                  <span key={s.user_id}>
-                    {s.name}: {formatCents(s.amount_cents ?? 0)}
-                  </span>
+                  <div
+                    className={`exp-breakdown__row${s.user_id === currentUserId ? " exp-breakdown__row--me" : ""}`}
+                    key={s.user_id}
+                  >
+                    <span className="exp-breakdown__name">{s.name}</span>
+                    <span className="exp-breakdown__amt">
+                      {formatCents(s.amount_cents ?? equalShare)}
+                    </span>
+                  </div>
                 ))}
               </div>
             )}

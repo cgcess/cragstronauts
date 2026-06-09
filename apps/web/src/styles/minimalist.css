@@ -251,6 +251,93 @@ input:focus, textarea:focus, select:focus {
   margin-top: 2px;
 }
 
+/* ---------- Expense ledger card ---------- */
+.exp-item {
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--min-line);
+}
+.exp-item:last-child { border-bottom: 0; }
+.exp-item__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.exp-item__title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+.exp-item__name {
+  font-weight: 600;
+  color: var(--min-ink);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.exp-item__total {
+  flex-shrink: 0;
+  font-weight: 700;
+  color: var(--min-ink);
+}
+.exp-item__meta {
+  font-size: 13px;
+  color: var(--min-ink-3);
+  margin-top: 2px;
+}
+.exp-item__share {
+  font-size: 14px;
+  color: var(--min-ink);
+  margin-top: 6px;
+}
+.exp-item__share strong {
+  font-weight: 700;
+  color: var(--min-accent);
+}
+.exp-item__toggle {
+  margin-top: 8px;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--min-ink-3);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.exp-breakdown {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.exp-breakdown__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--min-ink-3);
+  padding: 2px 0;
+}
+.exp-breakdown__row--me {
+  color: var(--min-ink);
+  font-weight: 600;
+}
+.exp-breakdown__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.exp-breakdown__amt {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---------- Segmented toggle (split mode) ---------- */
 .seg {
   position: relative;

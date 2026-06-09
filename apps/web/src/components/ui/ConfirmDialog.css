@@ -1,0 +1,58 @@
+/* ============================================================
+   Confirm dialog — centered modal alertdialog. Reuses the scrim
+   look from the bottom sheet, but the card is centered and scales
+   in. Built for short, decisive confirmations (often destructive).
+   ============================================================ */
+
+.confirm-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.55);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+
+.confirm-card {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px 22px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-card);
+  color: var(--text);
+}
+
+.confirm-card__title {
+  margin: 0;
+  font-family: var(--fl-font-display, "Funnel Display", system-ui, sans-serif);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.confirm-card__message {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.confirm-card__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.confirm-card__actions > .th-btn {
+  flex: 1;
+}

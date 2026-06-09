@@ -1,5 +1,5 @@
-import React from "react";
-import { Button, Tag } from "../components/ui";
+import React, { useState } from "react";
+import { Button, Tag, useConfirm } from "../components/ui";
 import type { ButtonVariant, TagVariant } from "../components/ui";
 
 /* A tiny gallery of every component in the Trailhead UI kit. Lives at
@@ -60,6 +60,46 @@ function Cell({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
+function ConfirmDemo() {
+  const confirm = useConfirm();
+  const [result, setResult] = useState<string>("—");
+
+  const ask = async (tone: "default" | "danger") => {
+    const ok = await confirm(
+      tone === "danger"
+        ? {
+            title: "Delete this trip?",
+            message: "“Bishop” will be removed for everyone. This can’t be undone.",
+            confirmLabel: "Delete trip",
+            tone: "danger",
+          }
+        : {
+            title: "Transfer ownership to Sam?",
+            message: "They become the organizer and you become a regular member.",
+            confirmLabel: "Transfer",
+          }
+    );
+    setResult(ok ? "confirmed" : "cancelled");
+  };
+
+  return (
+    <div className="uikit__grid">
+      <Cell label="default tone">
+        <Button variant="primary" onClick={() => ask("default")}>
+          Transfer…
+        </Button>
+      </Cell>
+      <Cell label="danger tone">
+        <Button variant="danger" onClick={() => ask("danger")}>
+          Delete…
+        </Button>
+      </Cell>
+      <Cell label="last result">
+        <Tag variant={result === "confirmed" ? "moss" : "neutral"}>{result}</Tag>
+      </Cell>
+    </div>
+  );
+}
 export default function UIKit() {
   return (
     <div className="uikit">
@@ -162,6 +202,10 @@ export default function UIKit() {
             <Tag variant="slate" mono>5.11a</Tag>
           </Cell>
         </div>
+      </Section>
+
+      <Section title="Confirm — modal dialog" hint="useConfirm() · await confirm({ … }) returns a Promise<boolean>">
+        <ConfirmDemo />
       </Section>
       </div>
     </div>

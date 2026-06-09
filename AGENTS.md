@@ -16,6 +16,11 @@ pnpm workspaces + turborepo monorepo with three packages:
 - `apps/api` — Cloudflare Worker, Hono, Durable Objects with SQLite (do-orm)
 - `packages/contract` — Zod schemas and route contracts
 
+Confirmations use the custom `useConfirm()` hook (`apps/web/src/components/ui`,
+mounted via `ConfirmProvider` in `App.tsx`) — `await confirm({ title, message,
+confirmLabel, tone })` returns a `Promise<boolean>`. Never use the native
+`window.confirm`. Browse the UI kit at `/ui-kit`.
+
 ## Local development
 
 ```bash

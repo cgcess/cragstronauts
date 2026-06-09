@@ -21,7 +21,7 @@ import Linkify from "../components/Linkify";
 import Markdown from "../components/Markdown";
 import DateRangePicker from "../components/DateRangePicker";
 import BottomSheet from "../components/BottomSheet";
-import { Button, Tag } from "../components/ui";
+import { Button, Tag, useConfirm } from "../components/ui";
 
 type Car = z.infer<typeof CarSchema>;
 type Dog = z.infer<typeof DogSchema>;
@@ -563,6 +563,7 @@ export default function TripDashboard() {
     deleteTrip,
   } = useTripContext();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const me = users.find((u) => u.id === currentUserId) ?? null;
   const isOrganizer = me?.is_organizer ?? false;
 
@@ -660,9 +661,13 @@ export default function TripDashboard() {
   const leaveTrip = async () => {
     if (!me || me.is_organizer) return;
     if (
-      !confirm(
-        "Leave this trip? Your car and gear contributions will also be removed."
-      )
+      !(await confirm({
+        title: "Leave this trip?",
+        message:
+          "Your car and gear contributions will also be removed.",
+        confirmLabel: "Leave",
+        tone: "danger",
+      }))
     )
       return;
     setError(null);
@@ -2085,6 +2090,7 @@ function DangerZone({
   tripLocation: string;
   onDelete: () => Promise<void>;
 }) {
+  const confirm = useConfirm();
   return (
     <div className="dash-danger">
       <div className="dash-danger__title">Danger zone</div>
@@ -2094,9 +2100,14 @@ function DangerZone({
       <button
         className="th-btn th-btn--secondary"
         style={{ color: "var(--danger)", borderColor: "var(--danger)" }}
-        onClick={() => {
+        onClick={async () => {
           if (
-            confirm(`Delete the "${tripLocation}" trip? This can't be undone.`)
+            await confirm({
+              title: "Delete this trip?",
+              message: `“${tripLocation}” will be removed for everyone. This can’t be undone.`,
+              confirmLabel: "Delete trip",
+              tone: "danger",
+            })
           ) {
             onDelete();
           }
@@ -2121,6 +2132,7 @@ function RosterBody({
   isOrganizer: boolean;
   onChanged: () => Promise<void>;
 }) {
+  const confirm = useConfirm();
   const joining = users.filter((u) => u.joining);
   const out = users.filter((u) => !u.joining);
   const [error, setError] = useState<string | null>(null);
@@ -2149,9 +2161,12 @@ function RosterBody({
 
   const transfer = async (toUserId: number, name: string) => {
     if (
-      !confirm(
-        `Transfer ownership to ${name}? They become the organizer and you become a regular member.`
-      )
+      !(await confirm({
+        title: `Transfer ownership to ${name}?`,
+        message:
+          "They become the organizer and you become a regular member.",
+        confirmLabel: "Transfer",
+      }))
     )
       return;
     setError(null);
@@ -2165,10 +2180,22 @@ function RosterBody({
   };
 
   const remove = async (userId: number, isSelf: boolean, name: string) => {
-    const message = isSelf
-      ? "Leave this trip? Your car and gear contributions will also be removed."
-      : `Remove ${name} from the trip? Their car and gear contributions will also be removed.`;
-    if (!confirm(message)) return;
+    const ok = isSelf
+      ? await confirm({
+          title: "Leave this trip?",
+          message:
+            "Your car and gear contributions will also be removed.",
+          confirmLabel: "Leave",
+          tone: "danger",
+        })
+      : await confirm({
+          title: `Remove ${name} from the trip?`,
+          message:
+            "Their car and gear contributions will also be removed.",
+          confirmLabel: "Remove",
+          tone: "danger",
+        });
+    if (!ok) return;
     setError(null);
     try {
       await api.deleteUser(tripId, userId);
@@ -2312,6 +2339,7 @@ function CarsBody({
   ensureUser: () => Promise<number | null>;
   onChanged: () => Promise<void>;
 }) {
+  const confirm = useConfirm();
   const [adding, setAdding] = useState(false);
   const [seats, setSeats] = useState("4");
   const [notes, setNotes] = useState("");
@@ -2367,16 +2395,18 @@ function CarsBody({
     }
   };
 
-  const pickDog = (carId: number, dog: Dog) => {
+  const pickDog = async (carId: number, dog: Dog) => {
     // Moving a dog from another car asks for confirmation first.
     if (dog.car_id != null && dog.car_id !== carId) {
       const target = cars.find((c) => c.id === carId);
       if (
-        !confirm(
-          `Move ${dog.name} from ${dogCarName(dog.car_id)} to ${
+        !(await confirm({
+          title: `Move ${dog.name}?`,
+          message: `${dog.name} is ${dogCarName(dog.car_id)}. Move to ${
             target ? `${target.driver_name}'s car` : "this car"
-          }?`
-        )
+          }?`,
+          confirmLabel: "Move",
+        }))
       )
         return;
     }
@@ -2488,7 +2518,15 @@ function CarsBody({
                 <button
                   className="th-btn th-btn--tertiary"
                   onClick={async () => {
-                    if (confirm("Remove your car from the trip?")) {
+                    if (
+                      await confirm({
+                        title: "Remove your car?",
+                        message:
+                          "Passengers and dogs riding with you will lose their seats.",
+                        confirmLabel: "Remove",
+                        tone: "danger",
+                      })
+                    ) {
                       await api.deleteCar(tripId, c.id);
                       onChanged();
                     }
@@ -2558,9 +2596,12 @@ function CarsBody({
                     }
                     if (iAmIn) return;
                     if (
-                      !confirm(
-                        "This seat is reserved by the driver for someone else. Only take it if you've already cleared it with the driver. Take this seat?"
-                      )
+                      !(await confirm({
+                        title: "Take a reserved seat?",
+                        message:
+                          "This seat is reserved by the driver for someone else. Only take it if you’ve already cleared it with them.",
+                        confirmLabel: "Take seat",
+                      }))
                     )
                       return;
                     setError(null);
@@ -2773,6 +2814,7 @@ function DogsBody({
   ensureUser: () => Promise<number | null>;
   onChanged: () => Promise<void>;
 }) {
+  const confirm = useConfirm();
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   // Organizer-only: which member the new dog belongs to. Defaults to self;
@@ -2841,7 +2883,15 @@ function DogsBody({
                         className="chip-x"
                         aria-label={`Delete ${d.name}`}
                         onClick={async () => {
-                          if (!confirm(`Delete ${d.name}? This removes the dog from the trip.`)) return;
+                          if (
+                            !(await confirm({
+                              title: `Delete ${d.name}?`,
+                              message: "This removes the dog from the trip.",
+                              confirmLabel: "Delete",
+                              tone: "danger",
+                            }))
+                          )
+                            return;
                           await api.deleteDog(tripId, d.id);
                           onChanged();
                         }}
@@ -2976,6 +3026,7 @@ function GearBody({
   isOrganizer: boolean;
   onChanged: () => Promise<void>;
 }) {
+  const confirm = useConfirm();
   const [addingFor, setAddingFor] = useState<number | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -3034,7 +3085,15 @@ function GearBody({
   };
 
   const removeCategory = async (catId: number, name: string) => {
-    if (!confirm(`Remove the "${name}" category? Anyone bringing one will lose their entry.`)) return;
+    if (
+      !(await confirm({
+        title: `Remove the “${name}” category?`,
+        message: "Anyone bringing one will lose their entry.",
+        confirmLabel: "Remove",
+        tone: "danger",
+      }))
+    )
+      return;
     setError(null);
     try {
       await api.deleteCategory(tripId, catId);
@@ -3342,6 +3401,7 @@ function PollsBody({
   isOrganizer: boolean;
   onChanged: () => Promise<void>;
 }) {
+  const confirm = useConfirm();
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
@@ -3406,7 +3466,14 @@ function PollsBody({
   };
 
   const remove = async (p: Poll) => {
-    if (!confirm(`Delete the poll “${p.question}”? All answers will be lost.`))
+    if (
+      !(await confirm({
+        title: `Delete the poll “${p.question}”?`,
+        message: "All answers will be lost.",
+        confirmLabel: "Delete",
+        tone: "danger",
+      }))
+    )
       return;
     setError(null);
     try {

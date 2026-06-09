@@ -70,6 +70,18 @@ export const carSignup = table("car_signup", {
   user_id: column.integer().notNull().references(ref(user, "id")),
 });
 
+export const dog = table("dog", {
+  id: column.integer().notNull().primaryKey().autoIncrement(),
+  owner_user_id: column.integer().notNull().references(ref(user, "id")),
+  name: column.text().notNull(),
+});
+
+export const carDog = table("car_dog", {
+  id: column.integer().notNull().primaryKey().autoIncrement(),
+  car_id: column.integer().notNull().references(ref(car, "id")),
+  dog_id: column.integer().notNull().references(ref(dog, "id")),
+});
+
 export const gearContribution = table("gear_contribution", {
   id: column.integer().notNull().primaryKey().autoIncrement(),
   user_id: column.integer().notNull().references(ref(user, "id")),
@@ -101,5 +113,4 @@ export const feedback = table("feedback", {
   anonymous: column.integer().notNull().default(0),
   created_at: column.text().notNull(),
 });
-
 

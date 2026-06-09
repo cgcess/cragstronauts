@@ -6,6 +6,8 @@ Polls are organizer-defined multiple-choice questions (e.g. "Can you lead belay?
 
 When the identified user still has unanswered polls, a horizontal nudge card appears between the dashboard hero and the mosaic tiles. Tapping it reopens the swipe deck filtered to just that user's outstanding polls (no joining/gear/driving cards, and it leaves `signup_completed` untouched). The card self-clears once they've answered everything. Gear questions are intentionally not part of this nudge yet — that pending state will be reworked later.
 
+Dogs are a first-class resource. A `dog` is owned by a user and created at the trip level (a person *brings* a dog — no car required), then placed in a car via a `car_dog` link (parallel to `car_signup`). A dog occupies a seat like a passenger but is **never a climber**, so it never appears in any climber/user tally — the hero shows a dog count beside the climber count. A dog rides in at most one car; moving it to another car relinks (the UI prompts a switch confirmation naming the previous car). Removing a dog from a car keeps the dog (it returns to `no car`); deleting it from the trip-level Dogs card is what destroys it. Seat capacity (`total_seats - 1`) counts `passengers + dogs + reserved`. Cascades: deleting a car unassigns its dogs, an owner leaving a car unassigns their dogs from it, and deleting a user deletes their dogs. The Dogs dashboard card is the creation/management home; an open car seat opens a chooser (sit yourself / reserve / place one of your dogs) with a `+ new dog` shortcut.
+
 ## Stack
 
 pnpm workspaces + turborepo monorepo with three packages:

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import { DayPicker, type DateRange } from "react-day-picker";
 import type { z } from "zod";
-import type { CarSchema, GearContributionSchema, ExpenseSchema, SettlementSchema, FeedbackSchema } from "@cragstronauts/contract";
+import type { CarSchema, DogSchema, GearContributionSchema, ExpenseSchema, SettlementSchema, FeedbackSchema } from "@cragstronauts/contract";
 import { api } from "../api";
 import { tripPath, slugify } from "../lib/tripUrl";
 import { cleanLinks } from "../lib/links";
@@ -24,6 +24,7 @@ import BottomSheet from "../components/BottomSheet";
 import { Button, Tag } from "../components/ui";
 
 type Car = z.infer<typeof CarSchema>;
+type Dog = z.infer<typeof DogSchema>;
 type Contribution = z.infer<typeof GearContributionSchema>;
 type Expense = z.infer<typeof ExpenseSchema>;
 type Settlement = z.infer<typeof SettlementSchema>;
@@ -566,6 +567,7 @@ export default function TripDashboard() {
   const isOrganizer = me?.is_organizer ?? false;
 
   const [cars, setCars] = useState<Car[]>([]);
+  const [dogs, setDogs] = useState<Dog[]>([]);
   const [gear, setGear] = useState<Contribution[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [balances, setBalances] = useState<Settlement[]>([]);
@@ -619,13 +621,15 @@ export default function TripDashboard() {
   const reload = async () => {
     setError(null);
     try {
-      const [c, g, ex, bal] = await Promise.all([
+      const [c, g, ex, bal, dg] = await Promise.all([
         api.listCars(tripId),
         api.listGear(tripId),
         api.listExpenses(tripId),
         api.getBalances(tripId),
+        api.listDogs(tripId),
       ]);
       setCars(c);
+      setDogs(dg);
       setGear(g);
       setExpenses(ex);
       setBalances(bal);
@@ -686,7 +690,7 @@ export default function TripDashboard() {
   );
   const amInCar = Boolean(myCar || ridingIn);
   const seatsTotal = cars.reduce((n, c) => n + Math.max(0, c.total_seats), 0);
-  const seatsFilled = cars.reduce((n, c) => n + 1 + c.passengers.length + c.reserved_seats, 0);
+  const seatsFilled = cars.reduce((n, c) => n + 1 + c.passengers.length + c.dogs.length + c.reserved_seats, 0);
   const myGear = gear.filter((g) => g.user_id === currentUserId);
   const coveredCats = new Set(gear.map((g) => g.category_id)).size;
   const dUntil = daysUntil(trip.start_date);
@@ -732,7 +736,7 @@ export default function TripDashboard() {
         {cars.length > 0 && (
           <span className="dash-tile__chips">
             {cars.slice(0, 4).map((c) => {
-              const filled = c.passengers.length + 1;
+              const filled = c.passengers.length + c.dogs.length + 1;
               return (
                 <span key={c.id} className="dash-tile__chip">
                   🚗 <span className="dash-tile__chip-trunc">{c.driver_name}</span>{" "}
@@ -750,6 +754,47 @@ export default function TripDashboard() {
     body: (
       <CarsBody
         tripId={tripId}
+        cars={cars}
+        dogs={dogs}
+        currentUserId={currentUserId}
+        ensureUser={ensureUser}
+        onChanged={reload}
+      />
+    ),
+  });
+
+  // Dogs — trip-level pets. The home for bringing/removing a dog.
+  cards.push({
+    id: "dogs",
+    score: 30,
+    icon: "🐕",
+    title: "Dogs",
+    badge: dogs.length ? `${dogs.length}` : undefined,
+    summary: (
+      <>
+        <span>
+          {dogs.length === 0
+            ? "No dogs yet"
+            : `${dogs.length} ${dogs.length === 1 ? "dog" : "dogs"} coming`}
+        </span>
+        {dogs.length > 0 && (
+          <span className="dash-tile__chips">
+            {dogs.slice(0, 4).map((d) => (
+              <span key={d.id} className="dash-tile__chip">
+                🐕 <span className="dash-tile__chip-trunc">{d.name}</span>
+              </span>
+            ))}
+            {dogs.length > 4 && (
+              <span className="dash-tile__chip">+{dogs.length - 4}</span>
+            )}
+          </span>
+        )}
+      </>
+    ),
+    body: (
+      <DogsBody
+        tripId={tripId}
+        dogs={dogs}
         cars={cars}
         currentUserId={currentUserId}
         ensureUser={ensureUser}
@@ -1231,6 +1276,29 @@ export default function TripDashboard() {
                         <span key={u.id}>
                           {u.name}{u.is_organizer ? " 👑" : ""}
                           {i < joining.length - 1 ? ", " : ""}
+                        </span>
+                      ))}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {dogs.length > 0 && (
+                <div className="fl-detail-hero__logistics-item">
+                  <span
+                    className="fl-detail-hero__logistics-icon"
+                    aria-hidden="true"
+                  >
+                    🐕
+                  </span>
+                  <div className="fl-detail-hero__logistics-text">
+                    <span className="fl-detail-hero__logistics-label">
+                      Dogs · {dogs.length}
+                    </span>
+                    <span className="fl-detail-hero__logistics-detail fl-detail-hero__climbers">
+                      {dogs.map((d, i) => (
+                        <span key={d.id}>
+                          {d.name}
+                          {i < dogs.length - 1 ? ", " : ""}
                         </span>
                       ))}
                     </span>
@@ -2224,12 +2292,14 @@ function RosterBody({
 function CarsBody({
   tripId,
   cars,
+  dogs,
   currentUserId,
   ensureUser,
   onChanged,
 }: {
   tripId: string;
   cars: Car[];
+  dogs: Dog[];
   currentUserId: number | null;
   ensureUser: () => Promise<number | null>;
   onChanged: () => Promise<void>;
@@ -2238,6 +2308,69 @@ function CarsBody({
   const [seats, setSeats] = useState("4");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Which car's empty seat is showing the chooser / dog picker.
+  const [chooserCar, setChooserCar] = useState<number | null>(null);
+  const [newDogName, setNewDogName] = useState("");
+
+
+
+  const myDogs = dogs.filter((d) => d.owner_user_id === currentUserId);
+  const dogCarName = (carId: number | null) => {
+    if (carId == null) return "no car";
+    const car = cars.find((c) => c.id === carId);
+    return car ? `in ${car.driver_name}'s car` : "in a car";
+  };
+
+  const closeChooser = () => {
+    setChooserCar(null);
+    setNewDogName("");
+  };
+
+  const placeDog = async (carId: number, dog: Dog) => {
+    setError(null);
+    try {
+      const uid = await ensureUser();
+      if (uid == null) return;
+      await api.assignDog(tripId, carId, dog.id);
+      closeChooser();
+
+      onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const pickDog = (carId: number, dog: Dog) => {
+    // Moving a dog from another car asks for confirmation first.
+    if (dog.car_id != null && dog.car_id !== carId) {
+      const target = cars.find((c) => c.id === carId);
+      if (
+        !confirm(
+          `Move ${dog.name} from ${dogCarName(dog.car_id)} to ${
+            target ? `${target.driver_name}'s car` : "this car"
+          }?`
+        )
+      )
+        return;
+    }
+    placeDog(carId, dog);
+  };
+
+  const addAndPlaceDog = async (carId: number) => {
+    const name = newDogName.trim();
+    if (!name) return;
+    setError(null);
+    try {
+      const uid = await ensureUser();
+      if (uid == null) return;
+      const dog = await api.createDog(tripId, uid, name);
+      await api.assignDog(tripId, carId, dog.id);
+      closeChooser();
+      onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
 
   const myCar = cars.find((c) => c.driver_user_id === currentUserId);
 
@@ -2269,8 +2402,10 @@ function CarsBody({
       <div className="sheet-sections">
         {cars.map((c) => {
         const passengerCount = c.passengers.length;
+        const dogCount = c.dogs.length;
         const passengerCapacity = Math.max(0, c.total_seats - 1);
-        const empty = Math.max(0, passengerCapacity - passengerCount - c.reserved_seats);
+        const empty = Math.max(0, passengerCapacity - passengerCount - dogCount - c.reserved_seats);
+
         const isDriver = c.driver_user_id === currentUserId;
         const iAmIn =
           isDriver ||
@@ -2319,6 +2454,7 @@ function CarsBody({
                   )}
                   <span>· {passengerCount}/{passengerCapacity} passengers</span>
                   {c.reserved_seats > 0 && <span>· {c.reserved_seats} reserved</span>}
+                  {dogCount > 0 && <span>· {dogCount} {dogCount === 1 ? "dog" : "dogs"}</span>}
                 </div>
               </div>
               {isDriver && (
@@ -2362,6 +2498,28 @@ function CarsBody({
                   )}
                 </span>
               ))}
+              {c.dogs.map((d) => {
+                const canRemove =
+                  d.owner_user_id === currentUserId || isDriver;
+                return (
+                  <span className="seat" key={`dog-${d.dog_id}`}>
+                    🐕 {d.name}
+                    {canRemove && (
+                      <button
+                        type="button"
+                        className="chip-x"
+                        aria-label={`Remove ${d.name} from this car`}
+                        onClick={async () => {
+                          await api.unassignDog(tripId, c.id, d.dog_id);
+                          onChanged();
+                        }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </span>
+                );
+              })}
               {Array.from({ length: c.reserved_seats }).map((_, i) => (
                 <button
                   key={`reserved-${i}`}
@@ -2399,29 +2557,85 @@ function CarsBody({
                 <button
                   key={`empty-${i}`}
                   className="seat empty"
-                  disabled={iAmIn && !isDriver}
-                  aria-label={isDriver ? "Reserve a seat" : undefined}
+                  aria-label="Choose what goes in this seat"
                   onClick={async () => {
-                    if (isDriver) {
-                      updateCar({ reserved_seats: c.reserved_seats + 1 });
-                      return;
-                    }
+                    const uid = await ensureUser();
+                    if (uid == null) return;
                     setError(null);
-                    try {
-                      const uid = await ensureUser();
-                      if (uid == null) return;
-                      await api.carSignup(tripId, c.id, uid);
-                      onChanged();
-                    } catch (e) {
-                      setError(e instanceof Error ? e.message : String(e));
-                    }
+                    setNewDogName("");
+                    setChooserCar(c.id);
                   }}
                   style={{ border: "1px dashed var(--border)", background: "transparent" }}
                 >
-                  {isDriver ? "+ Reserve" : "+ open seat"}
+                  + open seat
                 </button>
               ))}
             </div>
+            {chooserCar === c.id && (
+              <div className="seat-chooser" style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+                <div className="row between">
+                  <strong>This seat…</strong>
+                  <button type="button" className="th-btn th-btn--tertiary" onClick={closeChooser}>Cancel</button>
+                </div>
+                {isDriver && (
+                  <button
+                    type="button"
+                    className="th-btn th-btn--secondary"
+                    onClick={() => { updateCar({ reserved_seats: c.reserved_seats + 1 }); closeChooser(); }}
+                  >
+                    Reserve this seat
+                  </button>
+                )}
+                {!isDriver && !iAmIn && (
+                  <button
+                    type="button"
+                    className="th-btn th-btn--secondary"
+                    onClick={async () => {
+                      setError(null);
+                      try {
+                        const uid = await ensureUser();
+                        if (uid == null) return;
+                        await api.carSignup(tripId, c.id, uid);
+                        closeChooser();
+                        onChanged();
+                      } catch (e) {
+                        setError(e instanceof Error ? e.message : String(e));
+                      }
+                    }}
+                  >
+                    Sit here myself
+                  </button>
+                )}
+                {myDogs.map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    className="th-btn th-btn--secondary"
+                    onClick={() => pickDog(c.id, d)}
+                  >
+                    🐕 {d.name} — {dogCarName(d.car_id)}
+                  </button>
+                ))}
+                <div className="row" style={{ gap: 8 }}>
+                  <input
+                    className="th-input"
+                    placeholder="New dog's name"
+                    value={newDogName}
+                    onChange={(e) => setNewDogName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") addAndPlaceDog(c.id); }}
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    className="th-btn th-btn--primary"
+                    disabled={!newDogName.trim()}
+                    onClick={() => addAndPlaceDog(c.id)}
+                  >
+                    + new dog
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         );
       })}
@@ -2467,6 +2681,119 @@ function CarsBody({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function DogsBody({
+  tripId,
+  dogs,
+  cars,
+  currentUserId,
+  ensureUser,
+  onChanged,
+}: {
+  tripId: string;
+  dogs: Dog[];
+  cars: Car[];
+  currentUserId: number | null;
+  ensureUser: () => Promise<number | null>;
+  onChanged: () => Promise<void>;
+}) {
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const carName = (carId: number | null) => {
+    if (carId == null) return "no car";
+    const car = cars.find((c) => c.id === carId);
+    return car ? `in ${car.driver_name}'s car` : "in a car";
+  };
+
+  // Group dogs by owner, preserving first-seen order.
+  const byOwner: { ownerId: number; ownerName: string; dogs: Dog[] }[] = [];
+  for (const d of dogs) {
+    let group = byOwner.find((g) => g.ownerId === d.owner_user_id);
+    if (!group) {
+      group = { ownerId: d.owner_user_id, ownerName: d.owner_name, dogs: [] };
+      byOwner.push(group);
+    }
+    group.dogs.push(d);
+  }
+
+  const addDog = async () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setError(null);
+    try {
+      const uid = await ensureUser();
+      if (uid == null) return;
+      await api.createDog(tripId, uid, trimmed);
+      setName("");
+      onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  return (
+    <div className="sheet-flat">
+      {error && <div className="error-banner">{error}</div>}
+      {dogs.length === 0 && (
+        <p className="muted">No dogs yet. Bringing a furry friend? Add it below.</p>
+      )}
+
+      <div className="sheet-sections">
+        {byOwner.map((g) => (
+          <div className="card" key={g.ownerId}>
+            <div style={{ fontWeight: 600, marginBottom: 6 }}>{g.ownerName}</div>
+            <div className="seat-row">
+              {g.dogs.map((d) => {
+                const mine = d.owner_user_id === currentUserId;
+                return (
+                  <span className="seat" key={d.id}>
+                    🐕 {d.name}{" "}
+                    <span className="muted" style={{ fontSize: 12 }}>
+                      — {carName(d.car_id)}
+                    </span>
+                    {mine && (
+                      <button
+                        type="button"
+                        className="chip-x"
+                        aria-label={`Delete ${d.name}`}
+                        onClick={async () => {
+                          if (!confirm(`Delete ${d.name}? This removes the dog from the trip.`)) return;
+                          await api.deleteDog(tripId, d.id);
+                          onChanged();
+                        }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="row" style={{ gap: 8, marginTop: 12 }}>
+        <input
+          className="th-input"
+          placeholder="Your dog's name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") addDog(); }}
+          style={{ flex: 1 }}
+        />
+        <button
+          className="th-btn th-btn--primary"
+          disabled={!name.trim()}
+          onClick={addDog}
+        >
+          Add a dog
+        </button>
+      </div>
     </div>
   );
 }

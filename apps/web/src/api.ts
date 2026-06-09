@@ -9,6 +9,7 @@ import type {
   TripIndexEntrySchema,
   UserSchema,
   CarSchema,
+  DogSchema,
   GearCategorySchema,
   GearContributionSchema,
   PollSchema,
@@ -24,6 +25,7 @@ type CreateTripResponse = z.infer<typeof CreateTripResponseSchema>;
 type TripIndexEntry = z.infer<typeof TripIndexEntrySchema>;
 type User = z.infer<typeof UserSchema>;
 type Car = z.infer<typeof CarSchema>;
+export type Dog = z.infer<typeof DogSchema>;
 type Category = z.infer<typeof GearCategorySchema>;
 type Contribution = z.infer<typeof GearContributionSchema>;
 type Poll = z.infer<typeof PollSchema>;
@@ -135,6 +137,17 @@ export const api = {
     req<Car>("POST", `/api/trips/${tripId}/cars/${carId}/signup`, { user_id: userId, from_reserved: fromReserved }),
   carSignoff: (tripId: string, carId: number, userId: number) =>
     req<Car>("DELETE", `/api/trips/${tripId}/cars/${carId}/signup/${userId}`),
+
+  // Dogs
+  listDogs: (tripId: string) => req<Dog[]>("GET", `/api/trips/${tripId}/dogs`),
+  createDog: (tripId: string, ownerUserId: number, name: string) =>
+    req<Dog>("POST", `/api/trips/${tripId}/dogs`, { owner_user_id: ownerUserId, name }),
+  deleteDog: (tripId: string, dogId: number) =>
+    req<Ok>("DELETE", `/api/trips/${tripId}/dogs/${dogId}`),
+  assignDog: (tripId: string, carId: number, dogId: number) =>
+    req<Car>("POST", `/api/trips/${tripId}/cars/${carId}/dogs`, { dog_id: dogId }),
+  unassignDog: (tripId: string, carId: number, dogId: number) =>
+    req<Car>("DELETE", `/api/trips/${tripId}/cars/${carId}/dogs/${dogId}`),
 
   // Gear contributions
   listGear: (tripId: string) => req<Contribution[]>("GET", `/api/trips/${tripId}/gear`),

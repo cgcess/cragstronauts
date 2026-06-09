@@ -5,6 +5,21 @@ export const PassengerSchema = z.object({
   name: z.string(),
 });
 
+export const CarDogSchema = z.object({
+  dog_id: z.number(),
+  name: z.string(),
+  owner_user_id: z.number(),
+  owner_name: z.string(),
+});
+
+export const DogSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  owner_user_id: z.number(),
+  owner_name: z.string(),
+  car_id: z.number().nullable(),
+});
+
 export const CarSchema = z.object({
   id: z.number(),
   driver_user_id: z.number(),
@@ -13,6 +28,7 @@ export const CarSchema = z.object({
   reserved_seats: z.number(),
   notes: z.string().nullable(),
   passengers: z.array(PassengerSchema),
+  dogs: z.array(CarDogSchema),
 });
 
 export const CreateCarBodySchema = z.object({
@@ -25,4 +41,13 @@ export const CreateCarBodySchema = z.object({
 export const CarSignupBodySchema = z.object({
   user_id: z.number(),
   from_reserved: z.boolean().optional(),
+});
+
+export const CreateDogBodySchema = z.object({
+  owner_user_id: z.number(),
+  name: z.string().min(1),
+});
+
+export const AssignDogBodySchema = z.object({
+  dog_id: z.number(),
 });

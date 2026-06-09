@@ -8,6 +8,8 @@ import {
   gearCategory,
   car,
   carSignup,
+  dog,
+  carDog,
   gearContribution,
   expense,
   expenseSplit,
@@ -23,6 +25,7 @@ import type {
   UserSchema,
   GearCategorySchema,
   CarSchema,
+  DogSchema,
   GearContributionSchema,
   ExpenseSchema,
   SettlementSchema,
@@ -38,6 +41,7 @@ type User = z.infer<typeof UserSchema>;
 type Feedback = z.infer<typeof FeedbackSchema>;
 type Category = z.infer<typeof GearCategorySchema>;
 type Car = z.infer<typeof CarSchema>;
+type Dog = z.infer<typeof DogSchema>;
 type Contribution = z.infer<typeof GearContributionSchema>;
 type Expense = z.infer<typeof ExpenseSchema>;
 type Settlement = z.infer<typeof SettlementSchema>;
@@ -346,6 +350,7 @@ export class TripDO extends DurableObject<Env> {
       throw new Error("Cannot remove a user who is part of expenses");
     }
 
+    this.db.delete(dog, { where: eq("owner_user_id", userId) });
     this.db.delete(user, { where: eq("id", userId) });
     return { ok: true };
   }
@@ -483,7 +488,10 @@ export class TripDO extends DurableObject<Env> {
     const passengers = existing
       ? this.db.count(carSignup, { where: eq("car_id", existing.id) })
       : 0;
-    if (passengers + reservedSeats > data.total_seats - 1)
+    const dogs = existing
+      ? this.db.count(carDog, { where: eq("car_id", existing.id) })
+      : 0;
+    if (passengers + dogs + reservedSeats > data.total_seats - 1)
       throw new Error("Not enough open seats to reserve");
 
     let carId: number;
@@ -517,6 +525,7 @@ export class TripDO extends DurableObject<Env> {
   }
 
   async deleteCar(carId: number): Promise<{ ok: boolean }> {
+    this.db.delete(carDog, { where: eq("car_id", carId) });
     this.db.delete(car, { where: eq("id", carId) });
     return { ok: true };
   }
@@ -533,6 +542,7 @@ export class TripDO extends DurableObject<Env> {
       throw new Error("Driver is already in the car");
 
     const taken = this.db.count(carSignup, { where: eq("car_id", carId) });
+    const dogs = this.db.count(carDog, { where: eq("car_id", carId) });
     const capacity = Math.max(0, c.total_seats - 1);
 
     if (fromReserved) {
@@ -543,7 +553,7 @@ export class TripDO extends DurableObject<Env> {
         { where: eq("id", carId) }
       );
     } else {
-      if (taken + c.reserved_seats >= capacity) throw new Error("Car is full");
+      if (taken + dogs + c.reserved_seats >= capacity) throw new Error("Car is full");
     }
 
     try {
@@ -571,6 +581,96 @@ export class TripDO extends DurableObject<Env> {
     this.db.raw(
       "DELETE FROM car_signup WHERE car_id = ? AND user_id = ?",
       [carId, userId]
+    );
+    // A departing owner's dogs leave this car too (the dogs themselves survive).
+    this.db.raw(
+      "DELETE FROM car_dog WHERE car_id = ? AND dog_id IN (SELECT id FROM dog WHERE owner_user_id = ?)",
+      [carId, userId]
+    );
+    const c = this.db.get(car, { where: eq("id", carId) });
+    if (!c) throw new Error("Car not found");
+    return this.formatCar(c);
+  }
+
+  // ---- Dogs ----
+
+  async listDogs(): Promise<Dog[]> {
+    return this.db.raw<{
+      id: number;
+      name: string;
+      owner_user_id: number;
+      owner_name: string;
+      car_id: number | null;
+    }>(
+      `SELECT d.id, d.name, d.owner_user_id,
+              u.name as owner_name, cd.car_id as car_id
+       FROM dog d
+       JOIN user u ON u.id = d.owner_user_id
+       LEFT JOIN car_dog cd ON cd.dog_id = d.id
+       ORDER BY d.id`,
+      []
+    );
+  }
+
+  async createDog(ownerUserId: number, name: string): Promise<Dog> {
+    const trimmed = name.trim();
+    if (!trimmed) throw new Error("Name required");
+
+    const owner = this.db.get(user, { where: eq("id", ownerUserId) });
+    if (!owner) throw new Error("Owner not found");
+
+    const row = this.db.insertReturning(
+      dog,
+      { owner_user_id: ownerUserId, name: trimmed },
+      ["id"]
+    );
+    return {
+      id: row.id,
+      name: trimmed,
+      owner_user_id: ownerUserId,
+      owner_name: owner.name,
+      car_id: null,
+    };
+  }
+
+  async deleteDog(dogId: number): Promise<{ ok: boolean }> {
+    this.db.delete(carDog, { where: eq("dog_id", dogId) });
+    this.db.delete(dog, { where: eq("id", dogId) });
+    return { ok: true };
+  }
+
+  async assignDog(carId: number, dogId: number): Promise<Car> {
+    const c = this.db.get(car, { where: eq("id", carId) });
+    if (!c) throw new Error("Car not found");
+
+    const d = this.db.get(dog, { where: eq("id", dogId) });
+    if (!d) throw new Error("Dog not found");
+
+    // If the dog already rides in this car, nothing to do.
+    const existingLink = this.db.get(carDog, { where: eq("dog_id", dogId) });
+    if (existingLink && existingLink.car_id === carId) {
+      return this.formatCar(c);
+    }
+
+    const passengers = this.db.count(carSignup, { where: eq("car_id", carId) });
+    const dogs = this.db.count(carDog, { where: eq("car_id", carId) });
+    const capacity = Math.max(0, c.total_seats - 1);
+    if (passengers + dogs + c.reserved_seats >= capacity)
+      throw new Error("Car is full");
+
+    // Moving relinks: drop the prior car_dog link first.
+    if (existingLink) {
+      this.db.delete(carDog, { where: eq("dog_id", dogId) });
+    }
+    this.db.insert(carDog, { car_id: carId, dog_id: dogId });
+
+    return this.formatCar(c);
+  }
+
+  async unassignDog(carId: number, dogId: number): Promise<Car> {
+    this.db.raw(
+      "DELETE FROM car_dog WHERE car_id = ? AND dog_id = ?",
+      [carId, dogId]
     );
 
     const c = this.db.get(car, { where: eq("id", carId) });
@@ -1030,6 +1130,21 @@ export class TripDO extends DurableObject<Env> {
       [r.id]
     );
 
+    const dogs = this.db.raw<{
+      dog_id: number;
+      name: string;
+      owner_user_id: number;
+      owner_name: string;
+    }>(
+      `SELECT d.id as dog_id, d.name as name,
+              d.owner_user_id as owner_user_id, u.name as owner_name
+       FROM car_dog cd
+       JOIN dog d ON d.id = cd.dog_id
+       JOIN user u ON u.id = d.owner_user_id
+       WHERE cd.car_id = ? ORDER BY cd.id`,
+      [r.id]
+    );
+
     return {
       id: r.id,
       driver_user_id: r.driver_user_id,
@@ -1038,6 +1153,7 @@ export class TripDO extends DurableObject<Env> {
       reserved_seats: r.reserved_seats,
       notes: r.notes,
       passengers,
+      dogs,
     };
   }
 

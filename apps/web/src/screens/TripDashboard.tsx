@@ -1056,28 +1056,6 @@ export default function TripDashboard() {
 
   return (
     <div className="app-shell">
-      <div className="topbar">
-        <div className="row between">
-          {me ? (
-            <>
-              <div className="glass-surface nav-cap">
-                <strong>{me.name}</strong>
-                {me.is_organizer && " 👑"}
-              </div>
-              <Button
-                variant="text"
-                onClick={() => {
-                  switchUser();
-                  navigate(tripPath(trip.name, tripId));
-                }}
-              >
-                Logout
-              </Button>
-            </>
-          ) : null}
-        </div>
-      </div>
-
       <div className="content content--dash">
         <div className="column column--dash">
         {error && <div className="error-banner">{error}</div>}
@@ -1138,12 +1116,26 @@ export default function TripDashboard() {
                             setExpandedId("roster");
                           },
                         },
+                        {
+                          label: "Logout",
+                          onSelect: () => {
+                            switchUser();
+                            navigate(tripPath(trip.name, tripId));
+                          },
+                        },
                       ] as MenuItem[])
                     : ([
                         {
                           label: "Leave trip",
                           tone: "danger",
                           onSelect: leaveTrip,
+                        },
+                        {
+                          label: "Logout",
+                          onSelect: () => {
+                            switchUser();
+                            navigate(tripPath(trip.name, tripId));
+                          },
                         },
                       ] as MenuItem[])
                 }

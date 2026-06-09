@@ -152,7 +152,7 @@ label { color: var(--fl-fg-3); }
    secondary/btn-3d class rules are retired — see Trailhead <Button>. */
 button { background: var(--fl-surface-3); color: var(--fl-fg); }
 
-/* Floating glass nav pills + nav-cap on dark */
+/* Floating glass surface on dark */
 .glass-surface {
   background:
     linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
@@ -166,8 +166,6 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
 }
 .glass-surface::before { display: none; }
 
-.nav-cap { color: var(--fl-fg-2); }
-.nav-cap strong { color: var(--fl-fg); }
 
 /* Tabbar dark */
 .tabbar a {

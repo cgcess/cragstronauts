@@ -155,7 +155,7 @@ button:disabled:active { transform: none; }
 /* ----------  Shared liquid-glass surface  ----------
    Reusable frosted-glass chassis: gradient tint, backdrop blur,
    glossy inner highlights, soft floating shadow. Applied to
-   .nav-pill, .nav-cap, and .tabbar. */
+   .tabbar and other frosted chrome. */
 .glass-surface {
   position: relative;
   border-radius: 999px;
@@ -193,7 +193,7 @@ button:disabled:active { transform: none; }
 
 /* nav-pill / btn-3d button systems retired — replaced by the Trailhead
    <Button> component (.th-btn). The .glass-surface utility above is kept
-   (still used by .nav-cap in TripDashboard). */
+   as a general frosted-chrome utility. */
 
 /* ----------  Scroll-fade overlays  ----------
    Gentle white wash + light backdrop blur that softens the edge where
@@ -459,77 +459,7 @@ label {
 .content--tabs {
   /* top: clear .topbar (~68px) + breathing
      bottom: clear .tabbar (~75px) + its 12px bottom inset + safe-area */
-  padding: 84px 20px calc(108px + env(safe-area-inset-bottom));
-}
-
-/* Floating top navigation row. Sits above .content so cards visibly
-   scroll *behind* it — the .nav-pill / .nav-cap chassis takes care of
-   the liquid-glass refraction. The .topbar wrapper itself is just a
-   transparent layout slot; we don't tint it because we don't want a
-   hard edge across the page. */
-.topbar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  padding: 20px 0 8px;
-  z-index: 10;
-  /* Don't intercept scroll/click on the gaps between pills. */
-  pointer-events: none;
-}
-.topbar > * { pointer-events: auto; }
-/* The .topbar wrapper spans the full-bleed shell; center its inner row to the
-   content column and match the dashboard column's 16px gutter so the pills
-   line up with the card edges (not the raw column edge). */
-.topbar .row { max-width: var(--col); margin-inline: auto; padding-inline: 16px; }
-/* Functional buttons in the topbar row must never be shrunk by flex
-   pressure — hit targets stay full size. The .nav-cap identity chip
-   is the only element allowed to absorb width, and it truncates. */
-.topbar .row > button { flex-shrink: 0; }
-
-/* Static glass capsule — .nav-pill chassis without the button affordance.
-   Truncates when the topbar is crammed. */
-.nav-cap {
-  display: block;
-  text-align: center;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 13px;
-  letter-spacing: -0.005em;
-  color: var(--brown-700);
-  padding: 8px 14px;
-  flex: 0 1 auto;
-  min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.nav-cap strong { color: var(--fg); }
-
-/* Top-nav pills (← Trips / Switch) — mostly-solid frosted capsules so page
-   content never bleeds through, with a faint frost + top-edge highlight for
-   a touch of life. Scoped to .topbar so secondary buttons elsewhere keep
-   their quiet 4% fill. The two-class selector wins over .th-btn--secondary
-   on specificity, no !important needed. */
-.topbar .th-btn--secondary {
-  background: color-mix(in srgb, var(--surface-2) 90%, transparent);
-  -webkit-backdrop-filter: blur(14px) saturate(150%);
-  backdrop-filter: blur(14px) saturate(150%);
-  border-color: var(--border-strong);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07),
-    0 2px 8px -3px rgba(0, 0, 0, 0.5);
-}
-@media (hover: hover) {
-  .topbar .th-btn--secondary:hover {
-    background: color-mix(in srgb, var(--surface-2) 97%, transparent);
-    border-color: var(--text);
-    transform: translateY(-1px);
-  }
-}
-.topbar .th-btn--secondary:active {
-  background: var(--surface-2);
-  transform: translateY(1px);
+  padding: 64px 20px calc(108px + env(safe-area-inset-bottom));
 }
 
 /* Landing: brand at top, the trip-deck (shell + hint) vertically centered
@@ -1667,10 +1597,10 @@ label {
    in place. Urgent cards (an unmet action for you) stand out.
    ============================================================ */
 
-/* Dashboard column: extra top clearance for the floating glass topbar and
-   bottom breathing room above the safe area. Horizontal inset stays 16px. */
+/* Dashboard column: normal top padding (the identity row now scrolls in-flow)
+   and bottom breathing room above the safe area. Horizontal inset stays 16px. */
 .column--dash {
-  padding: 84px 16px calc(28px + env(safe-area-inset-bottom));
+  padding: 16px 16px calc(28px + env(safe-area-inset-bottom));
 }
 
 .dash-stack {

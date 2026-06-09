@@ -756,7 +756,9 @@ export default function TripDashboard() {
         tripId={tripId}
         cars={cars}
         dogs={dogs}
+        users={users}
         currentUserId={currentUserId}
+        isOrganizer={isOrganizer}
         ensureUser={ensureUser}
         onChanged={reload}
       />
@@ -796,7 +798,9 @@ export default function TripDashboard() {
         tripId={tripId}
         dogs={dogs}
         cars={cars}
+        users={users}
         currentUserId={currentUserId}
+        isOrganizer={isOrganizer}
         ensureUser={ensureUser}
         onChanged={reload}
       />
@@ -2293,14 +2297,18 @@ function CarsBody({
   tripId,
   cars,
   dogs,
+  users,
   currentUserId,
+  isOrganizer,
   ensureUser,
   onChanged,
 }: {
   tripId: string;
   cars: Car[];
   dogs: Dog[];
+  users: ReturnType<typeof useTripContext>["users"];
   currentUserId: number | null;
+  isOrganizer: boolean;
   ensureUser: () => Promise<number | null>;
   onChanged: () => Promise<void>;
 }) {
@@ -2311,6 +2319,8 @@ function CarsBody({
   // Which car's empty seat is showing the chooser / dog picker.
   const [chooserCar, setChooserCar] = useState<number | null>(null);
   const [newDogName, setNewDogName] = useState("");
+  // Whether the chooser's compact "new dog" name field is expanded.
+  const [showNewDog, setShowNewDog] = useState(false);
 
 
 
@@ -2324,6 +2334,23 @@ function CarsBody({
   const closeChooser = () => {
     setChooserCar(null);
     setNewDogName("");
+    setShowNewDog(false);
+  };
+
+  // Seat a member in an empty seat. A null userId means "me" before identity is
+  // established, so we lazily create it; an explicit id (organizer seating
+  // someone else, or an already-known self) is used directly.
+  const seatPerson = async (carId: number, userId: number | null) => {
+    setError(null);
+    try {
+      const uid = userId ?? (await ensureUser());
+      if (uid == null) return;
+      await api.carSignup(tripId, carId, uid);
+      closeChooser();
+      onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
   };
 
   const placeDog = async (carId: number, dog: Dog) => {
@@ -2481,15 +2508,13 @@ function CarsBody({
               {c.passengers.map((p) => (
                 <span className="seat" key={p.user_id}>
                   {p.name}
-                  {p.user_id === currentUserId && (
+                  {(p.user_id === currentUserId || isOrganizer) && (
                     <button
                       type="button"
                       className="chip-x"
                       aria-label="Leave this car"
                       onClick={async () => {
-                        const uid = await ensureUser();
-                        if (uid == null) return;
-                        await api.carSignoff(tripId, c.id, uid);
+                        await api.carSignoff(tripId, c.id, p.user_id);
                         onChanged();
                       }}
                     >
@@ -2500,7 +2525,7 @@ function CarsBody({
               ))}
               {c.dogs.map((d) => {
                 const canRemove =
-                  d.owner_user_id === currentUserId || isDriver;
+                  d.owner_user_id === currentUserId || isDriver || isOrganizer;
                 return (
                   <span className="seat" key={`dog-${d.dog_id}`}>
                     🐕 {d.name}
@@ -2572,67 +2597,111 @@ function CarsBody({
               ))}
             </div>
             {chooserCar === c.id && (
-              <div className="seat-chooser" style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+              <div className="seat-chooser" style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 10 }}>
                 <div className="row between">
-                  <strong>This seat…</strong>
+                  <strong>Add to this seat</strong>
                   <button type="button" className="th-btn th-btn--tertiary" onClick={closeChooser}>Cancel</button>
                 </div>
-                {isDriver && (
-                  <button
-                    type="button"
-                    className="th-btn th-btn--secondary"
-                    onClick={() => { updateCar({ reserved_seats: c.reserved_seats + 1 }); closeChooser(); }}
-                  >
-                    Reserve this seat
-                  </button>
-                )}
-                {!isDriver && !iAmIn && (
-                  <button
-                    type="button"
-                    className="th-btn th-btn--secondary"
-                    onClick={async () => {
-                      setError(null);
-                      try {
-                        const uid = await ensureUser();
-                        if (uid == null) return;
-                        await api.carSignup(tripId, c.id, uid);
-                        closeChooser();
-                        onChanged();
-                      } catch (e) {
-                        setError(e instanceof Error ? e.message : String(e));
-                      }
-                    }}
-                  >
-                    Sit here myself
-                  </button>
-                )}
-                {myDogs.map((d) => (
-                  <button
-                    key={d.id}
-                    type="button"
-                    className="th-btn th-btn--secondary"
-                    onClick={() => pickDog(c.id, d)}
-                  >
-                    🐕 {d.name} — {dogCarName(d.car_id)}
-                  </button>
-                ))}
-                <div className="row" style={{ gap: 8 }}>
-                  <input
-                    className="th-input"
-                    placeholder="New dog's name"
-                    value={newDogName}
-                    onChange={(e) => setNewDogName(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") addAndPlaceDog(c.id); }}
-                    style={{ flex: 1 }}
-                  />
-                  <button
-                    type="button"
-                    className="th-btn th-btn--primary"
-                    disabled={!newDogName.trim()}
-                    onClick={() => addAndPlaceDog(c.id)}
-                  >
-                    + new dog
-                  </button>
+                {(() => {
+                  const seatedIds = new Set([
+                    c.driver_user_id,
+                    ...c.passengers.map((p) => p.user_id),
+                  ]);
+                  const people = isOrganizer
+                    ? users
+                        .filter((u) => u.joining && !seatedIds.has(u.id))
+                        .map((u) => ({
+                          id: u.id,
+                          label:
+                            u.id === currentUserId ? `${u.name} (you)` : u.name,
+                        }))
+                    : iAmIn
+                    ? []
+                    : [{ id: currentUserId, label: "You" }];
+                  if (people.length === 0) return null;
+                  return (
+                    <div>
+                      <div className="muted" style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>People</div>
+                      <div className="seat-row">
+                        {people.map((p) => (
+                          <button
+                            key={`person-${p.id}`}
+                            type="button"
+                            className="seat empty"
+                            onClick={() => seatPerson(c.id, p.id)}
+                          >
+                            {p.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+                {(() => {
+                  const availableDogs = (isOrganizer ? dogs : myDogs).filter(
+                    (d) => d.car_id !== c.id
+                  );
+                  if (availableDogs.length === 0) return null;
+                  return (
+                    <div>
+                      <div className="muted" style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Dogs</div>
+                      <div className="seat-row">
+                        {availableDogs.map((d) => (
+                          <button
+                            key={`dog-${d.id}`}
+                            type="button"
+                            className="seat empty"
+                            onClick={() => pickDog(c.id, d)}
+                          >
+                            🐕 {d.name}
+                            {isOrganizer && d.owner_user_id !== currentUserId
+                              ? ` · ${d.owner_name}`
+                              : ""}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+                <div className="seat-row" style={{ marginTop: 2 }}>
+                  {isDriver && (
+                    <button
+                      type="button"
+                      className="seat empty"
+                      onClick={() => { updateCar({ reserved_seats: c.reserved_seats + 1 }); closeChooser(); }}
+                    >
+                      🔒 Reserve seat
+                    </button>
+                  )}
+                  {!showNewDog ? (
+                    <button
+                      type="button"
+                      className="seat empty"
+                      onClick={() => setShowNewDog(true)}
+                    >
+                      + new dog
+                    </button>
+                  ) : (
+                    <div className="row" style={{ gap: 8, flex: 1, minWidth: 0 }}>
+                      <input
+                        className="th-input"
+                        style={{ flex: 1, minWidth: 0 }}
+                        placeholder="New dog's name"
+                        value={newDogName}
+                        autoFocus
+                        onChange={(e) => setNewDogName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") addAndPlaceDog(c.id); }}
+                      />
+                      <button
+                        type="button"
+                        className="th-btn th-btn--primary"
+                        disabled={!newDogName.trim()}
+                        onClick={() => addAndPlaceDog(c.id)}
+                      >
+                        Add
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -2689,19 +2758,28 @@ function DogsBody({
   tripId,
   dogs,
   cars,
+  users,
   currentUserId,
+  isOrganizer,
   ensureUser,
   onChanged,
 }: {
   tripId: string;
   dogs: Dog[];
   cars: Car[];
+  users: ReturnType<typeof useTripContext>["users"];
   currentUserId: number | null;
+  isOrganizer: boolean;
   ensureUser: () => Promise<number | null>;
   onChanged: () => Promise<void>;
 }) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Organizer-only: which member the new dog belongs to. Defaults to self;
+  // "" means use the current device's identity (the non-organizer path).
+  const [ownerId, setOwnerId] = useState<number | "">(currentUserId ?? "");
+  // Members a dog can be assigned to: only those joining the trip.
+  const ownerOptions = users.filter((u) => u.joining);
 
   const carName = (carId: number | null) => {
     if (carId == null) return "no car";
@@ -2725,7 +2803,9 @@ function DogsBody({
     if (!trimmed) return;
     setError(null);
     try {
-      const uid = await ensureUser();
+      // When an explicit owner is chosen (organizer assigning on someone's
+      // behalf) that member already exists, so skip identity establishment.
+      const uid = ownerId === "" ? await ensureUser() : ownerId;
       if (uid == null) return;
       await api.createDog(tripId, uid, trimmed);
       setName("");
@@ -2748,14 +2828,14 @@ function DogsBody({
             <div style={{ fontWeight: 600, marginBottom: 6 }}>{g.ownerName}</div>
             <div className="seat-row">
               {g.dogs.map((d) => {
-                const mine = d.owner_user_id === currentUserId;
+                const canDelete = d.owner_user_id === currentUserId || isOrganizer;
                 return (
                   <span className="seat" key={d.id}>
                     🐕 {d.name}{" "}
                     <span className="muted" style={{ fontSize: 12 }}>
                       — {carName(d.car_id)}
                     </span>
-                    {mine && (
+                    {canDelete && (
                       <button
                         type="button"
                         className="chip-x"
@@ -2778,13 +2858,30 @@ function DogsBody({
       </div>
 
       <div className="row" style={{ gap: 8, marginTop: 12 }}>
+        {isOrganizer && (
+          <select
+            className="th-input"
+            style={{ flex: "0 0 auto", width: "auto", maxWidth: "45%" }}
+            value={ownerId}
+            onChange={(e) =>
+              setOwnerId(e.target.value === "" ? "" : Number(e.target.value))
+            }
+            aria-label="Dog owner"
+          >
+            {ownerOptions.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.id === currentUserId ? `${u.name} (you)` : u.name}
+              </option>
+            ))}
+          </select>
+        )}
         <input
           className="th-input"
           placeholder="Your dog's name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") addDog(); }}
-          style={{ flex: 1 }}
+          style={{ flex: 1, minWidth: 0 }}
         />
         <button
           className="th-btn th-btn--primary"

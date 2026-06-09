@@ -1015,6 +1015,7 @@ export default function TripDashboard() {
       </div>
 
       <div className="content content--dash">
+        <div className="column column--dash">
         {error && <div className="error-banner">{error}</div>}
 
         {/* Weather-app hero: date / trip name / countdown / weather.
@@ -1276,6 +1277,7 @@ export default function TripDashboard() {
           userId={currentUserId}
           isOrganizer={isOrganizer}
         />
+        </div>
       </div>
 
       <BottomSheet

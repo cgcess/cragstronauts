@@ -60,6 +60,10 @@
 
   font-family: var(--font-body);
   color: var(--fg);
+
+  /* Content column width — the single source of truth for the centered
+     reading column inside the full-bleed scroller (see App shell). */
+  --col: 480px;
 }
 
 * {
@@ -71,7 +75,8 @@ html, body, #root {
   height: 100%;
   margin: 0;
   color: var(--fg);
-  overscroll-behavior: none;
+  /* The locked body needs no overscroll rule — .content owns scroll
+     containment via overscroll-behavior:contain. */
   /* Lock the page itself — only the inner .content scroll container moves.
      Without this, any time the visible viewport ≠ 100vh (mobile address-bar,
      desktop window chrome quirks), the whole app-shell scrolls behind the
@@ -251,6 +256,8 @@ button:disabled:active { transform: none; }
   position: absolute;
   left: 16px;
   right: 16px;
+  max-width: var(--col);
+  margin-inline: auto;
   bottom: calc(12px + env(safe-area-inset-bottom));
   z-index: 10;
   display: flex;
@@ -265,6 +272,9 @@ button:disabled:active { transform: none; }
   bottom: 0;
   left: 0;
   right: 0;
+  /* Cap to the content column on wide viewports and center. */
+  max-width: var(--col);
+  margin-inline: auto;
   padding: 16px 20px calc(24px + env(safe-area-inset-bottom));
   pointer-events: none;
   z-index: 10;
@@ -385,7 +395,14 @@ label {
   margin: -4px 0 18px;
 }
 
-/* ----------  App shell  ---------- */
+/* ----------  App shell  ----------
+   LAYOUT CONTRACT (Option B — full-bleed scroller, centered column):
+     .app-shell = full-bleed frame (100dvh flex column, NO width cap).
+     .content   = the single full-bleed scroll region (flex:1, overflow-y).
+     .column    = centered reading column inside the scroller (max-width:var(--col)).
+   Floating chrome (.topbar row, .tabbar, .bottom-cta) is viewport-anchored
+   and centered to the column via --col. The width cap lives on --col / .column
+   only — never on .app-shell, or the scroll dead-zone bug returns. */
 
 .app-shell {
   display: flex;
@@ -395,30 +412,43 @@ label {
      scrolled. 100dvh tracks the actual visible viewport. */
   height: 100vh; /* fallback for browsers without dvh */
   height: 100dvh;
-  max-width: 480px;
-  margin: 0 auto;
   position: relative;
   /* Transparent so AlpsBackground shows through */
   background: transparent;
 }
 @media (min-width: 640px) {
-  .app-shell { max-width: 600px; }
+  :root { --col: 600px; }
   .deck-shell, .deck-empty, .deck-hint { max-width: 420px; }
 }
 @media (min-width: 1024px) {
-  .app-shell { max-width: 720px; }
+  :root { --col: 720px; }
   .deck-shell, .deck-empty, .deck-hint { max-width: 480px; }
 }
 
 
 .content {
+  /* The single full-bleed scroll region. min-height:0 lets an overflow
+     flex child actually scroll instead of growing to fit its content;
+     overscroll-behavior:contain stops scroll-chaining to the locked body. */
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 24px 20px;
+  overscroll-behavior: contain;
   scrollbar-width: none;
 }
 .content::-webkit-scrollbar {
   display: none;
+}
+
+/* Centered reading column inside the full-bleed .content scroller. The
+   width cap lives here (via --col), never on .app-shell, so the scroll
+   surface spans the whole viewport while text stays a centered column. */
+.column {
+  width: 100%;
+  max-width: var(--col);
+  margin-inline: auto;
+  padding-inline: 20px;
+  padding-block: 24px;
 }
 
 /* MainTabs scroll container. With the topbar and tabbar lifted into
@@ -442,12 +472,16 @@ label {
   top: 0;
   left: 0;
   right: 0;
-  padding: 20px 20px 8px;
+  padding: 20px 0 8px;
   z-index: 10;
   /* Don't intercept scroll/click on the gaps between pills. */
   pointer-events: none;
 }
 .topbar > * { pointer-events: auto; }
+/* The .topbar wrapper spans the full-bleed shell; center its inner row to the
+   content column and match the dashboard column's 16px gutter so the pills
+   line up with the card edges (not the raw column edge). */
+.topbar .row { max-width: var(--col); margin-inline: auto; padding-inline: 16px; }
 /* Functional buttons in the topbar row must never be shrunk by flex
    pressure — hit targets stay full size. The .nav-cap identity chip
    is the only element allowed to absorb width, and it truncates. */
@@ -520,6 +554,10 @@ label {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  /* The shell is now full-bleed; keep this modal stage capped + centered. */
+  width: 100%;
+  max-width: var(--col);
+  margin-inline: auto;
   padding: 16px 20px calc(8px + env(safe-area-inset-bottom));
 }
 
@@ -528,6 +566,8 @@ label {
   position: absolute;
   left: 16px;
   right: 16px;
+  max-width: var(--col);
+  margin-inline: auto;
   bottom: calc(12px + env(safe-area-inset-bottom));
   z-index: 10;
   display: flex;
@@ -1627,7 +1667,9 @@ label {
    in place. Urgent cards (an unmet action for you) stand out.
    ============================================================ */
 
-.content--dash {
+/* Dashboard column: extra top clearance for the floating glass topbar and
+   bottom breathing room above the safe area. Horizontal inset stays 16px. */
+.column--dash {
   padding: 84px 16px calc(28px + env(safe-area-inset-bottom));
 }
 
@@ -1829,6 +1871,9 @@ label {
 .identity-identify {
   display: flex;
   flex-direction: column;
+  /* .content is now full-bleed; keep a gutter so the centered card never
+     touches the screen edges on narrow viewports. */
+  padding-inline: 16px;
 }
 .identity-identify__inner {
   width: 100%;

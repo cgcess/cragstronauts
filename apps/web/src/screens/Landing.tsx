@@ -92,6 +92,7 @@ export default function Landing() {
     <div className="app-shell">
       <div className="fade-overlay fade-overlay--top" aria-hidden="true" />
       <div className="content">
+        <div className="column">
         <div className="landing-hero">
           <div className="h1">🧗 {trip.name}</div>
           <div className="landing-hero__glance">
@@ -282,6 +283,7 @@ export default function Landing() {
             )}
           </div>
         )}
+        </div>
       </div>
 
       {showStickyCta && (

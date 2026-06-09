@@ -208,6 +208,7 @@ export default function OrganizerWizard() {
   return (
     <div className="app-shell">
       <div className="content">
+        <div className="column">
         <motion.div
           className="row between"
           initial={reduceMotion ? false : { opacity: 0, y: -10 }}
@@ -588,6 +589,7 @@ export default function OrganizerWizard() {
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
       </div>
     </div>
   );

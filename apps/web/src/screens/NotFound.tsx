@@ -8,6 +8,7 @@ export default function NotFound() {
   return (
     <div className="app-shell">
       <div className="content" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "0 24px" }}>
+        <div className="column">
         <div style={{ fontSize: 64, marginBottom: 8 }}>🧭</div>
         <div className="h1">Off the map</div>
         <p className="muted" style={{ marginBottom: 24 }}>
@@ -16,6 +17,7 @@ export default function NotFound() {
         <Button variant="primary" onClick={() => navigate("/")}>
           Back to base camp
         </Button>
+        </div>
       </div>
     </div>
   );

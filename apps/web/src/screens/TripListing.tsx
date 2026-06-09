@@ -255,7 +255,9 @@ export default function TripListing() {
     return (
       <div className="app-shell">
         <div className="content">
+        <div className="column">
           <p className="muted">Loading…</p>
+        </div>
         </div>
       </div>
     );
@@ -267,6 +269,7 @@ export default function TripListing() {
     <div className="app-shell">
       <div className="fade-overlay fade-overlay--top" aria-hidden="true" />
       <div className="content">
+        <div className="column">
         <motion.div
           className="fl-brand"
           initial={reduceMotion ? false : { opacity: 0, y: -6 }}
@@ -352,6 +355,7 @@ export default function TripListing() {
             )}
           </div>
         )}
+        </div>
       </div>
 
       {hasAnyTrip && (

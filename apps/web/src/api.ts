@@ -90,6 +90,14 @@ export const api = {
   listUsers: (tripId: string) => req<User[]>("GET", `/api/trips/${tripId}/users`),
   createUser: (tripId: string, name: string) =>
     req<User>("POST", `/api/trips/${tripId}/users`, { name, joining: true }),
+  // Organizer adds a member on someone's behalf — left unclaimed so the real
+  // person can adopt the slot later via "pick yourself".
+  addMember: (tripId: string, name: string) =>
+    req<User>("POST", `/api/trips/${tripId}/users`, {
+      name,
+      joining: true,
+      claimed: false,
+    }),
   updateUser: (
     tripId: string,
     id: number,

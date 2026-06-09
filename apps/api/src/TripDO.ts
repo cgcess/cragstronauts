@@ -300,7 +300,7 @@ export class TripDO extends DurableObject<Env> {
   }
 
   async createUser(
-    data: { name: string; joining: boolean }
+    data: { name: string; joining: boolean; claimed?: boolean }
   ): Promise<User> {
     const name = data.name.trim();
     if (!name) throw new Error("Name required");
@@ -310,7 +310,7 @@ export class TripDO extends DurableObject<Env> {
 
     const row = this.db.insertReturning(
       user,
-      { name, joining: data.joining ? 1 : 0, claimed: 1 },
+      { name, joining: data.joining ? 1 : 0, claimed: data.claimed === false ? 0 : 1 },
       ["id", "name", "joining", "is_organizer", "signup_completed", "claimed"]
     );
     return formatUser(row);

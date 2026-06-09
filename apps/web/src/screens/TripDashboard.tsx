@@ -2053,9 +2053,27 @@ function RosterBody({
   const out = users.filter((u) => !u.joining);
   const [error, setError] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [adding, setAdding] = useState(false);
 
   // Members the organizer can hand off to: anyone joining who isn't already organizer.
   const transferTargets = joining.filter((u) => !u.is_organizer);
+
+  const addMember = async () => {
+    const name = newName.trim();
+    if (!name || adding) return;
+    setError(null);
+    setAdding(true);
+    try {
+      await api.addMember(tripId, name);
+      setNewName("");
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setAdding(false);
+    }
+  };
 
   const transfer = async (toUserId: number, name: string) => {
     if (
@@ -2173,6 +2191,23 @@ function RosterBody({
   return (
     <>
       {error && <div className="error-banner">{error}</div>}
+      <div className="row" style={{ gap: 6, marginBottom: 8 }}>
+        <input
+          placeholder="Add a member by name"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && addMember()}
+          style={{ flex: 1 }}
+          aria-label="New member name"
+        />
+        <button
+          className="th-btn th-btn--primary th-btn--sm"
+          onClick={addMember}
+          disabled={!newName.trim() || adding}
+        >
+          {adding ? "Adding…" : "Add"}
+        </button>
+      </div>
       {joining.map((u) => renderRow(u))}
       {out.length > 0 && (
         <>

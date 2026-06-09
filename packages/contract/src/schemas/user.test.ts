@@ -31,4 +31,13 @@ describe("CreateUserBodySchema", () => {
     const parsed = CreateUserBodySchema.parse({ name: "Ada", joining: true });
     expect(parsed).toEqual({ name: "Ada", joining: true });
   });
+
+  it("accepts an optional claimed flag", () => {
+    const parsed = CreateUserBodySchema.parse({
+      name: "Ada",
+      joining: true,
+      claimed: false,
+    });
+    expect(parsed).toEqual({ name: "Ada", joining: true, claimed: false });
+  });
 });

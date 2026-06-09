@@ -487,12 +487,23 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   margin-bottom: 18px;
 }
 
-/* Edit affordance — top-right of the read-only hero (organizers only). */
-.fl-detail-hero__edit {
+/* Top-right action cluster on the read-only hero: Share + Edit + overflow. */
+.fl-detail-hero__actions-cluster {
   position: absolute;
   top: 16px;
   right: 16px;
-  z-index: 2;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fl-detail-hero__menu-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Shared icon-button treatment (Share, Edit, overflow). */
+.fl-detail-hero__iconbtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -511,10 +522,27 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
     color 160ms var(--fl-ease-out);
 }
 @media (hover: hover) {
-  .fl-detail-hero__edit:hover {
+  .fl-detail-hero__iconbtn:hover {
     border-color: var(--fl-accent-ring);
     color: var(--fl-fg);
   }
+}
+
+/* Transient “Link copied!” pill under the cluster (clipboard-fallback path). */
+.fl-detail-hero__copied {
+  position: absolute;
+  top: 58px;
+  right: 16px;
+  z-index: 3;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--fl-accent-ring);
+  background: var(--fl-surface-2);
+  color: var(--fl-fg);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: var(--fl-shadow-card);
 }
 
 /* Inline editable hero title (matches .fl-detail-hero__title typography). */
@@ -905,16 +933,6 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   box-shadow: 0 0 0 2px var(--fl-accent-ring);
 }
 
-/* Read-mode actions — share + add-to-calendar, available to everyone. */
-.fl-detail-hero__actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 20px;
-  padding-top: 18px;
-  border-top: 1px solid var(--fl-divider);
-}
 /* Past trips read weathered — lower the glow + warmth. */
 .fl-detail-hero--past {
   background:

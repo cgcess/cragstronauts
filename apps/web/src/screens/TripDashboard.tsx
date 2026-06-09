@@ -21,7 +21,8 @@ import Linkify from "../components/Linkify";
 import Markdown from "../components/Markdown";
 import DateRangePicker from "../components/DateRangePicker";
 import BottomSheet from "../components/BottomSheet";
-import { Button, Tag, useConfirm } from "../components/ui";
+import { Button, Tag, Menu, useConfirm } from "../components/ui";
+import type { MenuItem } from "../components/ui";
 
 type Car = z.infer<typeof CarSchema>;
 type Dog = z.infer<typeof DogSchema>;
@@ -140,6 +141,24 @@ function ShareIcon() {
       <circle cx="6" cy="12" r="3" />
       <circle cx="18" cy="19" r="3" />
       <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 6L9 17l-5-5" />
+    </svg>
+  );
+}
+
+function MoreIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+      <circle cx="5" cy="12" r="1.8" />
+      <circle cx="12" cy="12" r="1.8" />
+      <circle cx="19" cy="12" r="1.8" />
     </svg>
   );
 }
@@ -578,6 +597,8 @@ export default function TripDashboard() {
   const [weatherSheetOpen, setWeatherSheetOpen] = useState(false);
   const [calendarSheetOpen, setCalendarSheetOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [heroMenuOpen, setHeroMenuOpen] = useState(false);
+  const [rosterAutoTransfer, setRosterAutoTransfer] = useState(false);
 
   // Expenses drawer navigation (list ⇄ add/edit/settle). Direction drives the
   // slide animation: +1 pushes a sub-view in from the right, −1 pops back.
@@ -900,6 +921,7 @@ export default function TripDashboard() {
           currentUserId={currentUserId}
           isOrganizer={isOrganizer}
           onChanged={reload}
+          autoTransfer={rosterAutoTransfer}
         />
       ),
     });
@@ -1036,19 +1058,6 @@ export default function TripDashboard() {
     <div className="app-shell">
       <div className="topbar">
         <div className="row between">
-          <Button
-            variant="text"
-            onClick={leaveTrip}
-            disabled={isOrganizer}
-            title={
-              isOrganizer
-                ? "Transfer ownership in the People list before you can leave"
-                : "Leave this trip"
-            }
-            style={{ marginLeft: -4 }}
-          >
-            🚪 Leave trip
-          </Button>
           {me ? (
             <>
               <div className="glass-surface nav-cap">
@@ -1089,14 +1098,62 @@ export default function TripDashboard() {
           />
         ) : (
         <div className={"fl-detail-hero" + (tripUpcoming ? "" : " fl-detail-hero--past")}>
-          {isOrganizer && (
+          <div className="fl-detail-hero__actions-cluster">
             <button
-              className="fl-detail-hero__edit"
-              onClick={() => setEditingHero(true)}
-              aria-label="Edit trip"
+              className="fl-detail-hero__iconbtn"
+              onClick={shareTrip}
+              aria-label={copied ? "Trip link copied" : "Share trip"}
             >
-              <PencilIcon />
+              {copied ? <CheckIcon /> : <ShareIcon />}
             </button>
+            {isOrganizer && (
+              <button
+                className="fl-detail-hero__iconbtn"
+                onClick={() => setEditingHero(true)}
+                aria-label="Edit trip"
+              >
+                <PencilIcon />
+              </button>
+            )}
+            <div className="fl-detail-hero__menu-anchor">
+              <button
+                className="fl-detail-hero__iconbtn"
+                onClick={() => setHeroMenuOpen((v) => !v)}
+                aria-label="More actions"
+                aria-haspopup="menu"
+                aria-expanded={heroMenuOpen}
+              >
+                <MoreIcon />
+              </button>
+              <Menu
+                open={heroMenuOpen}
+                onClose={() => setHeroMenuOpen(false)}
+                items={
+                  isOrganizer
+                    ? ([
+                        {
+                          label: "Transfer ownership…",
+                          onSelect: () => {
+                            setRosterAutoTransfer(true);
+                            setExpandedId("roster");
+                          },
+                        },
+                      ] as MenuItem[])
+                    : ([
+                        {
+                          label: "Leave trip",
+                          tone: "danger",
+                          onSelect: leaveTrip,
+                        },
+                      ] as MenuItem[])
+                }
+              />
+            </div>
+          </div>
+          {copied && (
+            <div className="fl-detail-hero__copied" role="status">
+              Link copied!
+            </div>
           )}
           {trip.start_date || trip.end_date ? (
             <button
@@ -1316,16 +1373,6 @@ export default function TripDashboard() {
               )}
             </div>
           )}
-          <div className="fl-detail-hero__actions">
-            <Button
-              variant="text"
-              onClick={shareTrip}
-              leadingIcon={copied ? undefined : <ShareIcon />}
-              style={copied ? { color: "var(--min-accent)" } : undefined}
-            >
-              {copied ? "Link copied!" : "Share trip"}
-            </Button>
-          </div>
         </div>
         )}
 
@@ -1391,6 +1438,7 @@ export default function TripDashboard() {
         onClose={() => {
           setExpandedId(null);
           setExpView({ kind: "list" });
+          setRosterAutoTransfer(false);
         }}
         title={
           selectedCard?.id === "expenses" && expView.kind !== "list"
@@ -2125,12 +2173,15 @@ function RosterBody({
   currentUserId,
   isOrganizer,
   onChanged,
+  autoTransfer = false,
 }: {
   tripId: string;
   users: ReturnType<typeof useTripContext>["users"];
   currentUserId: number | null;
   isOrganizer: boolean;
   onChanged: () => Promise<void>;
+  /** Deep-link from the hero menu: open the transfer picker on mount. */
+  autoTransfer?: boolean;
 }) {
   const confirm = useConfirm();
   const joining = users.filter((u) => u.joining);
@@ -2139,6 +2190,11 @@ function RosterBody({
   const [picking, setPicking] = useState(false);
   const [newName, setNewName] = useState("");
   const [adding, setAdding] = useState(false);
+
+  // Hero “Transfer ownership…” lands here with the picker already open.
+  useEffect(() => {
+    if (autoTransfer) setPicking(true);
+  }, [autoTransfer]);
 
   // Members the organizer can hand off to: anyone joining who isn't already organizer.
   const transferTargets = joining.filter((u) => !u.is_organizer);

@@ -75,7 +75,7 @@ export default function Landing() {
   return (
     <div className="app-shell">
       <div className="fade-overlay fade-overlay--top" aria-hidden="true" />
-      <div className="content">
+      <div className="content content--cta">
         <div className="h1">🧗 {trip.name}</div>
 
         {trip.welcome_message && (
@@ -220,7 +220,7 @@ export default function Landing() {
             </div>
         </div>
 
-        <div className="col" style={{ marginTop: 20 }}>
+        <div className="bottom-cta">
           {joined ? (
             <Button
               variant="primary"
@@ -236,6 +236,7 @@ export default function Landing() {
           )}
         </div>
       </div>
+      <div className="fade-overlay fade-overlay--bottom" aria-hidden="true" />
     </div>
   );
 }

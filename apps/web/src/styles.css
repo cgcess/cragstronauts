@@ -277,6 +277,18 @@ button:disabled:active { transform: none; }
   justify-content: center;
 }
 
+/* Content variant that pins a trailing .bottom-cta to the bottom of the
+   scroll viewport. When the page is shorter than the viewport, margin-top:auto
+   pushes the CTA down so it floats at the bottom; when it overflows, the CTA's
+   sticky bottom keeps it pinned while the page scrolls behind it. */
+.content--cta {
+  display: flex;
+  flex-direction: column;
+}
+.content--cta > .bottom-cta {
+  margin-top: auto;
+}
+
 /* ----------  Inputs  ---------- */
 
 input, select, textarea {

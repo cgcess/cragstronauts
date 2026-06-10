@@ -1,4 +1,4 @@
-import React, { Fragment, useEffect, useRef, useState } from "react";
+import React, { Fragment, useState } from "react";
 import { useNavigate } from "react-router";
 import { useTripContext } from "../context/TripContext";
 import { tripPath } from "../lib/tripUrl";
@@ -46,22 +46,6 @@ export default function Landing() {
 
   const joined = currentUserId != null;
 
-  // The hero CTA sits above the fold so eager visitors join in one tap. Once
-  // it scrolls out of view we float a sticky twin at the thumb zone, so the
-  // action stays reachable no matter how much trip info the organizer wrote.
-  const heroCtaRef = useRef<HTMLDivElement>(null);
-  const [showStickyCta, setShowStickyCta] = useState(false);
-  useEffect(() => {
-    const el = heroCtaRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setShowStickyCta(!entry.isIntersecting),
-      { threshold: 0 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
   // "Join trip" runs the identity flow; once the visitor establishes who they
   // are, we drop them onto the board. Dismissing the flow keeps them here.
   const joinTrip = async () => {
@@ -92,7 +76,7 @@ export default function Landing() {
     <div className="app-shell">
       <div className="fade-overlay fade-overlay--top" aria-hidden="true" />
       <div className="content">
-        <div className="column">
+        <div className="column landing-column">
         <div className="landing-hero">
           <div className="h1">🧗 {trip.name}</div>
           <div className="landing-hero__glance">
@@ -140,24 +124,6 @@ export default function Landing() {
             )}
           </div>
         )}
-
-        {/* Action sits right under the personal note: read the welcome, then
-            join. The sticky twin below keeps it reachable past the facts. */}
-        <div className="landing-cta" ref={heroCtaRef}>
-          {joined ? (
-            <Button
-              variant="primary"
-              fullWidth
-              onClick={() => navigate(tripPath(trip.name, tripId, "board"))}
-            >
-              View trip →
-            </Button>
-          ) : (
-            <Button variant="primary" fullWidth onClick={joinTrip}>
-              Join trip
-            </Button>
-          )}
-        </div>
 
         {/* At-a-glance details so visitors can decide before committing. */}
         <div className="card">
@@ -266,29 +232,31 @@ export default function Landing() {
         </div>
         </div>
 
-        {showStickyCta && (
-          <div className="bottom-cta landing-sticky-cta">
-            {joined ? (
-              <Button
-                variant="primary"
-                fullWidth
-                onClick={() => navigate(tripPath(trip.name, tripId, "board"))}
-              >
-                View trip →
-              </Button>
-            ) : (
-              <Button variant="primary" fullWidth onClick={joinTrip}>
-                Join trip
-              </Button>
-            )}
-          </div>
-        )}
+        <div className="bottom-cta">
+          {joined ? (
+            <Button
+              variant="primary"
+              fullWidth
+              onClick={() => navigate(tripPath(trip.name, tripId, "board"))}
+            >
+              View trip →
+            </Button>
+          ) : (
+            <Button variant="primary" fullWidth onClick={joinTrip}>
+              Join trip
+            </Button>
+          )}
+        </div>
         </div>
       </div>
 
-      {showStickyCta && (
-        <div className="fade-overlay fade-overlay--bottom" aria-hidden="true" />
-      )}
+      <div className="landing-cta-scrim" aria-hidden="true">
+        <div className="landing-cta-scrim__blur landing-cta-scrim__blur--1" />
+        <div className="landing-cta-scrim__blur landing-cta-scrim__blur--2" />
+        <div className="landing-cta-scrim__blur landing-cta-scrim__blur--3" />
+        <div className="landing-cta-scrim__blur landing-cta-scrim__blur--4" />
+        <div className="landing-cta-scrim__tint" />
+      </div>
     </div>
   );
 }

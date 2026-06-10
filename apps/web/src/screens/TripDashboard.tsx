@@ -134,25 +134,6 @@ function openCalendarFile(filename: string, ics: string) {
   setTimeout(() => URL.revokeObjectURL(href), 1000);
 }
 
-function ShareIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="18" cy="5" r="3" />
-      <circle cx="6" cy="12" r="3" />
-      <circle cx="18" cy="19" r="3" />
-      <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M20 6L9 17l-5-5" />
-    </svg>
-  );
-}
-
 function MoreIcon() {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
@@ -177,6 +158,54 @@ function PencilIcon() {
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M12 20h9" />
       <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+    </svg>
+  );
+}
+
+function ChevronIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M9 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+/* Glyphs for the overflow menu rows. 16px to sit beside 14px labels. */
+function ShareIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />
+    </svg>
+  );
+}
+
+function CrownIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 8l3.5 3L12 5l4.5 6L20 8l-1.4 9H5.4L4 8z" />
+      <path d="M5.4 17h13.2" />
+    </svg>
+  );
+}
+
+function LogoutIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <path d="M16 17l5-5-5-5M21 12H9" />
+    </svg>
+  );
+}
+
+function DoorIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6 21V4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v17" />
+      <path d="M4 21h16" />
+      <circle cx="13" cy="12" r="1.1" fill="currentColor" stroke="none" />
     </svg>
   );
 }
@@ -395,10 +424,14 @@ function FeedbackSection({
   tripId,
   userId,
   isOrganizer,
+  wide,
 }: {
   tripId: string;
   userId: number;
   isOrganizer: boolean;
+  /** Span both grid columns — set when the tile count is even, so feedback
+      lands on its own full-width row at the bottom instead of leaving a gap. */
+  wide: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
@@ -442,7 +475,9 @@ function FeedbackSection({
   };
 
   return (
-    <section className="card" style={{ marginTop: 16 }}>
+    <section
+      className={"card dash-feedback" + (wide ? " dash-feedback--wide" : "")}
+    >
       <div
         className="muted"
         style={{
@@ -1077,13 +1112,15 @@ export default function TripDashboard() {
         ) : (
         <div className={"fl-detail-hero" + (tripUpcoming ? "" : " fl-detail-hero--past")}>
           <div className="fl-detail-hero__actions-cluster">
-            <button
-              className="fl-detail-hero__iconbtn"
-              onClick={shareTrip}
-              aria-label={copied ? "Trip link copied" : "Share trip"}
-            >
-              {copied ? <CheckIcon /> : <ShareIcon />}
-            </button>
+            {(trip.start_date || trip.end_date) && (
+              <button
+                className="fl-detail-hero__iconbtn"
+                onClick={() => setCalendarSheetOpen(true)}
+                aria-label="Open trip calendar"
+              >
+                <CalendarIcon />
+              </button>
+            )}
             {isOrganizer && (
               <button
                 className="fl-detail-hero__iconbtn"
@@ -1110,7 +1147,13 @@ export default function TripDashboard() {
                   isOrganizer
                     ? ([
                         {
+                          label: "Share trip",
+                          icon: <ShareIcon />,
+                          onSelect: shareTrip,
+                        },
+                        {
                           label: "Transfer ownership…",
+                          icon: <CrownIcon />,
                           onSelect: () => {
                             setRosterAutoTransfer(true);
                             setExpandedId("roster");
@@ -1118,6 +1161,7 @@ export default function TripDashboard() {
                         },
                         {
                           label: "Logout",
+                          icon: <LogoutIcon />,
                           onSelect: () => {
                             switchUser();
                             navigate(tripPath(trip.name, tripId));
@@ -1126,16 +1170,23 @@ export default function TripDashboard() {
                       ] as MenuItem[])
                     : ([
                         {
-                          label: "Leave trip",
-                          tone: "danger",
-                          onSelect: leaveTrip,
+                          label: "Share trip",
+                          icon: <ShareIcon />,
+                          onSelect: shareTrip,
                         },
                         {
                           label: "Logout",
+                          icon: <LogoutIcon />,
                           onSelect: () => {
                             switchUser();
                             navigate(tripPath(trip.name, tripId));
                           },
+                        },
+                        {
+                          label: "Leave trip",
+                          tone: "danger",
+                          icon: <DoorIcon />,
+                          onSelect: leaveTrip,
                         },
                       ] as MenuItem[])
                 }
@@ -1179,16 +1230,23 @@ export default function TripDashboard() {
                 {dUntil > 0 ? (
                   <>
                     <span className="fl-detail-hero__count">{dUntil}</span>
-                    <span className="fl-detail-hero__count-label">
+                    <span className="fl-detail-hero__count-label fl-detail-hero__count-label--cue">
                       {dUntil === 1 ? "Day to go" : "Days to go"}
+                      <ChevronIcon className="fl-detail-hero__count-cue" />
                     </span>
                   </>
                 ) : dUntil === 0 ? (
-                  <Tag variant="ember" dot>On Now</Tag>
+                  <span className="fl-detail-hero__count-onnow">
+                    <Tag variant="ember" dot>On Now</Tag>
+                    <ChevronIcon className="fl-detail-hero__count-cue" />
+                  </span>
                 ) : (
                   <>
                     <span className="fl-detail-hero__count">{Math.abs(dUntil)}</span>
-                    <span className="fl-detail-hero__count-label">Days ago</span>
+                    <span className="fl-detail-hero__count-label fl-detail-hero__count-label--cue">
+                      Days ago
+                      <ChevronIcon className="fl-detail-hero__count-cue" />
+                    </span>
                   </>
                 )}
               </button>
@@ -1387,13 +1445,15 @@ export default function TripDashboard() {
               onClick={() => setExpandedId(c.id)}
             />
           ))}
+          {/* Always the last cell: spans both columns when the tile count is
+              even (own row), otherwise fills the lone trailing gap. */}
+          <FeedbackSection
+            tripId={tripId}
+            userId={currentUserId}
+            isOrganizer={isOrganizer}
+            wide={cards.length % 2 === 0}
+          />
         </div>
-
-        <FeedbackSection
-          tripId={tripId}
-          userId={currentUserId}
-          isOrganizer={isOrganizer}
-        />
         </div>
       </div>
 

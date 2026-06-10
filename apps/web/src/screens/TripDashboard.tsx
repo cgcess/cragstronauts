@@ -1115,8 +1115,8 @@ export default function TripDashboard() {
             {(trip.start_date || trip.end_date) && (
               <button
                 className="fl-detail-hero__iconbtn"
-                onClick={() => setCalendarSheetOpen(true)}
-                aria-label="Open trip calendar"
+                onClick={addToCalendar}
+                aria-label="Add trip to calendar"
               >
                 <CalendarIcon />
               </button>

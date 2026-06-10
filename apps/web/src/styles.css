@@ -325,20 +325,19 @@ button:disabled:active { transform: none; }
   gap: 16px;
 }
 
-/* Landing fills the scroll viewport so the always-on sticky CTA can be
-   pushed to the bottom edge even when the trip info is short. On taller
-   pages the body grows past the viewport and the CTA's sticky bottom keeps
-   it pinned to the thumb zone while the content scrolls behind it. */
-.landing-column {
-  display: flex;
-  flex-direction: column;
-  min-height: 100%;
+/* The join CTA is a fixed overlay pinned to the bottom of the viewport — it
+   lives outside the scroll flow, so a page that fits the screen never gains a
+   stray strip of scroll just to reserve room for it. The base .bottom-cta
+   supplies the column cap, centring, padding and safe-area inset. */
+.landing-cta-bar {
+  position: fixed;
+  bottom: 0;
 }
-.landing-column > .bottom-cta {
-  margin-top: auto;
-  /* In the flex column, auto inline margins would shrink-wrap + centre the
-     CTA; keep it spanning the reading column like the cards above it. */
-  width: 100%;
+/* Bottom clearance, rendered only when the cards overflow the viewport, so the
+   last card can scroll fully clear of the fixed CTA. Height ≈ the CTA's footprint
+   plus a little breathing room. */
+.landing-cta-clearance {
+  height: calc(96px + env(safe-area-inset-bottom));
 }
 
 /* ----------  Landing CTA scrim  ----------

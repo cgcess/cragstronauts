@@ -1,4 +1,4 @@
-import React, { Fragment, useState } from "react";
+import React, { Fragment, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useTripContext } from "../context/TripContext";
 import { tripPath } from "../lib/tripUrl";
@@ -46,6 +46,27 @@ export default function Landing() {
 
   const joined = currentUserId != null;
 
+  // The CTA is a fixed overlay, so it never reserves scroll space on its own —
+  // a page that fits the screen doesn't scroll. We only reserve bottom
+  // clearance (so the last card can clear the button) when the cards actually
+  // overflow the viewport. Without that guard, near-screen-height pages would
+  // scroll a few pointless pixels just to reveal the reserved strip.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const cardsRef = useRef<HTMLDivElement>(null);
+  const [overflowing, setOverflowing] = useState(false);
+  useEffect(() => {
+    const scroll = scrollRef.current;
+    const cards = cardsRef.current;
+    if (!scroll || !cards) return;
+    const measure = () =>
+      setOverflowing(cards.offsetHeight > scroll.clientHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(scroll);
+    ro.observe(cards);
+    return () => ro.disconnect();
+  }, [trip, users]);
+
   // "Join trip" runs the identity flow; once the visitor establishes who they
   // are, we drop them onto the board. Dismissing the flow keeps them here.
   const joinTrip = async () => {
@@ -75,8 +96,8 @@ export default function Landing() {
   return (
     <div className="app-shell">
       <div className="fade-overlay fade-overlay--top" aria-hidden="true" />
-      <div className="content">
-        <div className="column landing-column">
+      <div className="content" ref={scrollRef}>
+        <div className="column landing-column" ref={cardsRef}>
         <div className="landing-hero">
           <div className="h1">🧗 {trip.name}</div>
           <div className="landing-hero__glance">
@@ -231,23 +252,28 @@ export default function Landing() {
             </div>
         </div>
         </div>
+        </div>
+        {/* Clearance so the last card can scroll clear of the fixed CTA —
+            only present when the page actually overflows. */}
+        {overflowing && (
+          <div className="landing-cta-clearance" aria-hidden="true" />
+        )}
+      </div>
 
-        <div className="bottom-cta">
-          {joined ? (
-            <Button
-              variant="primary"
-              fullWidth
-              onClick={() => navigate(tripPath(trip.name, tripId, "board"))}
-            >
-              View trip →
-            </Button>
-          ) : (
-            <Button variant="primary" fullWidth onClick={joinTrip}>
-              Join trip
-            </Button>
-          )}
-        </div>
-        </div>
+      <div className="bottom-cta landing-cta-bar">
+        {joined ? (
+          <Button
+            variant="primary"
+            fullWidth
+            onClick={() => navigate(tripPath(trip.name, tripId, "board"))}
+          >
+            View trip →
+          </Button>
+        ) : (
+          <Button variant="primary" fullWidth onClick={joinTrip}>
+            Join trip
+          </Button>
+        )}
       </div>
 
       <div className="landing-cta-scrim" aria-hidden="true">

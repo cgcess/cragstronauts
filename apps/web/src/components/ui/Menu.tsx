@@ -7,6 +7,8 @@ export type MenuTone = "default" | "danger";
 export interface MenuItem {
   label: string;
   tone?: MenuTone;
+  /** Optional leading glyph, rendered muted before the label. */
+  icon?: React.ReactNode;
   onSelect: () => void;
 }
 
@@ -75,6 +77,11 @@ export default function Menu({ open, onClose, items, align = "right" }: MenuProp
                 item.onSelect();
               }}
             >
+              {item.icon && (
+                <span className="ui-menu__icon" aria-hidden="true">
+                  {item.icon}
+                </span>
+              )}
               {item.label}
             </button>
           ))}

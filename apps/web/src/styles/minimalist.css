@@ -704,6 +704,16 @@ input:focus, textarea:focus, select:focus {
   gap: 12px;
   margin-top: 16px;
 }
+/* Feedback is the last grid cell. By default it takes one column (filling a
+   trailing gap when the tile count is odd); --wide spans both columns so an
+   even tile count still leaves no hole. Margin is zeroed (grid gap spaces it)
+   to override the base .card margin-bottom. */
+.dash-feedback {
+  margin: 0;
+}
+.dash-feedback--wide {
+  grid-column: 1 / -1;
+}
 
 /* Horizontal "finish your polls" nudge — sits between the hero and the mosaic.
    Full-width and amber-tinted so it reads as a gentle call to action without

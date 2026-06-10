@@ -625,7 +625,9 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   letter-spacing: 0.16em; text-transform: uppercase;
   color: var(--fl-fg-3);
 }
-/* Tappable countdown — strip button chrome, keep the count layout. */
+/* Tappable countdown — strip button chrome, keep the count layout. Hug the
+   content width (don't inherit the column's flex-grow) so the hit area is just
+   the number + label, not the empty space out to the weather chip. */
 .fl-detail-hero__count-col--btn {
   appearance: none;
   font-family: inherit;
@@ -633,6 +635,9 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   border: none;
   padding: 0;
   cursor: pointer;
+  flex: 0 0 auto;
+  align-self: flex-start;
+  width: fit-content;
   transition: opacity 160ms var(--fl-ease-out);
 }
 
@@ -654,6 +659,26 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
 .fl-detail-hero__count-col--btn:active {
   background: none;
   opacity: 0.6;
+}
+
+/* "Tap me" cue on the countdown — a small accent chevron beside the label so
+   it reads as a control, not just a stat. Opacity still carries press/hover. */
+.fl-detail-hero__count-label--cue,
+.fl-detail-hero__count-onnow {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.fl-detail-hero__count-cue {
+  /* --min-accent is remapped in every theme (sage on light/dark, magenta in
+     party); --fl-accent is not, so it'd stay green in party mode. */
+  color: var(--min-accent);
+  transition: transform 160ms var(--fl-ease-out);
+}
+@media (hover: hover) {
+  .fl-detail-hero__count-col--btn:hover .fl-detail-hero__count-cue {
+    transform: translateX(2px);
+  }
 }
 
 /* Calendar drawer body */

@@ -71,14 +71,16 @@ html.theme-party .fl-detail-hero__title {
   to   { background-position: 200% 0%; }
 }
 
-/* Primary buttons turn into neon. */
-html.theme-party button {
+/* Primary buttons turn into neon. Text-only triggers (dropdown items, the
+   hero date + countdown) opt out so they stay transparent like light/dark —
+   a neon fill would box the 72px countdown and turn the menu into glow bars. */
+html.theme-party button:not(.ui-menu__item):not(.fl-detail-hero__meta--btn):not(.fl-detail-hero__count-col--btn) {
   background: linear-gradient(180deg, #ff2bd6, #b510a5) !important;
   color: #fff !important;
   border-color: #ff2bd6 !important;
   box-shadow: 0 0 14px rgba(255, 43, 214, 0.45) !important;
 }
-html.theme-party button:hover {
+html.theme-party button:not(.ui-menu__item):not(.fl-detail-hero__meta--btn):not(.fl-detail-hero__count-col--btn):hover {
   background: linear-gradient(180deg, #ff5be0, #d11dc4) !important;
   box-shadow: 0 0 20px rgba(255, 91, 224, 0.6) !important;
 }
@@ -249,7 +251,7 @@ html.theme-party .theme-toggle {
      marquee. */
   html.theme-party .fl-hero__cta,
   html.theme-party button.btn-3d,
-  html.theme-party button:not(.theme-toggle):not(.dash-tile):not(.dash-card__head):not(.fab) {
+  html.theme-party button:not(.theme-toggle):not(.dash-tile):not(.dash-card__head):not(.fab):not(.ui-menu__item):not(.fl-detail-hero__meta--btn):not(.fl-detail-hero__count-col--btn) {
     background: linear-gradient(90deg, #ff2bd6, #ffb800, #00d4ff, #ff2bd6) !important;
     background-size: 300% 100% !important;
     color: #fff !important;

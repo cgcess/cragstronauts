@@ -700,7 +700,11 @@ input:focus, textarea:focus, select:focus {
    row stretch to match the tallest tile's content. */
 .dash-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  /* minmax(0, 1fr) rather than the 1fr shorthand: a plain 1fr is
+     minmax(auto, 1fr), so a tile with wide non-shrinkable content (ride
+     chips, long names) can blow its track wider than the other column and
+     leave the columns visibly uneven. The 0 floor pins both to equal width. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-top: 16px;
 }

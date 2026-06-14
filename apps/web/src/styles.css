@@ -315,15 +315,8 @@ button:disabled:active { transform: none; }
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-/* Primary action mounted directly under the welcome note: personal first,
-   then the join. */
-.landing-cta {
-  margin: 0;
-}
-
-/* Body groups the welcome note, CTA, and facts in one shared-width column so
-   all three line up on both edges — the fullWidth CTA used to overhang the
-   narrower cards. Single column at every width, same as mobile. */
+/* Body groups the welcome note and facts in one shared-width column so they
+   line up on both edges. Single column at every width, same as mobile. */
 .landing-body {
   margin-top: 20px;
   max-width: 560px;
@@ -332,26 +325,77 @@ button:disabled:active { transform: none; }
   gap: 16px;
 }
 
-/* Sticky twin of the hero CTA, mounted once the hero button scrolls out of
-   view (IntersectionObserver). Slides up into the thumb zone; the base
-   .bottom-cta handles the sticky mount + safe-area padding. */
-.landing-sticky-cta {
-  animation: landing-cta-in 280ms cubic-bezier(0.22, 1, 0.36, 1);
+/* The join CTA is a fixed overlay pinned to the bottom of the viewport — it
+   lives outside the scroll flow, so a page that fits the screen never gains a
+   stray strip of scroll just to reserve room for it. The base .bottom-cta
+   supplies the column cap, centring, padding and safe-area inset. */
+.landing-cta-bar {
+  position: fixed;
+  bottom: 0;
 }
-@keyframes landing-cta-in {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Bottom clearance, rendered only when the cards overflow the viewport, so the
+   last card can scroll fully clear of the fixed CTA. Height ≈ the CTA's footprint
+   plus a little breathing room. */
+.landing-cta-clearance {
+  height: calc(96px + env(safe-area-inset-bottom));
 }
-@media (prefers-reduced-motion: reduce) {
-  .landing-sticky-cta {
-    animation: none;
-  }
+
+/* ----------  Landing CTA scrim  ----------
+   Progressive blur + theme-tinted wash behind the sticky join CTA. Four
+   stacked backdrop-blur layers with overlapping band masks ramp the blur
+   radius from heavy at the bottom (under the button) to nothing at the top,
+   so the scrolling trip content dissolves into the thumb zone instead of
+   ending at a hard edge. Sits above the content but below the button itself
+   (.bottom-cta is z-index 10). */
+.landing-cta-scrim {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Just tall enough to cover the button + a short fade above it. */
+  height: calc(118px + env(safe-area-inset-bottom));
+  z-index: 9;
+  pointer-events: none;
+}
+.landing-cta-scrim__blur,
+.landing-cta-scrim__tint {
+  position: absolute;
+  inset: 0;
+}
+.landing-cta-scrim__blur--1 {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  -webkit-mask-image: linear-gradient(to top, #000 0%, #000 32%, transparent 56%);
+  mask-image: linear-gradient(to top, #000 0%, #000 32%, transparent 56%);
+}
+.landing-cta-scrim__blur--2 {
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  -webkit-mask-image: linear-gradient(to top, transparent 24%, #000 44%, #000 60%, transparent 78%);
+  mask-image: linear-gradient(to top, transparent 24%, #000 44%, #000 60%, transparent 78%);
+}
+.landing-cta-scrim__blur--3 {
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  -webkit-mask-image: linear-gradient(to top, transparent 46%, #000 64%, #000 78%, transparent 92%);
+  mask-image: linear-gradient(to top, transparent 46%, #000 64%, #000 78%, transparent 92%);
+}
+.landing-cta-scrim__blur--4 {
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
+  -webkit-mask-image: linear-gradient(to top, transparent 66%, #000 84%, transparent 100%);
+  mask-image: linear-gradient(to top, transparent 66%, #000 84%, transparent 100%);
+}
+/* Theme-tinted colour wash: opaque page canvas at the very bottom fading to
+   fully transparent at the top. --min-canvas tracks the active theme
+   (dark #0F1115 / light #F4F5F7 / party #150027). */
+.landing-cta-scrim__tint {
+  background: linear-gradient(
+    to top,
+    var(--min-canvas) 0%,
+    color-mix(in srgb, var(--min-canvas) 55%, transparent) 45%,
+    transparent 100%
+  );
 }
 
 /* ----------  Inputs  ---------- */

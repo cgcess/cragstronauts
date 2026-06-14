@@ -46,21 +46,26 @@ export default function Landing() {
 
   const joined = currentUserId != null;
 
-  // The hero CTA sits above the fold so eager visitors join in one tap. Once
-  // it scrolls out of view we float a sticky twin at the thumb zone, so the
-  // action stays reachable no matter how much trip info the organizer wrote.
-  const heroCtaRef = useRef<HTMLDivElement>(null);
-  const [showStickyCta, setShowStickyCta] = useState(false);
+  // The CTA is a fixed overlay, so it never reserves scroll space on its own —
+  // a page that fits the screen doesn't scroll. We only reserve bottom
+  // clearance (so the last card can clear the button) when the cards actually
+  // overflow the viewport. Without that guard, near-screen-height pages would
+  // scroll a few pointless pixels just to reveal the reserved strip.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const cardsRef = useRef<HTMLDivElement>(null);
+  const [overflowing, setOverflowing] = useState(false);
   useEffect(() => {
-    const el = heroCtaRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setShowStickyCta(!entry.isIntersecting),
-      { threshold: 0 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
+    const scroll = scrollRef.current;
+    const cards = cardsRef.current;
+    if (!scroll || !cards) return;
+    const measure = () =>
+      setOverflowing(cards.offsetHeight > scroll.clientHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(scroll);
+    ro.observe(cards);
+    return () => ro.disconnect();
+  }, [trip, users]);
 
   // "Join trip" runs the identity flow; once the visitor establishes who they
   // are, we drop them onto the board. Dismissing the flow keeps them here.
@@ -91,8 +96,8 @@ export default function Landing() {
   return (
     <div className="app-shell">
       <div className="fade-overlay fade-overlay--top" aria-hidden="true" />
-      <div className="content">
-        <div className="column">
+      <div className="content" ref={scrollRef}>
+        <div className="column landing-column" ref={cardsRef}>
         <div className="landing-hero">
           <div className="h1">🧗 {trip.name}</div>
           <div className="landing-hero__glance">
@@ -140,24 +145,6 @@ export default function Landing() {
             )}
           </div>
         )}
-
-        {/* Action sits right under the personal note: read the welcome, then
-            join. The sticky twin below keeps it reachable past the facts. */}
-        <div className="landing-cta" ref={heroCtaRef}>
-          {joined ? (
-            <Button
-              variant="primary"
-              fullWidth
-              onClick={() => navigate(tripPath(trip.name, tripId, "board"))}
-            >
-              View trip →
-            </Button>
-          ) : (
-            <Button variant="primary" fullWidth onClick={joinTrip}>
-              Join trip
-            </Button>
-          )}
-        </div>
 
         {/* At-a-glance details so visitors can decide before committing. */}
         <div className="card">
@@ -265,30 +252,37 @@ export default function Landing() {
             </div>
         </div>
         </div>
-
-        {showStickyCta && (
-          <div className="bottom-cta landing-sticky-cta">
-            {joined ? (
-              <Button
-                variant="primary"
-                fullWidth
-                onClick={() => navigate(tripPath(trip.name, tripId, "board"))}
-              >
-                View trip →
-              </Button>
-            ) : (
-              <Button variant="primary" fullWidth onClick={joinTrip}>
-                Join trip
-              </Button>
-            )}
-          </div>
-        )}
         </div>
+        {/* Clearance so the last card can scroll clear of the fixed CTA —
+            only present when the page actually overflows. */}
+        {overflowing && (
+          <div className="landing-cta-clearance" aria-hidden="true" />
+        )}
       </div>
 
-      {showStickyCta && (
-        <div className="fade-overlay fade-overlay--bottom" aria-hidden="true" />
-      )}
+      <div className="bottom-cta landing-cta-bar">
+        {joined ? (
+          <Button
+            variant="primary"
+            fullWidth
+            onClick={() => navigate(tripPath(trip.name, tripId, "board"))}
+          >
+            View trip →
+          </Button>
+        ) : (
+          <Button variant="primary" fullWidth onClick={joinTrip}>
+            Join trip
+          </Button>
+        )}
+      </div>
+
+      <div className="landing-cta-scrim" aria-hidden="true">
+        <div className="landing-cta-scrim__blur landing-cta-scrim__blur--1" />
+        <div className="landing-cta-scrim__blur landing-cta-scrim__blur--2" />
+        <div className="landing-cta-scrim__blur landing-cta-scrim__blur--3" />
+        <div className="landing-cta-scrim__blur landing-cta-scrim__blur--4" />
+        <div className="landing-cta-scrim__tint" />
+      </div>
     </div>
   );
 }

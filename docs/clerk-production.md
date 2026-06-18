@@ -13,7 +13,7 @@ How auth is wired (so the steps below make sense):
 
 ## Decide first: custom domain or workers.dev?
 
-- **Custom domain** lets you create a real Clerk **production** instance
+- **Custom domain** enables a real Clerk **production** instance
   (recommended for launch). Needs DNS access on the domain.
 - **workers.dev only** means staying on the Clerk **development** instance even
   when deployed (Path B). Works, but has dev rate limits, a "development"
@@ -21,23 +21,27 @@ How auth is wired (so the steps below make sense):
 
 ---
 
-## Path A: proper production (custom domain)  — [you, in the Clerk dashboard]
+## Path A: proper production (custom domain)
+
+**Owner: Nico (Clerk dashboard).**
 
 1. Create a **production** instance for the Cragstronauts app.
 2. Clerk shows a set of **DNS records** (e.g. `clerk.`, `accounts.`,
-   `clkmail.`, DKIM). Add them on your domain. _(Whoever controls the domain's
+   `clkmail.`, DKIM). Add them on the domain. _(Whoever controls the domain's
    DNS does this.)_
-3. Production does **not** use Clerk's shared Google credentials, so add your
-   own Google OAuth client:
+3. Production does **not** use Clerk's shared Google credentials, so add the
+   project's own Google OAuth client:
    - In the Clerk dashboard, open the Google social connection and copy the
      **Authorized redirect URI** it shows (looks like
-     `https://clerk.<yourdomain>/v1/oauth_callback`).
-   - In the Google Cloud console, open the OAuth client you already created and
+     `https://clerk.<domain>/v1/oauth_callback`).
+   - In the Google Cloud console, open the OAuth client Nico created earlier and
      set that as an Authorized redirect URI. Copy the client ID + secret.
    - Paste the client ID + secret back into Clerk and enable the connection.
 4. From **API keys**, copy the production `pk_live_…` and `sk_live_…`.
 
-## Path B: interim on workers.dev  — [you]
+## Path B: interim on workers.dev
+
+**Owner: Nico.**
 
 - Skip the DNS and own-Google steps. Reuse the current **dev** keys
   (`pk_test_…` / `sk_test_…`); Google works via Clerk's shared credentials.
@@ -45,7 +49,9 @@ How auth is wired (so the steps below make sense):
 
 ---
 
-## Cloudflare / deploy  — [Colin]
+## Cloudflare / deploy
+
+**Owner: Colin.**
 
 > Needs the workers.dev subdomain (or the custom domain) and a Cloudflare login.
 > Run from the repo root with Node 22.

@@ -41,11 +41,29 @@ type Settlement = z.infer<typeof SettlementSchema>;
 type Feedback = z.infer<typeof FeedbackSchema>;
 type Ok = { ok: boolean };
 
+// Clerk session-token getter, registered by ClerkTokenBridge while signed in.
+// Null when Clerk is disabled or signed out, in which case requests go out
+// unauthenticated and the backend treats the caller as an anonymous,
+// cooperative visitor.
+let authTokenGetter: (() => Promise<string | null>) | null = null;
+export function setAuthTokenGetter(getter: (() => Promise<string | null>) | null) {
+  authTokenGetter = getter;
+}
+
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const opts: RequestInit = { method, headers: {} };
+  const headers: Record<string, string> = {};
+  const opts: RequestInit = { method, headers };
   if (body !== undefined) {
-    (opts.headers as Record<string, string>)["Content-Type"] = "application/json";
+    headers["Content-Type"] = "application/json";
     opts.body = JSON.stringify(body);
+  }
+  if (authTokenGetter) {
+    try {
+      const token = await authTokenGetter();
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+    } catch {
+      // No token (e.g. expired session); fall through unauthenticated.
+    }
   }
   const r = await fetch(path, opts);
   if (!r.ok) {
@@ -90,6 +108,10 @@ export const api = {
 
   // Users (within a trip)
   listUsers: (tripId: string) => req<User[]>("GET", `/api/trips/${tripId}/users`),
+  // Resolve the signed-in Clerk account to its trip user (null when signed out
+  // or not yet linked on this trip).
+  myTripUser: (tripId: string) =>
+    req<{ user_id: number | null }>("GET", `/api/trips/${tripId}/users/me`),
   createUser: (tripId: string, name: string) =>
     req<User>("POST", `/api/trips/${tripId}/users`, { name, joining: true }),
   // Organizer adds a member on someone's behalf — left unclaimed so the real

@@ -11,6 +11,8 @@ import {
 } from "../context/TripContext";
 import { extractTripId, slugify } from "../lib/tripUrl";
 import IdentityFlow from "./IdentityFlow";
+import { clerkEnabled } from "../lib/clerk";
+import TripAccountSync from "../components/TripAccountSync";
 
 const userKey = (tripId: string) => `climbingTrip.userId.${tripId}`;
 
@@ -98,14 +100,19 @@ export default function TripLayout() {
     navigate(`/trips/${stem}${sub}`, { replace: true });
   }, [loading, trip, tripId, tripParam, routeLocation.pathname, navigate]);
 
-  const setUser = (userId: number | null) => {
-    if (userId == null) {
-      localStorage.removeItem(userKey(tripId));
-    } else {
-      localStorage.setItem(userKey(tripId), String(userId));
-    }
-    setCurrentUserId(userId);
-  };
+  // Memoized so it is stable across renders — TripAccountSync depends on it in
+  // an effect, and an unstable identity would re-fire the /users/me lookup.
+  const setUser = useCallback(
+    (userId: number | null) => {
+      if (userId == null) {
+        localStorage.removeItem(userKey(tripId));
+      } else {
+        localStorage.setItem(userKey(tripId), String(userId));
+      }
+      setCurrentUserId(userId);
+    },
+    [tripId]
+  );
 
   const switchUser = () => {
     localStorage.removeItem(userKey(tripId));
@@ -172,6 +179,7 @@ export default function TripLayout() {
         deleteTrip,
       }}
     >
+      {clerkEnabled && <TripAccountSync />}
       <Outlet />
       <IdentityFlow
         open={identityOpen}

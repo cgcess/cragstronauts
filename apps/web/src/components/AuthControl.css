@@ -1,0 +1,36 @@
+/* Floating, bottom-right counterpart to the bottom-left theme toggle. */
+.auth-control {
+  position: fixed;
+  right: 16px;
+  bottom: calc(22px + env(safe-area-inset-bottom));
+  z-index: 60;
+  display: flex;
+  align-items: center;
+}
+
+.auth-control .auth-signin {
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: var(--min-surface);
+  color: var(--min-ink);
+  border: 1px solid var(--min-line);
+  font: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: var(--min-shadow-sm);
+  cursor: pointer;
+  transition: transform 120ms ease-out, background 160ms ease-out;
+}
+.auth-control .auth-signin:hover {
+  background: var(--min-surface-2);
+}
+.auth-control .auth-signin:active {
+  transform: scale(0.96);
+}
+.auth-control .auth-signin:focus-visible {
+  outline: 2px solid var(--min-accent-focus);
+  outline-offset: 3px;
+}

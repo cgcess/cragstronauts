@@ -1,8 +1,9 @@
-/* Floating, bottom-right counterpart to the bottom-left theme toggle. */
+/* Floating, top-right so it stays clear of the bottom action buttons
+   (Create / Join) and the bottom-left theme toggle. */
 .auth-control {
   position: fixed;
   right: 16px;
-  bottom: calc(22px + env(safe-area-inset-bottom));
+  top: calc(16px + env(safe-area-inset-top));
   z-index: 60;
   display: flex;
   align-items: center;

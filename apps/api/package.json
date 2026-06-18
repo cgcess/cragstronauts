@@ -11,6 +11,8 @@
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
+    "@clerk/backend": "^3.8.0",
+    "@clerk/hono": "^0.1.38",
     "@cragstronauts/contract": "workspace:*",
     "@hono/zod-openapi": "^0.19.6",
     "do-orm": "github:juanibiapina/do-orm",

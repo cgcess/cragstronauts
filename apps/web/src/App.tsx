@@ -4,14 +4,21 @@ import AlpsBackground from "./components/AlpsBackground";
 import GlassFilter from "./components/GlassFilter";
 import ThemeToggle from "./components/ThemeToggle";
 import { ConfirmProvider } from "./components/ui";
+import { clerkEnabled } from "./lib/clerk";
+import ClerkTokenBridge from "./components/ClerkTokenBridge";
+import AuthControl from "./components/AuthControl";
 
 export default function App() {
   return (
     <ConfirmProvider>
       <GlassFilter />
       <AlpsBackground />
+      {clerkEnabled && <ClerkTokenBridge />}
+      <div className="app-topbar">
+        <ThemeToggle />
+        {clerkEnabled && <AuthControl />}
+      </div>
       <Outlet />
-      <ThemeToggle />
     </ConfirmProvider>
   );
 }

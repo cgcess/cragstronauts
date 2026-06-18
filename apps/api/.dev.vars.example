@@ -1,0 +1,9 @@
+# Local Clerk keys for `wrangler dev`. Copy this file to `.dev.vars` (gitignored)
+# and fill in, or let the Clerk CLI write them for you:
+#   npx clerk env pull --app <your_app_id> --file apps/api/.dev.vars
+#
+# Find them on the Clerk dashboard API keys page. CLERK_PUBLISHABLE_KEY is safe
+# to expose; CLERK_SECRET_KEY is a secret. In production set both as Worker vars,
+# the secret via `wrangler secret put CLERK_SECRET_KEY`.
+CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=

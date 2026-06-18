@@ -34,6 +34,7 @@ import type {
   PollAnswerSchema,
 } from "@cragstronauts/contract";
 import { computeSimplifiedBalances, distributeEqual } from "./lib/balances";
+import { decideClaimBinding } from "./lib/claim";
 
 type Trip = z.infer<typeof TripSchema>;
 type TripLink = z.infer<typeof TripLinkSchema>;
@@ -322,15 +323,35 @@ export class TripDO extends DurableObject<Env> {
 
   // Mark a user as taken by a device. Adopting an existing identity
   // (pick-yourself or the "that's me" confirm) flips this flag server-side so
-  // other devices see the slot as claimed.
-  async claimUser(userId: number): Promise<User> {
+  // other devices see the slot as claimed. When the caller is signed in we also
+  // bind the slot to their Google account; once bound, only that account may
+  // re-claim it (the impersonation guard lives in decideClaimBinding).
+  async claimUser(userId: number, sessionAccountId: string | null = null): Promise<User> {
     const row = this.db.get(user, { where: eq("id", userId) });
     if (!row) throw new Error("User not found");
 
-    this.db.update(user, { claimed: 1 }, { where: eq("id", userId) });
+    const decision = decideClaimBinding({
+      boundAccountId: row.account_id ?? null,
+      sessionAccountId,
+    });
+    if (!decision.ok) {
+      throw new Error(
+        decision.reason === "account_required" ? "ACCOUNT_REQUIRED" : "ACCOUNT_MISMATCH"
+      );
+    }
+
+    const patch: { claimed: number; account_id?: string } = { claimed: 1 };
+    if (decision.bind !== null) patch.account_id = decision.bind;
+    this.db.update(user, patch, { where: eq("id", userId) });
 
     const updated = this.db.get(user, { where: eq("id", userId) })!;
     return formatUser(updated);
+  }
+
+  // Resolve which trip user (if any) a signed-in account has claimed here.
+  async findUserByAccount(accountId: string): Promise<User | null> {
+    const row = this.db.get(user, { where: eq("account_id", accountId) });
+    return row ? formatUser(row) : null;
   }
 
   async deleteUser(userId: number): Promise<{ ok: boolean }> {
@@ -1250,6 +1271,7 @@ function formatUser(r: {
   is_organizer: number;
   signup_completed: number;
   claimed: number;
+  account_id?: string | null;
 }): User {
   return {
     id: r.id,
@@ -1258,6 +1280,7 @@ function formatUser(r: {
     is_organizer: Boolean(r.is_organizer),
     signup_completed: Boolean(r.signup_completed),
     claimed: Boolean(r.claimed),
+    linked: r.account_id != null,
   };
 }
 

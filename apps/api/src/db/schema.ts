@@ -24,6 +24,9 @@ export const user = table("user", {
   is_organizer: column.integer().notNull().default(0),
   signup_completed: column.integer().notNull().default(0),
   claimed: column.integer().notNull().default(0),
+  // Google account `sub` this person is bound to, or NULL when unlinked (the
+  // cooperative-identity default). Set when a signed-in user claims this slot.
+  account_id: column.text(),
 });
 
 export const poll = table("poll", {

@@ -14,9 +14,11 @@ export default function App() {
       <GlassFilter />
       <AlpsBackground />
       {clerkEnabled && <ClerkTokenBridge />}
+      <div className="app-topbar">
+        <ThemeToggle />
+        {clerkEnabled && <AuthControl />}
+      </div>
       <Outlet />
-      <ThemeToggle />
-      {clerkEnabled && <AuthControl />}
     </ConfirmProvider>
   );
 }

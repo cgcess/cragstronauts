@@ -1,10 +1,5 @@
-/* Floating, top-right so it stays clear of the bottom action buttons
-   (Create / Join) and the bottom-left theme toggle. */
+/* Lives inside the global .app-topbar (right side); the bar owns placement. */
 .auth-control {
-  position: fixed;
-  right: 16px;
-  top: calc(16px + env(safe-area-inset-top));
-  z-index: 60;
   display: flex;
   align-items: center;
 }

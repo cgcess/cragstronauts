@@ -457,9 +457,41 @@ label {
   height: 100vh; /* fallback for browsers without dvh */
   height: 100dvh;
   position: relative;
+  /* Reserve the top strip for the global .app-topbar (theme + account) so its
+     controls never sit on top of page content or buttons. */
+  padding-top: calc(var(--app-topbar-h) + env(safe-area-inset-top));
   /* Transparent so AlpsBackground shows through */
   background: transparent;
 }
+
+/* Global top bar: theme toggle on the left, account control on the right,
+   pinned above every screen in the strip reserved by .app-shell's padding-top.
+   pointer-events:none on the bar (auto on its controls) so the empty middle
+   never intercepts taps. */
+:root { --app-topbar-h: 58px; }
+.app-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--app-topbar-h) + env(safe-area-inset-top));
+  padding: env(safe-area-inset-top) 16px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 80;
+  pointer-events: none;
+}
+.app-topbar > * { pointer-events: auto; }
+/* Drop the theme toggle's default fixed bottom-left placement inside the bar. */
+.app-topbar .theme-toggle {
+  position: static;
+  left: auto;
+  right: auto;
+  top: auto;
+  bottom: auto;
+}
+
 @media (min-width: 640px) {
   :root { --col: 600px; }
   .deck-shell, .deck-empty, .deck-hint { max-width: 420px; }

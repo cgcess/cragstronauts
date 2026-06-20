@@ -50,6 +50,19 @@ export function setAuthTokenGetter(getter: (() => Promise<string | null>) | null
   authTokenGetter = getter;
 }
 
+// Thrown for any non-2xx response. `status` carries the HTTP status so callers
+// can branch on it (e.g. a 403 from claim means the slot is bound to another
+// account and retrying is pointless). `message` stays the human-facing detail,
+// so existing code that surfaces `err.message` is unchanged.
+export class ApiError extends Error {
+  readonly status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {};
   const opts: RequestInit = { method, headers };
@@ -74,7 +87,7 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
     } catch {}
     // 4xx are user-facing domain errors with a meaningful detail message, so
     // show it as-is. 5xx are unexpected — keep the status code to aid debugging.
-    throw new Error(r.status >= 500 ? `${r.status} ${detail}` : detail);
+    throw new ApiError(r.status, r.status >= 500 ? `${r.status} ${detail}` : detail);
   }
   if (r.status === 204) return null as T;
   return r.json() as Promise<T>;

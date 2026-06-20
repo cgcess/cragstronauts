@@ -1194,7 +1194,9 @@ label {
   width: 100%;
   max-width: 380px;
   margin: 0 auto;
-  background: white;
+  /* Theme-aware surface (paper in light, dark in dark) so the title, which
+     uses a theme-aware ink color, stays legible in both modes. */
+  background: var(--surface);
   border: 1px solid var(--stone-200);
   border-radius: 24px;
   padding: 28px 24px;

@@ -16,7 +16,21 @@ interface Props {
   onClose: () => void;
 }
 
-const serialize = (p: CragProfile) => JSON.stringify(p);
+// Order-independent so the dirty check survives a save round-trip: Clerk reloads
+// unsafeMetadata with object keys in a different order than the live draft (the
+// draft appends new keys; the reloaded copy comes back in schema order), which
+// would otherwise read as "still dirty" immediately after a successful save.
+function stableStringify(v: unknown): string {
+  if (v === null || typeof v !== "object") return JSON.stringify(v) ?? "null";
+  if (Array.isArray(v)) return `[${v.map(stableStringify).join(",")}]`;
+  const o = v as Record<string, unknown>;
+  return `{${Object.keys(o)
+    .filter((k) => o[k] !== undefined)
+    .sort()
+    .map((k) => `${JSON.stringify(k)}:${stableStringify(o[k])}`)
+    .join(",")}}`;
+}
+const serialize = (p: CragProfile) => stableStringify(p);
 
 export default function ProfileDialog({ open, onClose }: Props) {
   const { user } = useUser();
@@ -26,8 +40,6 @@ export default function ProfileDialog({ open, onClose }: Props) {
   const [tab, setTab] = useState<Tab>("general");
   const [draft, setDraft] = useState<CragProfile>(profile);
   const [error, setError] = useState<string | null>(null);
-  const [justSaved, setJustSaved] = useState(false);
-  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Seed a fresh draft each time the dialog opens, and land on the tab that
   // makes sense (General when signed in, Account — i.e. sign in — when not).
@@ -36,7 +48,6 @@ export default function ProfileDialog({ open, onClose }: Props) {
     setDraft(profile);
     setTab(signedIn ? "general" : "account");
     setError(null);
-    setJustSaved(false);
     // Intentionally keyed on `open` only: re-seeding on every `profile` change
     // while open would clobber in-progress edits.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -70,12 +81,6 @@ export default function ProfileDialog({ open, onClose }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, draft]);
 
-  useEffect(() => {
-    return () => {
-      if (savedTimer.current) clearTimeout(savedTimer.current);
-    };
-  }, []);
-
   const dirty = serialize(draft) !== serialize(profile);
 
   const attemptClose = async () => {
@@ -96,9 +101,7 @@ export default function ProfileDialog({ open, onClose }: Props) {
     setError(null);
     try {
       await save(draft);
-      setJustSaved(true);
-      if (savedTimer.current) clearTimeout(savedTimer.current);
-      savedTimer.current = setTimeout(() => setJustSaved(false), 1800);
+      onClose(); // success — close the dialog; draft is saved so nothing is dirty
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't save. Try again.");
     }
@@ -180,9 +183,6 @@ export default function ProfileDialog({ open, onClose }: Props) {
             {showSave && (
               <footer className="pf-foot">
                 {error && <span className="pf-foot__error">{error}</span>}
-                {!error && justSaved && (
-                  <span className="pf-foot__saved">Saved ✓</span>
-                )}
                 <button
                   type="button"
                   className="pf-save"

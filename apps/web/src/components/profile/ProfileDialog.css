@@ -75,15 +75,18 @@
   color: var(--min-ink);
 }
 .pf-head__close {
+  flex: 0 0 auto;
   width: 32px;
   height: 32px;
-  display: grid;
-  place-items: center;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
   border-radius: 999px;
   background: var(--min-surface-2);
   border: 1px solid var(--min-line);
   color: var(--min-ink-2);
-  font-size: 13px;
   cursor: pointer;
 }
 .pf-head__close:hover {
@@ -166,82 +169,92 @@
   gap: 10px;
 }
 
-/* inputs */
+/* Box-sizing safety: the app's global element styles are aggressive, so make
+   sure everything in the dialog measures predictably (border-box). */
+.pf-dialog,
+.pf-dialog * {
+  box-sizing: border-box;
+}
+
+/* inputs — the visual style (bg / border / radius / padding) comes from the
+   app's global `input` rule (which is !important), so we only set sizing here,
+   keeping the dialog's fields consistent with the rest of the app. */
 .pf-input {
   height: 44px;
   width: 100%;
-  padding: 0 14px;
-  border-radius: 12px;
-  background: var(--min-surface-2);
-  border: 1px solid var(--min-line);
-  color: var(--min-ink);
-  font: inherit;
-  font-size: 15px;
-}
-.pf-input::placeholder {
-  color: var(--min-ink-3);
-}
-.pf-input:focus {
-  outline: none;
-  border-color: var(--min-accent);
-  box-shadow: 0 0 0 3px var(--min-accent-soft);
-}
-.pf-input--grow {
-  flex: 1 1 auto;
-  min-width: 0;
 }
 .pf-input--num {
-  width: 64px;
-  padding: 0 8px;
+  width: 88px;
   text-align: center;
 }
-.pf-num {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-}
-.pf-num__unit {
-  font-size: 11px;
-  color: var(--min-ink-3);
-  white-space: nowrap;
-}
 
-/* rows (cars / gear / companions) */
-.pf-row {
+/* item cards (cars / gear / companions) — one uniform shape: a header row
+   (emoji · title · remove) over a wrapping field grid, so the remove button and
+   every input line up identically no matter the label length or field count. */
+.pf-item {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 12px;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 14px;
   background: var(--min-surface-2);
   border: 1px solid var(--min-line);
 }
-.pf-row--wrap {
-  flex-wrap: wrap;
+.pf-item__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
-.pf-row__emoji {
+.pf-item__emoji {
+  flex: 0 0 auto;
   font-size: 20px;
   line-height: 1;
 }
-.pf-row__label {
-  font-weight: 600;
-  color: var(--min-ink);
+.pf-item__title {
   margin-right: auto;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--min-ink);
 }
+.pf-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 14px;
+}
+.pf-field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+.pf-field--grow {
+  flex: 1 1 160px;
+}
+.pf-field__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--min-ink-3);
+}
+
+/* remove (✕) — icon button. Reset the global button padding so the glyph
+   centers, and use flex centering (robust across browsers, incl. iOS Safari). */
 .pf-remove {
   flex: 0 0 auto;
-  margin-left: auto;
   width: 30px;
   height: 30px;
-  display: grid;
-  place-items: center;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
   border-radius: 999px;
   background: transparent;
   border: 1px solid var(--min-line);
   color: var(--min-ink-3);
-  font-size: 12px;
   cursor: pointer;
+  transition: color 140ms ease, border-color 140ms ease;
 }
 .pf-remove:hover {
   color: var(--min-danger);
@@ -535,11 +548,6 @@
   font-size: 13px;
   color: var(--min-danger);
 }
-.pf-foot__saved {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--min-accent);
-}
 .pf-save {
   height: 44px;
   padding: 0 24px;
@@ -564,19 +572,15 @@
   cursor: default;
 }
 
-/* ---------- phone: go full-screen ---------- */
+/* ---------- phone: stay an inset overlay so the scrim shows around it ------- */
 @media (max-width: 600px) {
   .pf-scrim {
-    padding: 0;
+    padding: max(20px, env(safe-area-inset-top) + 8px) 12px
+             max(20px, env(safe-area-inset-bottom) + 8px);
   }
   .pf-dialog {
     max-width: none;
-    max-height: none;
-    height: 100dvh;
-    border: none;
-    border-radius: 0;
-  }
-  .pf-head {
-    padding-top: calc(18px + env(safe-area-inset-top));
+    max-height: 100%;
+    border-radius: 18px;
   }
 }

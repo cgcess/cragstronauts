@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GEAR_CATALOG, GEAR_CATALOG_BY_SLUG } from "@cragstronauts/contract";
 import {
   type CragProfile,
@@ -10,6 +10,27 @@ import {
 import { Segmented, ToggleRow, XIcon } from "./controls";
 
 const uid = () => crypto.randomUUID();
+
+function SeatsInput({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => setDraft(String(value)), [value]);
+  return (
+    <input
+      className="pf-input pf-input--num"
+      type="number"
+      min={1}
+      max={12}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => {
+        const n = parseInt(draft, 10);
+        const clamped = isNaN(n) ? 1 : Math.max(1, Math.min(12, n));
+        onChange(clamped);
+        setDraft(String(clamped));
+      }}
+    />
+  );
+}
 
 const COMPANION_OPTIONS: { value: CompanionType; label: string }[] = [
   { value: "dog", label: "🐕 Dog" },
@@ -139,21 +160,9 @@ export default function GeneralTab({ value, onChange, placeholderName }: Props) 
                 </label>
                 <label className="pf-field">
                   <span className="pf-field__label">Seats</span>
-                  <input
-                    className="pf-input pf-input--num"
-                    type="number"
-                    min={1}
-                    max={12}
+                  <SeatsInput
                     value={car.seats}
-                    onChange={(e) => {
-                      const n = parseInt(e.target.value, 10);
-                      if (!isNaN(n)) updateCar(car.id, { seats: n });
-                    }}
-                    onBlur={() =>
-                      updateCar(car.id, {
-                        seats: Math.max(1, Math.min(12, car.seats)),
-                      })
-                    }
+                    onChange={(seats) => updateCar(car.id, { seats })}
                   />
                 </label>
               </div>

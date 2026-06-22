@@ -46,6 +46,7 @@ export const CreateTripBodySchema = z.object({
       name: z.string(),
       fields: z.array(GearCategoryFieldSchema),
       summary_mode: z.enum(["people", "total"]).optional(),
+      catalog_key: z.string().nullable().optional(),
     })
   ),
   polls: z

@@ -118,3 +118,21 @@ export function useProfile(): UseProfile {
 
   return { ready: isLoaded, signedIn: !!user, profile, save, saving };
 }
+
+// --- Join-time matching (Phase 2) -------------------------------------------
+
+/** The profile gear item whose catalog slug matches a trip gear category, if any. */
+export function gearForCategory(
+  profile: CragProfile | null | undefined,
+  category: { catalog_key?: string | null }
+): ProfileGear | undefined {
+  if (!profile || !category.catalog_key) return undefined;
+  return profile.gear.find((g) => g.slug === category.catalog_key);
+}
+
+/** The member's first saved car, used to prefill the "are you driving?" card. */
+export function firstCar(
+  profile: CragProfile | null | undefined
+): ProfileCar | undefined {
+  return profile?.cars[0];
+}

@@ -111,7 +111,7 @@ export const api = {
     signature: string;
     links?: { name: string; url: string }[];
     organizer_name: string;
-    gear_categories: { name: string; fields: { key: string; label: string; type: string }[] }[];
+    gear_categories: { name: string; fields: { key: string; label: string; type: string }[]; summary_mode?: "people" | "total"; catalog_key?: string | null }[];
     polls?: { question: string; description?: string | null; emoji?: string | null; options: { label: string; emoji?: string | null }[] }[];
   }) => req<CreateTripResponse>("POST", "/api/trips", data),
   getTrip: (tripId: string) => req<Trip>("GET", `/api/trips/${tripId}`),
@@ -152,12 +152,12 @@ export const api = {
   // Gear categories
   listCategories: (tripId: string) =>
     req<Category[]>("GET", `/api/trips/${tripId}/gear-categories`),
-  addCategory: (tripId: string, data: { name: string; fields: { key: string; label: string; type: string }[]; summary_mode?: "people" | "total" }) =>
+  addCategory: (tripId: string, data: { name: string; fields: { key: string; label: string; type: string }[]; summary_mode?: "people" | "total"; catalog_key?: string | null }) =>
     req<Category>("POST", `/api/trips/${tripId}/gear-categories`, data),
   updateCategory: (
     tripId: string,
     id: number,
-    data: { name?: string; fields?: { key: string; label: string; type: string }[]; summary_mode?: "people" | "total" }
+    data: { name?: string; fields?: { key: string; label: string; type: string }[]; summary_mode?: "people" | "total"; catalog_key?: string | null }
   ) => req<Category>("PATCH", `/api/trips/${tripId}/gear-categories/${id}`, data),
   deleteCategory: (tripId: string, id: number) =>
     req<Ok>("DELETE", `/api/trips/${tripId}/gear-categories/${id}`),

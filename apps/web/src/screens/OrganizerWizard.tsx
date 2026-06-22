@@ -7,6 +7,7 @@ import { cleanLinks } from "../lib/links";
 import LinksEditor from "../components/LinksEditor";
 import DateRangePicker from "../components/DateRangePicker";
 import { Button } from "../components/ui";
+import { GEAR_CATALOG } from "@cragstronauts/contract";
 
 interface CategoryField {
   key: string;
@@ -18,6 +19,9 @@ interface CategoryDraft {
   name: string;
   fields: CategoryField[];
   summary_mode: "people" | "total";
+  // Canonical catalog slug when this draft came from a preset; lets a member's
+  // saved profile kit match this category at join time. Undefined = custom.
+  catalog_key?: string;
 }
 
 interface GeoResult {
@@ -36,11 +40,13 @@ const defaultCategories: CategoryDraft[] = [
       { key: "diameter", label: "Diameter (mm)", type: "number" },
     ],
     summary_mode: "total",
+    catalog_key: "rope",
   },
   {
     name: "Quickdraws",
     fields: [{ key: "count", label: "How many", type: "number" }],
     summary_mode: "total",
+    catalog_key: "quickdraws",
   },
 ];
 
@@ -178,6 +184,7 @@ export default function OrganizerWizard() {
             name: c.name.trim(),
             fields: c.fields.filter((f) => f.key.trim() && f.label.trim()),
             summary_mode: c.summary_mode,
+            catalog_key: c.catalog_key ?? null,
           })),
       });
       localStorage.setItem(userKey(res.trip_id), String(res.organizer_user_id));
@@ -491,6 +498,41 @@ export default function OrganizerWizard() {
                   </div>
                 </motion.div>
               ))}
+              {GEAR_CATALOG.some(
+                (g) => !categories.some((c) => c.catalog_key === g.slug)
+              ) && (
+                <motion.div
+                  variants={item}
+                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                >
+                  <span className="muted">Quick-add common gear</span>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {GEAR_CATALOG.filter(
+                      (g) => !categories.some((c) => c.catalog_key === g.slug)
+                    ).map((g) => (
+                      <button
+                        key={g.slug}
+                        type="button"
+                        className="th-btn th-btn--secondary th-btn--pill"
+                        style={{ minHeight: 0, padding: "8px 14px" }}
+                        onClick={() =>
+                          setCategories([
+                            ...categories,
+                            {
+                              name: g.label,
+                              fields: g.fields.map((f) => ({ ...f })),
+                              summary_mode: "total",
+                              catalog_key: g.slug,
+                            },
+                          ])
+                        }
+                      >
+                        {g.emoji} {g.label}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
               <motion.button
                 variants={item}
                 className="th-btn th-btn--secondary"

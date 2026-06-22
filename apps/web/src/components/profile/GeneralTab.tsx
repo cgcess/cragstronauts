@@ -17,6 +17,12 @@ const COMPANION_OPTIONS: { value: CompanionType; label: string }[] = [
   { value: "kid", label: "🧒 Kid" },
 ];
 
+const COMPANION_EMOJI: Record<CompanionType, string> = {
+  dog: "🐕",
+  cat: "🐈",
+  kid: "🧒",
+};
+
 interface Props {
   value: CragProfile;
   onChange: (next: CragProfile) => void;
@@ -112,33 +118,41 @@ export default function GeneralTab({ value, onChange, placeholderName }: Props) 
       <Section title="Wheels" hint="Cars you could bring to share the drive.">
         <div className="pf-stack">
           {value.cars.map((car) => (
-            <div key={car.id} className="pf-row">
-              <span className="pf-row__emoji" aria-hidden="true">
-                🚐
-              </span>
-              <input
-                className="pf-input pf-input--grow"
-                value={car.name ?? ""}
-                placeholder="Nickname (optional)"
-                onChange={(e) => updateCar(car.id, { name: e.target.value })}
-                maxLength={40}
-              />
-              <label className="pf-num">
-                <input
-                  className="pf-input pf-input--num"
-                  type="number"
-                  min={1}
-                  max={12}
-                  value={car.seats}
-                  onChange={(e) =>
-                    updateCar(car.id, {
-                      seats: Math.max(1, Math.min(12, Number(e.target.value) || 1)),
-                    })
-                  }
-                />
-                <span className="pf-num__unit">seats</span>
-              </label>
-              <RemoveButton onClick={() => removeCar(car.id)} label="Remove car" />
+            <div key={car.id} className="pf-item">
+              <div className="pf-item__head">
+                <span className="pf-item__emoji" aria-hidden="true">
+                  🚐
+                </span>
+                <span className="pf-item__title">Car</span>
+                <RemoveButton onClick={() => removeCar(car.id)} label="Remove car" />
+              </div>
+              <div className="pf-fields">
+                <label className="pf-field pf-field--grow">
+                  <span className="pf-field__label">Nickname</span>
+                  <input
+                    className="pf-input"
+                    value={car.name ?? ""}
+                    placeholder="Optional"
+                    onChange={(e) => updateCar(car.id, { name: e.target.value })}
+                    maxLength={40}
+                  />
+                </label>
+                <label className="pf-field">
+                  <span className="pf-field__label">Seats</span>
+                  <input
+                    className="pf-input pf-input--num"
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={car.seats}
+                    onChange={(e) =>
+                      updateCar(car.id, {
+                        seats: Math.max(1, Math.min(12, Number(e.target.value) || 1)),
+                      })
+                    }
+                  />
+                </label>
+              </div>
             </div>
           ))}
           <button type="button" className="pf-add" onClick={addCar}>
@@ -195,23 +209,37 @@ export default function GeneralTab({ value, onChange, placeholderName }: Props) 
       <Section title="Companions" hint="Dogs, cats, or kids coming along.">
         <div className="pf-stack">
           {value.companions.map((c) => (
-            <div key={c.id} className="pf-row pf-row--wrap">
-              <Segmented
-                value={c.type}
-                onChange={(type) => updateCompanion(c.id, { type })}
-                options={COMPANION_OPTIONS}
-              />
-              <input
-                className="pf-input pf-input--grow"
-                value={c.name}
-                placeholder="Name"
-                onChange={(e) => updateCompanion(c.id, { name: e.target.value })}
-                maxLength={40}
-              />
-              <RemoveButton
-                onClick={() => removeCompanion(c.id)}
-                label="Remove companion"
-              />
+            <div key={c.id} className="pf-item">
+              <div className="pf-item__head">
+                <span className="pf-item__emoji" aria-hidden="true">
+                  {COMPANION_EMOJI[c.type]}
+                </span>
+                <span className="pf-item__title">Companion</span>
+                <RemoveButton
+                  onClick={() => removeCompanion(c.id)}
+                  label="Remove companion"
+                />
+              </div>
+              <div className="pf-fields">
+                <label className="pf-field pf-field--grow">
+                  <span className="pf-field__label">Name</span>
+                  <input
+                    className="pf-input"
+                    value={c.name}
+                    placeholder="Name"
+                    onChange={(e) => updateCompanion(c.id, { name: e.target.value })}
+                    maxLength={40}
+                  />
+                </label>
+                <div className="pf-field">
+                  <span className="pf-field__label">Type</span>
+                  <Segmented
+                    value={c.type}
+                    onChange={(type) => updateCompanion(c.id, { type })}
+                    options={COMPANION_OPTIONS}
+                  />
+                </div>
+              </div>
             </div>
           ))}
           <button type="button" className="pf-add" onClick={addCompanion}>
@@ -255,24 +283,30 @@ function GearRow({
   const item = GEAR_CATALOG_BY_SLUG[gear.slug];
   if (!item) return null; // slug no longer in the catalog — skip rather than crash
   return (
-    <div className="pf-row pf-row--wrap">
-      <span className="pf-row__emoji" aria-hidden="true">
-        {item.emoji}
-      </span>
-      <span className="pf-row__label">{item.label}</span>
-      {item.fields.map((f) => (
-        <label key={f.key} className="pf-num">
-          <input
-            className="pf-input pf-input--num"
-            type="number"
-            inputMode="decimal"
-            value={(gear.values?.[f.key] as number | undefined) ?? ""}
-            onChange={(e) => onValue(f.key, e.target.value)}
-          />
-          <span className="pf-num__unit">{f.label}</span>
-        </label>
-      ))}
-      <RemoveButton onClick={onRemove} label={`Remove ${item.label}`} />
+    <div className="pf-item">
+      <div className="pf-item__head">
+        <span className="pf-item__emoji" aria-hidden="true">
+          {item.emoji}
+        </span>
+        <span className="pf-item__title">{item.label}</span>
+        <RemoveButton onClick={onRemove} label={`Remove ${item.label}`} />
+      </div>
+      {item.fields.length > 0 && (
+        <div className="pf-fields">
+          {item.fields.map((f) => (
+            <label key={f.key} className="pf-field">
+              <span className="pf-field__label">{f.label}</span>
+              <input
+                className="pf-input pf-input--num"
+                type="number"
+                inputMode="decimal"
+                value={(gear.values?.[f.key] as number | undefined) ?? ""}
+                onChange={(e) => onValue(f.key, e.target.value)}
+              />
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

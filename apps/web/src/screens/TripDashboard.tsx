@@ -1279,15 +1279,24 @@ export default function TripDashboard() {
                     </span>
                     <span className="fl-detail-hero__logistics-detail fl-detail-hero__links">
                       {trip.links.map((l, i) => (
-                        <a
-                          key={i}
-                          href={l.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="fl-detail-hero__link"
-                        >
-                          {l.name}
-                        </a>
+                        <React.Fragment key={i}>
+                          {i > 0 && (
+                            <span
+                              className="landing-fact__links-sep"
+                              aria-hidden="true"
+                            >
+                              ·
+                            </span>
+                          )}
+                          <a
+                            href={l.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="fl-detail-hero__link"
+                          >
+                            {l.name}
+                          </a>
+                        </React.Fragment>
                       ))}
                     </span>
                   </div>
@@ -1389,12 +1398,18 @@ export default function TripDashboard() {
                       Climbers · {joining.length}
                     </span>
                     <span className="fl-detail-hero__logistics-detail fl-detail-hero__climbers">
-                      {joining.map((u, i) => (
-                        <span key={u.id}>
-                          {u.name}{u.is_organizer ? " 👑" : ""}
-                          {i < joining.length - 1 ? ", " : ""}
-                        </span>
-                      ))}
+                      {joining.map((u, i) => {
+                        const isMe = u.id === currentUserId;
+                        return (
+                          <span key={u.id}>
+                            <span style={isMe ? { fontWeight: 600 } : undefined}>
+                              {u.name}{u.is_organizer ? " 👑" : ""}
+                              {isMe ? " (you)" : ""}
+                            </span>
+                            {i < joining.length - 1 ? ", " : ""}
+                          </span>
+                        );
+                      })}
                     </span>
                   </div>
                 </div>
@@ -2651,7 +2666,12 @@ function CarsBody({
               </p>
             )}
             <div className="seat-row">
-              <span className="seat driver">🚗 {c.driver_name}</span>
+              <span
+                className="seat driver"
+                style={isDriver ? { fontWeight: 600 } : undefined}
+              >
+                🚗 {c.driver_name}{isDriver ? " (you)" : ""}
+              </span>
               {c.passengers.map((p) => (
                 <span className="seat" key={p.user_id}>
                   {p.name}

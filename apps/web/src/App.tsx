@@ -6,7 +6,7 @@ import ThemeToggle from "./components/ThemeToggle";
 import { ConfirmProvider } from "./components/ui";
 import { clerkEnabled } from "./lib/clerk";
 import ClerkTokenBridge from "./components/ClerkTokenBridge";
-import AuthControl from "./components/AuthControl";
+import ProfileButton from "./components/profile/ProfileButton";
 
 export default function App() {
   return (
@@ -16,7 +16,7 @@ export default function App() {
       {clerkEnabled && <ClerkTokenBridge />}
       <div className="app-topbar">
         <ThemeToggle />
-        {clerkEnabled && <AuthControl />}
+        {clerkEnabled && <ProfileButton />}
       </div>
       <Outlet />
     </ConfirmProvider>

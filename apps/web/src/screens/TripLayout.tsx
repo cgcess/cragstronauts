@@ -13,6 +13,8 @@ import { extractTripId, slugify } from "../lib/tripUrl";
 import IdentityFlow from "./IdentityFlow";
 import { clerkEnabled } from "../lib/clerk";
 import TripAccountSync from "../components/TripAccountSync";
+import ProfileBridge from "../components/ProfileBridge";
+import type { CragProfile } from "../lib/profile";
 
 const userKey = (tripId: string) => `climbingTrip.userId.${tripId}`;
 
@@ -49,6 +51,10 @@ export default function TripLayout() {
   // Polls-only nudge deck (dashboard "finish your polls" card). Holds the
   // pre-filtered poll list while open; null means closed.
   const [questionPolls, setQuestionPolls] = useState<Poll[] | null>(null);
+
+  // Signed-in member's saved kit, lifted from Clerk by ProfileBridge (gated), to
+  // prefill the identify questionnaire. Null when signed out / Clerk disabled.
+  const [prefillProfile, setPrefillProfile] = useState<CragProfile | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -180,6 +186,7 @@ export default function TripLayout() {
       }}
     >
       {clerkEnabled && <TripAccountSync />}
+      {clerkEnabled && <ProfileBridge onProfile={setPrefillProfile} />}
       <Outlet />
       <IdentityFlow
         open={identityOpen}
@@ -187,6 +194,7 @@ export default function TripLayout() {
         users={users}
         categories={categories}
         polls={polls}
+        profile={prefillProfile}
         setUser={setUser}
         refresh={refresh}
         onDone={resolveIdentity}

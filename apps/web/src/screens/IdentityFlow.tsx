@@ -11,6 +11,7 @@ import { api } from "../api";
 import type { User, Category, Poll } from "../context/TripContext";
 import { Button, Tag } from "../components/ui";
 import { findNameMatches } from "../lib/identity";
+import { gearForCategory, firstCar, type CragProfile } from "../lib/profile";
 
 /* ------------------------------------------------------------------ */
 /* IdentityFlow                                                        */
@@ -58,6 +59,8 @@ interface IdentityFlowProps {
    */
   mode?: "identify" | "questions";
   questionUserId?: number | null;
+  /** Signed-in member's saved kit, used to prefill the questionnaire. */
+  profile?: CragProfile | null;
 }
 
 export default function IdentityFlow({
@@ -71,6 +74,7 @@ export default function IdentityFlow({
   onDone,
   mode = "identify",
   questionUserId = null,
+  profile = null,
 }: IdentityFlowProps) {
   const pollsOnly = mode === "questions";
   const [phase, setPhase] = useState<Phase>("identify");
@@ -177,6 +181,7 @@ export default function IdentityFlow({
                 users={users}
                 onCreate={createAndContinue}
                 onPick={pickExisting}
+                defaultName={profile?.username}
               />
             ) : (
               <Questionnaire
@@ -185,6 +190,7 @@ export default function IdentityFlow({
                 categories={categories}
                 polls={polls}
                 pollsOnly={pollsOnly}
+                profile={profile}
                 onComplete={finishQuestions}
                 onNotJoining={notJoining}
               />
@@ -205,12 +211,14 @@ function IdentifyPanel({
   users,
   onCreate,
   onPick,
+  defaultName,
 }: {
   users: User[];
   onCreate: (name: string) => Promise<void>;
   onPick: (id: number) => Promise<void>;
+  defaultName?: string;
 }) {
-  const [name, setName] = useState("");
+  const [name, setName] = useState(defaultName ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // When the typed name collides with existing people, hold them here so the
@@ -390,7 +398,8 @@ interface Question {
 function buildQuestions(
   categories: Category[],
   polls: Poll[],
-  pollsOnly = false
+  pollsOnly = false,
+  profile?: CragProfile | null
 ): Question[] {
   // The nudge deck only mops up unanswered polls — skip the joining, gear and
   // driving cards entirely.
@@ -414,20 +423,32 @@ function buildQuestions(
   }
   if (pollsOnly) return qs;
   for (const c of categories) {
+    // When the member's saved kit matches this category (by catalog slug), the
+    // card greets their gear and the detail form arrives pre-filled.
+    const mine = gearForCategory(profile, c);
     qs.push({
       id: `gear:${c.id}`,
-      title: `Are you bringing a ${c.name.toLowerCase()}?`,
-      sub: c.fields.length
-        ? "If yes, we'll ask for details."
-        : "Swipe right if you'll bring one.",
+      title: mine
+        ? `Bring your ${c.name.toLowerCase()}?`
+        : `Are you bringing a ${c.name.toLowerCase()}?`,
+      sub: mine
+        ? c.fields.length
+          ? "From your kit. Confirm the details."
+          : "From your kit. Swipe right to bring it."
+        : c.fields.length
+          ? "If yes, we'll ask for details."
+          : "Swipe right if you'll bring one.",
       kind: "gear",
       category: c,
     });
   }
+  const car = firstCar(profile);
   qs.push({
     id: "driving",
-    title: "Are you driving?",
-    sub: "If yes, we'll ask how many seats.",
+    title: car ? "Bring your car?" : "Are you driving?",
+    sub: car
+      ? `You saved ${car.seats} seats. Swipe right if you're in.`
+      : "If yes, we'll ask how many seats.",
     kind: "driving",
   });
   return qs;
@@ -439,6 +460,7 @@ function Questionnaire({
   categories,
   polls,
   pollsOnly = false,
+  profile = null,
   onComplete,
   onNotJoining,
 }: {
@@ -447,12 +469,13 @@ function Questionnaire({
   categories: Category[];
   polls: Poll[];
   pollsOnly?: boolean;
+  profile?: CragProfile | null;
   onComplete: () => void;
   onNotJoining: () => void;
 }) {
   const questions = useMemo(
-    () => buildQuestions(categories, polls, pollsOnly),
-    [categories, polls, pollsOnly]
+    () => buildQuestions(categories, polls, pollsOnly, profile),
+    [categories, polls, pollsOnly, profile]
   );
   const [idx, setIdx] = useState(0);
   const [details, setDetails] = useState<DetailState | null>(null);
@@ -499,11 +522,24 @@ function Questionnaire({
 
   const handleAnswer = async (yes: boolean) => {
     if (yes && q.kind === "gear" && q.category!.fields.length) {
-      setDetails({ kind: "gear", category: q.category!, values: {} });
+      // Pre-fill the detail form from the member's matching saved gear.
+      const mine = gearForCategory(profile, q.category!);
+      const values: Record<string, string> = {};
+      if (mine?.values) {
+        for (const f of q.category!.fields) {
+          const v = mine.values[f.key];
+          if (v != null) values[f.key] = String(v);
+        }
+      }
+      setDetails({ kind: "gear", category: q.category!, values });
       return;
     }
     if (yes && q.kind === "driving") {
-      setDetails({ kind: "driving", values: { seats: "4" } });
+      const car = firstCar(profile);
+      setDetails({
+        kind: "driving",
+        values: { seats: car ? String(car.seats) : "4" },
+      });
       return;
     }
     if (q.id === "joining" && !yes) {

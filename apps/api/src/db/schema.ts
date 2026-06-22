@@ -57,6 +57,9 @@ export const gearCategory = table("gear_category", {
   name: column.text().notNull(),
   fields: column.text().notNull(),
   summary_mode: column.text().notNull().default("people"),
+  // Canonical catalog slug (GEAR_CATALOG) when this category came from a preset,
+  // or NULL for free-form custom gear. Lets a profile's kit match the category.
+  catalog_key: column.text(),
 });
 
 export const car = table("car", {

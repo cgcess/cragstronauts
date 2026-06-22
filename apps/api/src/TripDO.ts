@@ -94,6 +94,7 @@ export class TripDO extends DurableObject<Env> {
       name: string;
       fields: { key: string; label: string; type: string }[];
       summary_mode?: "people" | "total";
+      catalog_key?: string | null;
     }[];
     polls?: PollInput[];
     organizer_name: string;
@@ -124,6 +125,7 @@ export class TripDO extends DurableObject<Env> {
         name: cat.name.trim(),
         fields: JSON.stringify(fields),
         summary_mode: cat.summary_mode ?? "people",
+        catalog_key: cat.catalog_key ?? null,
       });
     }
 
@@ -436,12 +438,18 @@ export class TripDO extends DurableObject<Env> {
       name: string;
       fields: { key: string; label: string; type: string }[];
       summary_mode?: "people" | "total";
+      catalog_key?: string | null;
     }
   ): Promise<Category> {
     const row = this.db.insertReturning(
       gearCategory,
-      { name: data.name, fields: JSON.stringify(data.fields), summary_mode: data.summary_mode ?? "people" },
-      ["id", "name", "fields", "summary_mode"]
+      {
+        name: data.name,
+        fields: JSON.stringify(data.fields),
+        summary_mode: data.summary_mode ?? "people",
+        catalog_key: data.catalog_key ?? null,
+      },
+      ["id", "name", "fields", "summary_mode", "catalog_key"]
     );
     return formatCategory(row);
   }
@@ -452,12 +460,18 @@ export class TripDO extends DurableObject<Env> {
       name?: string;
       fields?: { key: string; label: string; type: string }[];
       summary_mode?: "people" | "total";
+      catalog_key?: string | null;
     }
   ): Promise<Category> {
     const row = this.db.get(gearCategory, { where: eq("id", catId) });
     if (!row) throw new Error("Category not found");
 
-    const patch: { name?: string; fields?: string; summary_mode?: string } = {};
+    const patch: {
+      name?: string;
+      fields?: string;
+      summary_mode?: string;
+      catalog_key?: string | null;
+    } = {};
     if (data.name !== undefined) {
       const trimmed = data.name.trim();
       if (!trimmed) throw new Error("Name cannot be empty");
@@ -468,6 +482,9 @@ export class TripDO extends DurableObject<Env> {
     }
     if (data.summary_mode !== undefined) {
       patch.summary_mode = data.summary_mode;
+    }
+    if (data.catalog_key !== undefined) {
+      patch.catalog_key = data.catalog_key;
     }
 
     this.db.update(gearCategory, patch, { where: eq("id", catId) });
@@ -1289,11 +1306,13 @@ function formatCategory(r: {
   name: string;
   fields: string;
   summary_mode?: string;
+  catalog_key?: string | null;
 }): Category {
   return {
     id: r.id,
     name: r.name,
     fields: typeof r.fields === "string" ? JSON.parse(r.fields) : r.fields,
     summary_mode: (r.summary_mode as "people" | "total") ?? "people",
+    catalog_key: r.catalog_key ?? null,
   };
 }

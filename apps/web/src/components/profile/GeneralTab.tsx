@@ -145,9 +145,13 @@ export default function GeneralTab({ value, onChange, placeholderName }: Props) 
                     min={1}
                     max={12}
                     value={car.seats}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const n = parseInt(e.target.value, 10);
+                      if (!isNaN(n)) updateCar(car.id, { seats: n });
+                    }}
+                    onBlur={() =>
                       updateCar(car.id, {
-                        seats: Math.max(1, Math.min(12, Number(e.target.value) || 1)),
+                        seats: Math.max(1, Math.min(12, car.seats)),
                       })
                     }
                   />

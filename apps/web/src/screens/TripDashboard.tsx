@@ -2483,6 +2483,9 @@ function CarsBody({
   const [error, setError] = useState<string | null>(null);
   // Which car's empty seat is showing the chooser / dog picker.
   const [chooserCar, setChooserCar] = useState<number | null>(null);
+  // Which car's notes are being edited (driver only), and the draft value.
+  const [editingNotes, setEditingNotes] = useState<number | null>(null);
+  const [notesDraft, setNotesDraft] = useState("");
   const [newDogName, setNewDogName] = useState("");
   // Whether the chooser's compact "new dog" name field is expanded.
   const [showNewDog, setShowNewDog] = useState(false);
@@ -2604,14 +2607,14 @@ function CarsBody({
         const iAmIn =
           isDriver ||
           c.passengers.some((p) => p.user_id === currentUserId);
-        const updateCar = async (patch: { total_seats?: number; reserved_seats?: number }) => {
+        const updateCar = async (patch: { total_seats?: number; reserved_seats?: number; notes?: string | null }) => {
           setError(null);
           try {
             await api.createCar(tripId, {
               driver_user_id: c.driver_user_id,
               total_seats: patch.total_seats ?? c.total_seats,
               reserved_seats: patch.reserved_seats ?? c.reserved_seats,
-              notes: c.notes,
+              notes: "notes" in patch ? (patch.notes ?? null) : c.notes,
             });
             onChanged();
           } catch (e) {
@@ -2673,10 +2676,64 @@ function CarsBody({
                 </button>
               )}
             </div>
-            {c.notes && (
-              <p style={{ marginTop: 8 }}>
-                <Linkify>{c.notes}</Linkify>
-              </p>
+            {editingNotes === c.id ? (
+              <div style={{ marginTop: 8 }}>
+                <input
+                  value={notesDraft}
+                  onChange={(e) => setNotesDraft(e.target.value)}
+                  placeholder="e.g. leaving Friday 5pm"
+                />
+                <div className="row" style={{ marginTop: 8 }}>
+                  <button
+                    className="th-btn th-btn--secondary"
+                    onClick={() => setEditingNotes(null)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="th-btn th-btn--primary"
+                    style={{ flex: 1 }}
+                    onClick={async () => {
+                      await updateCar({ notes: notesDraft.trim() || null });
+                      setEditingNotes(null);
+                    }}
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            ) : c.notes ? (
+              <div className="row between" style={{ marginTop: 8, alignItems: "flex-start", gap: 8 }}>
+                <p style={{ margin: 0 }}>
+                  <Linkify>{c.notes}</Linkify>
+                </p>
+                {isDriver && (
+                  <button
+                    type="button"
+                    className="th-btn th-btn--tertiary th-btn--sm"
+                    onClick={() => {
+                      setNotesDraft(c.notes ?? "");
+                      setEditingNotes(c.id);
+                    }}
+                  >
+                    Edit
+                  </button>
+                )}
+              </div>
+            ) : (
+              isDriver && (
+                <button
+                  type="button"
+                  className="th-btn th-btn--tertiary th-btn--sm"
+                  style={{ marginTop: 8 }}
+                  onClick={() => {
+                    setNotesDraft("");
+                    setEditingNotes(c.id);
+                  }}
+                >
+                  + Add notes
+                </button>
+              )
             )}
             <div className="seat-row">
               <span

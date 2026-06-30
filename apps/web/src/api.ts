@@ -12,6 +12,7 @@ import type {
   DogSchema,
   GearCategorySchema,
   GearContributionSchema,
+  GearDeclineSchema,
   PollSchema,
   PollAnswerSchema,
   ExpenseSchema,
@@ -28,6 +29,7 @@ type Car = z.infer<typeof CarSchema>;
 export type Dog = z.infer<typeof DogSchema>;
 type Category = z.infer<typeof GearCategorySchema>;
 type Contribution = z.infer<typeof GearContributionSchema>;
+type Decline = z.infer<typeof GearDeclineSchema>;
 type Poll = z.infer<typeof PollSchema>;
 type PollAnswer = z.infer<typeof PollAnswerSchema>;
 type PollInput = {
@@ -190,6 +192,14 @@ export const api = {
     req<Contribution>("POST", `/api/trips/${tripId}/gear`, data),
   deleteGear: (tripId: string, id: number) =>
     req<Ok>("DELETE", `/api/trips/${tripId}/gear/${id}`),
+
+  // Gear declines ("not bringing one")
+  listGearDeclines: (tripId: string) =>
+    req<Decline[]>("GET", `/api/trips/${tripId}/gear-declines`),
+  addGearDecline: (tripId: string, data: { user_id: number; category_id: number }) =>
+    req<Decline>("POST", `/api/trips/${tripId}/gear-declines`, data),
+  deleteGearDecline: (tripId: string, id: number) =>
+    req<Ok>("DELETE", `/api/trips/${tripId}/gear-declines/${id}`),
 
   // Polls
   listPolls: (tripId: string) => req<Poll[]>("GET", `/api/trips/${tripId}/polls`),

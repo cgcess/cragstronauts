@@ -11,6 +11,7 @@ import {
   dog,
   carDog,
   gearContribution,
+  gearDecline,
   expense,
   expenseSplit,
   feedback,
@@ -27,6 +28,7 @@ import type {
   CarSchema,
   DogSchema,
   GearContributionSchema,
+  GearDeclineSchema,
   ExpenseSchema,
   SettlementSchema,
   FeedbackSchema,
@@ -44,6 +46,7 @@ type Category = z.infer<typeof GearCategorySchema>;
 type Car = z.infer<typeof CarSchema>;
 type Dog = z.infer<typeof DogSchema>;
 type Contribution = z.infer<typeof GearContributionSchema>;
+type Decline = z.infer<typeof GearDeclineSchema>;
 type Expense = z.infer<typeof ExpenseSchema>;
 type Settlement = z.infer<typeof SettlementSchema>;
 type Poll = z.infer<typeof PollSchema>;
@@ -291,6 +294,7 @@ export class TripDO extends DurableObject<Env> {
     this.db.raw("DELETE FROM poll_answer", []);
     this.db.raw("DELETE FROM poll_option", []);
     this.db.raw("DELETE FROM poll", []);
+    this.db.raw("DELETE FROM gear_decline", []);
     this.db.raw("DELETE FROM gear_contribution", []);
     this.db.raw("DELETE FROM car_signup", []);
     this.db.raw("DELETE FROM car", []);
@@ -731,6 +735,12 @@ export class TripDO extends DurableObject<Env> {
     const u = this.db.get(user, { where: eq("id", data.user_id) });
     if (!u) throw new Error("User not found");
 
+    // Bringing one supersedes a prior "not bringing one" answer.
+    this.db.raw(
+      "DELETE FROM gear_decline WHERE user_id = ? AND category_id = ?",
+      [data.user_id, data.category_id]
+    );
+
     const row = this.db.insertReturning(
       gearContribution,
       {
@@ -745,6 +755,39 @@ export class TripDO extends DurableObject<Env> {
 
   async deleteGear(contribId: number): Promise<{ ok: boolean }> {
     this.db.delete(gearContribution, { where: eq("id", contribId) });
+    return { ok: true };
+  }
+
+  async listGearDeclines(): Promise<Decline[]> {
+    return this.db.all(gearDecline).map((r) => this.formatDecline(r));
+  }
+
+  async addGearDecline(data: {
+    user_id: number;
+    category_id: number;
+  }): Promise<Decline> {
+    const u = this.db.get(user, { where: eq("id", data.user_id) });
+    if (!u) throw new Error("User not found");
+
+    // Idempotent: a repeat tap returns the existing row, never a duplicate.
+    const existing = this.db
+      .all(gearDecline)
+      .find(
+        (d) =>
+          d.user_id === data.user_id && d.category_id === data.category_id
+      );
+    if (existing) return this.formatDecline(existing);
+
+    const row = this.db.insertReturning(
+      gearDecline,
+      { user_id: data.user_id, category_id: data.category_id },
+      ["id", "user_id", "category_id"]
+    );
+    return this.formatDecline(row);
+  }
+
+  async deleteGearDecline(declineId: number): Promise<{ ok: boolean }> {
+    this.db.delete(gearDecline, { where: eq("id", declineId) });
     return { ok: true };
   }
 
@@ -1244,6 +1287,20 @@ export class TripDO extends DurableObject<Env> {
       category_id: r.category_id,
       category_name: cat ? cat.name : "(unknown)",
       details: typeof r.details === "string" ? JSON.parse(r.details) : r.details,
+    };
+  }
+
+  private formatDecline(r: {
+    id: number;
+    user_id: number;
+    category_id: number;
+  }): Decline {
+    const u = this.db.get(user, { where: eq("id", r.user_id) });
+    return {
+      id: r.id,
+      user_id: r.user_id,
+      user_name: u ? u.name : "(unknown)",
+      category_id: r.category_id,
     };
   }
 }

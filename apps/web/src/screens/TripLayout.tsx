@@ -6,6 +6,8 @@ import {
   type Trip,
   type User,
   type Category,
+  type GearContribution,
+  type GearDecline,
   type Poll,
   type PollAnswer,
 } from "../context/TripContext";
@@ -35,6 +37,8 @@ export default function TripLayout() {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [gear, setGear] = useState<GearContribution[]>([]);
+  const [gearDeclines, setGearDeclines] = useState<GearDecline[]>([]);
   const [polls, setPolls] = useState<Poll[]>([]);
   const [pollAnswers, setPollAnswers] = useState<PollAnswer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,9 +52,10 @@ export default function TripLayout() {
   const [identityOpen, setIdentityOpen] = useState(false);
   const resolverRef = useRef<((id: number | null) => void) | null>(null);
 
-  // Polls-only nudge deck (dashboard "finish your polls" card). Holds the
-  // pre-filtered poll list while open; null means closed.
+  // Nudge deck (dashboard "finish your answers" card). Holds the pre-filtered
+  // poll and gear-category lists while open; null means closed.
   const [questionPolls, setQuestionPolls] = useState<Poll[] | null>(null);
+  const [questionCategories, setQuestionCategories] = useState<Category[]>([]);
 
   // Signed-in member's saved kit, lifted from Clerk by ProfileBridge (gated), to
   // prefill the identify questionnaire. Null when signed out / Clerk disabled.
@@ -60,14 +65,18 @@ export default function TripLayout() {
     try {
       const t = await api.getTrip(tripId);
       setTrip(t);
-      const [u, c, p, pa] = await Promise.all([
+      const [u, c, g, gd, p, pa] = await Promise.all([
         api.listUsers(tripId),
         api.listCategories(tripId),
+        api.listGear(tripId),
+        api.listGearDeclines(tripId),
         api.listPolls(tripId),
         api.listPollAnswers(tripId),
       ]);
       setUsers(u);
       setCategories(c);
+      setGear(g);
+      setGearDeclines(gd);
       setPolls(p);
       setPollAnswers(pa);
     } catch {
@@ -135,9 +144,11 @@ export default function TripLayout() {
   }, [tripId]);
 
   const openQuestions = useCallback(
-    (polls: Poll[]) => {
+    (polls: Poll[], cats: Category[] = []) => {
       // Only meaningful once we know who the user is.
-      if (currentUserId == null || polls.length === 0) return;
+      if (currentUserId == null || (polls.length === 0 && cats.length === 0))
+        return;
+      setQuestionCategories(cats);
       setQuestionPolls(polls);
     },
     [currentUserId]
@@ -174,6 +185,8 @@ export default function TripLayout() {
         trip,
         users,
         categories,
+        gear,
+        gearDeclines,
         polls,
         pollAnswers,
         currentUserId,
@@ -199,15 +212,15 @@ export default function TripLayout() {
         refresh={refresh}
         onDone={resolveIdentity}
       />
-      {/* Polls-only deck for the dashboard nudge: already-identified user,
-          pre-filtered to their unanswered polls. */}
+      {/* Nudge deck for the dashboard card: already-identified user,
+          pre-filtered to their unanswered polls and pending gear. */}
       <IdentityFlow
         open={questionPolls != null}
         mode="questions"
         questionUserId={currentUserId}
         tripId={tripId}
         users={users}
-        categories={categories}
+        categories={questionCategories}
         polls={questionPolls ?? []}
         setUser={setUser}
         refresh={refresh}

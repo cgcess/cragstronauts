@@ -95,6 +95,15 @@ export const gearContribution = table("gear_contribution", {
   details: column.text().notNull(),
 });
 
+// A user's explicit "not bringing one" answer for a gear category. The presence
+// of a row (with zero contributions) means the user answered "no"; absence of
+// both means the category is still pending for them.
+export const gearDecline = table("gear_decline", {
+  id: column.integer().notNull().primaryKey().autoIncrement(),
+  user_id: column.integer().notNull().references(ref(user, "id")),
+  category_id: column.integer().notNull().references(ref(gearCategory, "id")),
+});
+
 export const expense = table("expense", {
   id: column.integer().notNull().primaryKey().autoIncrement(),
   payer_user_id: column.integer().notNull().references(ref(user, "id")),

@@ -8,11 +8,13 @@ import { api } from "../api";
 import { tripPath, slugify } from "../lib/tripUrl";
 import { cleanLinks } from "../lib/links";
 import { unansweredPolls } from "../lib/remaining";
+import { pendingGearCategories } from "../lib/pendingGear";
 import { summarizeSplit } from "../lib/expense-summary";
 import LinksEditor from "../components/LinksEditor";
 import {
   useTripContext,
   type Category,
+  type GearDecline,
   type Poll,
   type PollAnswer,
 } from "../context/TripContext";
@@ -608,6 +610,8 @@ export default function TripDashboard() {
     trip,
     users,
     categories,
+    gear,
+    gearDeclines,
     polls,
     pollAnswers,
     currentUserId,
@@ -624,7 +628,6 @@ export default function TripDashboard() {
 
   const [cars, setCars] = useState<Car[]>([]);
   const [dogs, setDogs] = useState<Dog[]>([]);
-  const [gear, setGear] = useState<Contribution[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [balances, setBalances] = useState<Settlement[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -679,16 +682,14 @@ export default function TripDashboard() {
   const reload = async () => {
     setError(null);
     try {
-      const [c, g, ex, bal, dg] = await Promise.all([
+      const [c, ex, bal, dg] = await Promise.all([
         api.listCars(tripId),
-        api.listGear(tripId),
         api.listExpenses(tripId),
         api.getBalances(tripId),
         api.listDogs(tripId),
       ]);
       setCars(c);
       setDogs(dg);
-      setGear(g);
       setExpenses(ex);
       setBalances(bal);
       await refresh();
@@ -753,7 +754,6 @@ export default function TripDashboard() {
   const amInCar = Boolean(myCar || ridingIn);
   const seatsTotal = cars.reduce((n, c) => n + Math.max(0, c.total_seats), 0);
   const seatsFilled = cars.reduce((n, c) => n + 1 + c.passengers.length + c.dogs.length + c.reserved_seats, 0);
-  const myGear = gear.filter((g) => g.user_id === currentUserId);
   const coveredCats = new Set(gear.map((g) => g.category_id)).size;
   const dUntil = daysUntil(trip.start_date);
   const tripUpcoming = dUntil == null || dUntil >= 0;
@@ -869,8 +869,18 @@ export default function TripDashboard() {
     ),
   });
 
-  // Gear — prominent if you (once identified) haven't claimed anything.
-  const gearUrgent = Boolean(me) && categories.length > 0 && myGear.length === 0;
+  // Gear — prominent if you (once identified) still have categories you've
+  // neither brought one for nor declined. Declining clears it like bringing one.
+  const myPendingGear =
+    me != null
+      ? pendingGearCategories({
+          categories,
+          gear,
+          declines: gearDeclines,
+          userId: currentUserId!,
+        })
+      : [];
+  const gearUrgent = Boolean(me) && myPendingGear.length > 0;
   cards.push({
     id: "gear",
     score: gearUrgent ? 80 : 33,
@@ -929,6 +939,7 @@ export default function TripDashboard() {
         tripId={tripId}
         categories={categories}
         gear={gear}
+        declines={gearDeclines}
         currentUserId={currentUserId}
         ensureUser={ensureUser}
         isOrganizer={isOrganizer}
@@ -1080,11 +1091,13 @@ export default function TripDashboard() {
   // Tiles open into a bottom sheet; no auto-open on mount.
   const selectedCard = cards.find((c) => c.id === expandedId) ?? null;
 
-  // Polls this identified user still owes an answer — drives the nudge card.
+  // Polls and gear this identified user still owes an answer — drives the nudge
+  // card. Tapping it reopens the deck filtered to exactly these.
   const myUnansweredPolls =
     me != null
       ? unansweredPolls({ polls, pollAnswers, userId: currentUserId! })
       : [];
+  const nudgeCount = myUnansweredPolls.length + myPendingGear.length;
 
   // Guard fires the redirect above; render nothing while it takes effect so
   // the members-only board never flashes for a non-member.
@@ -1442,10 +1455,10 @@ export default function TripDashboard() {
         </div>
         )}
 
-        {myUnansweredPolls.length > 0 && (
+        {nudgeCount > 0 && (
           <NudgeCard
-            count={myUnansweredPolls.length}
-            onClick={() => openQuestions(myUnansweredPolls)}
+            count={nudgeCount}
+            onClick={() => openQuestions(myUnansweredPolls, myPendingGear)}
           />
         )}
 
@@ -3142,6 +3155,7 @@ function GearBody({
   tripId,
   categories,
   gear,
+  declines,
   currentUserId,
   ensureUser,
   isOrganizer,
@@ -3150,6 +3164,7 @@ function GearBody({
   tripId: string;
   categories: Category[];
   gear: Contribution[];
+  declines: GearDecline[];
   currentUserId: number | null;
   ensureUser: () => Promise<number | null>;
   isOrganizer: boolean;
@@ -3255,6 +3270,31 @@ function GearBody({
       });
       setAddingFor(null);
       setValues({});
+      onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  // Record "not bringing one" for this category. Mirrors addContribution but
+  // carries no details — it just clears the pending/action-needed state.
+  const declineGear = async (cat: Category) => {
+    setError(null);
+    try {
+      const uid = await ensureUser();
+      if (uid == null) return;
+      await api.addGearDecline(tripId, { user_id: uid, category_id: cat.id });
+      onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  // Undo a decline, returning the category to pending for the current user.
+  const undoDecline = async (declineId: number) => {
+    setError(null);
+    try {
+      await api.deleteGearDecline(tripId, declineId);
       onChanged();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -3407,18 +3447,55 @@ function GearBody({
                 </button>
               </div>
             </div>
-          ) : (
-            <button
-              className="th-btn th-btn--fill"
-              onClick={() => {
-                setAddingFor(cat.id);
-                setValues({});
-              }}
-              style={{ marginTop: 10 }}
-            >
-              + I&apos;m bringing one
-            </button>
-          )}
+          ) : (() => {
+            const myDecline = declines.find(
+              (d) => d.user_id === currentUserId && d.category_id === cat.id
+            );
+            const mineHere = byCat[cat.id].some(
+              (g) => g.user_id === currentUserId
+            );
+            if (myDecline) {
+              return (
+                <div
+                  className="row between"
+                  style={{ marginTop: 10, alignItems: "center" }}
+                >
+                  <span className="muted" style={{ fontSize: 14 }}>
+                    You&apos;re not bringing one.
+                  </span>
+                  <button
+                    className="th-btn th-btn--tertiary th-btn--sm"
+                    onClick={() => undoDecline(myDecline.id)}
+                  >
+                    ↺ Undo
+                  </button>
+                </div>
+              );
+            }
+            return (
+              <>
+                <button
+                  className="th-btn th-btn--fill"
+                  onClick={() => {
+                    setAddingFor(cat.id);
+                    setValues({});
+                  }}
+                  style={{ marginTop: 10 }}
+                >
+                  + I&apos;m bringing one
+                </button>
+                {!mineHere && (
+                  <button
+                    className="th-btn th-btn--tertiary th-btn--full"
+                    onClick={() => declineGear(cat)}
+                    style={{ marginTop: 6 }}
+                  >
+                    Not bringing one
+                  </button>
+                )}
+              </>
+            );
+          })()}
         </div>
         )
         ))}

@@ -9,6 +9,9 @@ import {
   listGearRoute,
   addGearRoute,
   deleteGearRoute,
+  listGearDeclinesRoute,
+  addGearDeclineRoute,
+  deleteGearDeclineRoute,
 } from "@cragstronauts/contract";
 
 export const gearRoutes = new OpenAPIHono<{ Bindings: Env }>();
@@ -77,5 +80,34 @@ gearRoutes.openapi(deleteGearRoute, async (c) => {
   const contribId = Number(contrib_id);
   const stub = getTripDO(c.env, tripId);
   const result = await stub.deleteGear(contribId);
+  return c.json(result, 200);
+});
+
+// Gear declines ("not bringing one")
+gearRoutes.openapi(listGearDeclinesRoute, async (c) => {
+  const { trip_id: tripId } = c.req.valid("param");
+  const stub = getTripDO(c.env, tripId);
+  const declines = await stub.listGearDeclines();
+  return c.json([...declines], 200);
+});
+
+gearRoutes.openapi(addGearDeclineRoute, async (c) => {
+  const { trip_id: tripId } = c.req.valid("param");
+  const body = c.req.valid("json");
+  try {
+    const stub = getTripDO(c.env, tripId);
+    const decline = await stub.addGearDecline(body);
+    return c.json(decline, 200);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return c.json({ detail: msg }, 400);
+  }
+});
+
+gearRoutes.openapi(deleteGearDeclineRoute, async (c) => {
+  const { trip_id: tripId, decline_id } = c.req.valid("param");
+  const declineId = Number(decline_id);
+  const stub = getTripDO(c.env, tripId);
+  const result = await stub.deleteGearDecline(declineId);
   return c.json(result, 200);
 });

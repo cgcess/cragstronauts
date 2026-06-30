@@ -401,8 +401,9 @@ function buildQuestions(
   pollsOnly = false,
   profile?: CragProfile | null
 ): Question[] {
-  // The nudge deck only mops up unanswered polls — skip the joining, gear and
-  // driving cards entirely.
+  // The nudge deck skips the joining and driving cards (and never touches
+  // signup state), but still includes polls and gear so a user can answer
+  // "bringing one" / "not bringing one" straight from the dashboard nudge.
   const qs: Question[] = pollsOnly
     ? []
     : [
@@ -421,7 +422,6 @@ function buildQuestions(
       poll: p,
     });
   }
-  if (pollsOnly) return qs;
   for (const c of categories) {
     // When the member's saved kit matches this category (by catalog slug), the
     // card greets their gear and the detail form arrives pre-filled.
@@ -442,6 +442,7 @@ function buildQuestions(
       category: c,
     });
   }
+  if (pollsOnly) return qs;
   const car = firstCar(profile);
   qs.push({
     id: "driving",
@@ -498,6 +499,12 @@ function Questionnaire({
           user_id: userId,
           category_id: qq.category!.id,
           details: extra || {},
+        });
+      }
+      if (qq.kind === "gear" && !yes) {
+        await api.addGearDecline(tripId, {
+          user_id: userId,
+          category_id: qq.category!.id,
         });
       }
       if (qq.kind === "driving" && yes) {

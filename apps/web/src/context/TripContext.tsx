@@ -4,6 +4,8 @@ import type {
   TripSchema,
   UserSchema,
   GearCategorySchema,
+  GearContributionSchema,
+  GearDeclineSchema,
   PollSchema,
   PollAnswerSchema,
 } from "@cragstronauts/contract";
@@ -11,6 +13,8 @@ import type {
 export type Trip = z.infer<typeof TripSchema>;
 export type User = z.infer<typeof UserSchema>;
 export type Category = z.infer<typeof GearCategorySchema>;
+export type GearContribution = z.infer<typeof GearContributionSchema>;
+export type GearDecline = z.infer<typeof GearDeclineSchema>;
 export type Poll = z.infer<typeof PollSchema>;
 export type PollAnswer = z.infer<typeof PollAnswerSchema>;
 
@@ -19,6 +23,8 @@ export interface TripContextValue {
   trip: Trip;
   users: User[];
   categories: Category[];
+  gear: GearContribution[];
+  gearDeclines: GearDecline[];
   polls: Poll[];
   pollAnswers: PollAnswer[];
   currentUserId: number | null;
@@ -32,11 +38,11 @@ export interface TripContextValue {
    */
   ensureUser: () => Promise<number | null>;
   /**
-   * Open the polls-only deck for the current user, pre-filtered to the polls
-   * they still need to answer. Used by the dashboard nudge card. No-op if
-   * nobody is identified yet.
+   * Open the nudge deck for the current user, pre-filtered to the polls and
+   * gear categories they still need to answer. Used by the dashboard nudge
+   * card. No-op if nobody is identified yet or both lists are empty.
    */
-  openQuestions: (polls: Poll[]) => void;
+  openQuestions: (polls: Poll[], categories?: Category[]) => void;
   refresh: () => Promise<void>;
   deleteTrip: () => Promise<void>;
 }

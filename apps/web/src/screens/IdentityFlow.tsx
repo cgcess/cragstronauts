@@ -61,6 +61,13 @@ interface IdentityFlowProps {
   questionUserId?: number | null;
   /** Signed-in member's saved kit, used to prefill the questionnaire. */
   profile?: CragProfile | null;
+  /**
+   * The signed-in account's own display name (e.g. Google). Prefills the name
+   * field for a member who hasn't set a username yet, and switches the copy to
+   * explain the name they enter is remembered for next time. Null when signed
+   * out. (The saved username itself lives on `profile` and drives auto-skip.)
+   */
+  accountName?: string | null;
 }
 
 export default function IdentityFlow({
@@ -75,6 +82,7 @@ export default function IdentityFlow({
   mode = "identify",
   questionUserId = null,
   profile = null,
+  accountName = null,
 }: IdentityFlowProps) {
   const pollsOnly = mode === "questions";
   const [phase, setPhase] = useState<Phase>("identify");
@@ -215,7 +223,10 @@ export default function IdentityFlow({
                   users={users}
                   onCreate={createAndContinue}
                   onPick={pickExisting}
-                  defaultName={profile?.username}
+                  defaultName={profile?.username ?? accountName ?? undefined}
+                  rememberHint={
+                    !profile?.username?.trim() && !!accountName?.trim()
+                  }
                 />
               )
             ) : (
@@ -261,11 +272,15 @@ function IdentifyPanel({
   onCreate,
   onPick,
   defaultName,
+  rememberHint = false,
 }: {
   users: User[];
   onCreate: (name: string) => Promise<void>;
   onPick: (id: number) => Promise<void>;
   defaultName?: string;
+  /** Signed-in, no username yet: prefill is their account name and we tell them
+   * it'll be remembered for next time. */
+  rememberHint?: boolean;
 }) {
   const [name, setName] = useState(defaultName ?? "");
   const [busy, setBusy] = useState(false);
@@ -375,7 +390,9 @@ function IdentifyPanel({
     <div className="content identity-identify">
       <div className="identity-identify__inner">
         <div className="identity-identify__head">
-          <h1 className="identity-identify__title">Hop in 🧗</h1>
+          <h1 className="identity-identify__title">
+            {rememberHint ? "Pick your name 🧗" : "Hop in 🧗"}
+          </h1>
           <input
             className="identity-identify__input"
             placeholder="Your name"
@@ -384,6 +401,12 @@ function IdentifyPanel({
             onKeyDown={(e) => e.key === "Enter" && submitName()}
             autoFocus
           />
+          {rememberHint && (
+            <p className="identity-identify__note">
+              This is how you'll show up on trips — we'll remember it so you can
+              skip this next time.
+            </p>
+          )}
           {error && <div className="error-banner">{error}</div>}
           <Button
             variant="primary"

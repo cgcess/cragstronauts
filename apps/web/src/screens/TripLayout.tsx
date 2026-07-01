@@ -60,6 +60,9 @@ export default function TripLayout() {
   // Signed-in member's saved kit, lifted from Clerk by ProfileBridge (gated), to
   // prefill the identify questionnaire. Null when signed out / Clerk disabled.
   const [prefillProfile, setPrefillProfile] = useState<CragProfile | null>(null);
+  // The signed-in account's own display name (e.g. Google), used to prefill the
+  // join name for a member who hasn't set a username yet. Null when signed out.
+  const [accountName, setAccountName] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -199,7 +202,12 @@ export default function TripLayout() {
       }}
     >
       {clerkEnabled && <TripAccountSync />}
-      {clerkEnabled && <ProfileBridge onProfile={setPrefillProfile} />}
+      {clerkEnabled && (
+        <ProfileBridge
+          onProfile={setPrefillProfile}
+          onAccountName={setAccountName}
+        />
+      )}
       <Outlet />
       <IdentityFlow
         open={identityOpen}
@@ -208,6 +216,7 @@ export default function TripLayout() {
         categories={categories}
         polls={polls}
         profile={prefillProfile}
+        accountName={accountName}
         setUser={setUser}
         refresh={refresh}
         onDone={resolveIdentity}

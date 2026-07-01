@@ -25,6 +25,22 @@ export const listTripsRoute = createRoute({
   },
 });
 
+export const myTripsRoute = createRoute({
+  method: "get",
+  path: "/api/my-trips",
+  summary: "List trips the signed-in user belongs to",
+  responses: {
+    200: {
+      content: { "application/json": { schema: z.array(TripIndexEntrySchema) } },
+      description: "Trips the caller is a member of",
+    },
+    401: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Not signed in",
+    },
+  },
+});
+
 export const createTripRoute = createRoute({
   method: "post",
   path: "/api/trips",

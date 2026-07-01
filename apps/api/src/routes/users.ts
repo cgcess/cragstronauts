@@ -1,6 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Env } from "../types";
-import { getTripDO } from "../do";
+import { getTripDO, getTripIndexDO } from "../do";
 import { getAccountId } from "../lib/auth";
 import {
   listUsersRoute,
@@ -74,6 +74,10 @@ userRoutes.openapi(claimUserRoute, async (c) => {
   try {
     const stub = getTripDO(c.env, tripId);
     const user = await stub.claimUser(userId, accountId);
+    if (accountId) {
+      const index = getTripIndexDO(c.env);
+      await index.registerMember(accountId, tripId);
+    }
     return c.json(user, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

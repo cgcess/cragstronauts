@@ -97,6 +97,7 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
 export const api = {
   // Trips
   listTrips: () => req<TripIndexEntry[]>("GET", "/api/trips"),
+  myTrips: () => req<TripIndexEntry[]>("GET", "/api/my-trips"),
   createTrip: (data: {
     name: string;
     location: string;

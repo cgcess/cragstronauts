@@ -1,8 +1,10 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Env } from "../types";
 import { getTripDO, getTripIndexDO } from "../do";
+import { getAccountId } from "../lib/auth";
 import {
   listTripsRoute,
+  myTripsRoute,
   createTripRoute,
   getTripRoute,
   updateTripRoute,
@@ -14,6 +16,14 @@ export const tripRoutes = new OpenAPIHono<{ Bindings: Env }>();
 tripRoutes.openapi(listTripsRoute, async (c) => {
   const index = getTripIndexDO(c.env);
   const trips = await index.listTrips();
+  return c.json([...trips], 200);
+});
+
+tripRoutes.openapi(myTripsRoute, async (c) => {
+  const accountId = getAccountId(c);
+  if (!accountId) return c.json({ detail: "Sign in required" }, 401);
+  const index = getTripIndexDO(c.env);
+  const trips = await index.myTrips(accountId);
   return c.json([...trips], 200);
 });
 
@@ -32,6 +42,11 @@ tripRoutes.openapi(createTripRoute, async (c) => {
       start_date: body.start_date ?? null,
       end_date: body.end_date ?? null,
     });
+
+    const accountId = getAccountId(c);
+    if (accountId) {
+      await index.registerMember(accountId, tripId);
+    }
 
     return c.json({ trip_id: tripId, organizer_user_id: result.organizer_user_id }, 200);
   } catch (e) {

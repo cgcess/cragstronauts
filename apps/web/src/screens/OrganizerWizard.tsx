@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router";
 import { api } from "../api";
@@ -7,6 +7,9 @@ import { cleanLinks } from "../lib/links";
 import LinksEditor from "../components/LinksEditor";
 import DateRangePicker from "../components/DateRangePicker";
 import { Button } from "../components/ui";
+import ProfileBridge from "../components/ProfileBridge";
+import { clerkEnabled } from "../lib/clerk";
+import type { CragProfile } from "../lib/profile";
 import { GEAR_CATALOG } from "@cragstronauts/contract";
 
 interface CategoryField {
@@ -107,6 +110,23 @@ export default function OrganizerWizard() {
   const [organizerName, setOrganizerName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Signed-in organizer: their name is already known (saved username, else their
+  // account/Google name), lifted by ProfileBridge below. Prefill it instead of
+  // asking them to type it — same idea as the join flow. Runs once when the
+  // profile arrives and leaves a typed value alone; the signature mirrors it
+  // until the organizer edits the sign-off themselves.
+  const [memberProfile, setMemberProfile] = useState<CragProfile | null>(null);
+  const [accountName, setAccountName] = useState<string | null>(null);
+  const memberName =
+    memberProfile?.username?.trim() || accountName?.trim() || "";
+  const namePrefilled = useRef(false);
+  useEffect(() => {
+    if (namePrefilled.current || !memberName) return;
+    namePrefilled.current = true;
+    setOrganizerName((cur) => (cur.trim() ? cur : memberName));
+    setSignature((cur) => (cur.trim() || signatureTouched ? cur : memberName));
+  }, [memberName, signatureTouched]);
 
   const reduceMotion = useReducedMotion();
   const today = useMemo(todayLocal, []);
@@ -214,6 +234,12 @@ export default function OrganizerWizard() {
 
   return (
     <div className="app-shell">
+      {clerkEnabled && (
+        <ProfileBridge
+          onProfile={setMemberProfile}
+          onAccountName={setAccountName}
+        />
+      )}
       <div className="content">
         <div className="column">
         <motion.div

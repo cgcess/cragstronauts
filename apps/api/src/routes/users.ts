@@ -1,6 +1,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Env } from "../types";
 import { getTripDO } from "../do";
+import { getAccountId } from "../lib/auth";
 import {
   listUsersRoute,
   createUserRoute,
@@ -9,6 +10,7 @@ import {
   claimUserRoute,
   makeOrganizerRoute,
   updateUserRoute,
+  getMyTripUserRoute,
 } from "@cragstronauts/contract";
 
 export const userRoutes = new OpenAPIHono<{ Bindings: Env }>();
@@ -68,14 +70,24 @@ userRoutes.openapi(completeSignupRoute, async (c) => {
 userRoutes.openapi(claimUserRoute, async (c) => {
   const { trip_id: tripId, user_id } = c.req.valid("param");
   const userId = Number(user_id);
+  const accountId = getAccountId(c);
   try {
     const stub = getTripDO(c.env, tripId);
-    const user = await stub.claimUser(userId);
+    const user = await stub.claimUser(userId, accountId);
     return c.json(user, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg === "User not found") {
       return c.json({ detail: msg }, 404);
+    }
+    if (msg === "ACCOUNT_REQUIRED") {
+      return c.json(
+        { detail: "This member is linked to a Google account. Sign in with Google to claim it." },
+        403
+      );
+    }
+    if (msg === "ACCOUNT_MISMATCH") {
+      return c.json({ detail: "This member is linked to a different Google account." }, 403);
     }
     return c.json({ detail: msg }, 400);
   }
@@ -112,4 +124,13 @@ userRoutes.openapi(updateUserRoute, async (c) => {
     }
     return c.json({ detail: msg }, 400);
   }
+});
+
+userRoutes.openapi(getMyTripUserRoute, async (c) => {
+  const { trip_id: tripId } = c.req.valid("param");
+  const accountId = getAccountId(c);
+  if (!accountId) return c.json({ user_id: null }, 200);
+  const stub = getTripDO(c.env, tripId);
+  const me = await stub.findUserByAccount(accountId);
+  return c.json({ user_id: me?.id ?? null }, 200);
 });

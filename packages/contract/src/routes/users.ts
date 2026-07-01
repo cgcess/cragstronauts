@@ -1,10 +1,28 @@
 import { createRoute } from "@hono/zod-openapi";
 import { z } from "zod";
-import { UserSchema, CreateUserBodySchema, UpdateUserBodySchema } from "../schemas/user";
+import {
+  UserSchema,
+  CreateUserBodySchema,
+  UpdateUserBodySchema,
+  MyTripUserSchema,
+} from "../schemas/user";
 import { ErrorSchema, OkSchema } from "../schemas/common";
 
 const TripParamsSchema = z.object({
   trip_id: z.string(),
+});
+
+export const getMyTripUserRoute = createRoute({
+  method: "get",
+  path: "/api/trips/{trip_id}/users/me",
+  summary: "Resolve the signed-in account to its trip user (if any)",
+  request: { params: TripParamsSchema },
+  responses: {
+    200: {
+      content: { "application/json": { schema: MyTripUserSchema } },
+      description: "The linked user id, or null",
+    },
+  },
 });
 
 const UserParamsSchema = z.object({
@@ -102,6 +120,10 @@ export const claimUserRoute = createRoute({
     400: {
       content: { "application/json": { schema: ErrorSchema } },
       description: "Error",
+    },
+    403: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Slot is linked to a Google account; sign-in required or wrong account",
     },
     404: {
       content: { "application/json": { schema: ErrorSchema } },

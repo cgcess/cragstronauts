@@ -8,6 +8,9 @@ export * from "./schemas/poll";
 export * from "./schemas/expense";
 export * from "./schemas/feedback";
 
+// Catalog
+export * from "./catalog/gear";
+
 // Routes
 export * from "./routes/trips";
 export * from "./routes/users";

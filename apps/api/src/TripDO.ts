@@ -11,6 +11,7 @@ import {
   dog,
   carDog,
   gearContribution,
+  gearDecline,
   expense,
   expenseSplit,
   feedback,
@@ -27,6 +28,7 @@ import type {
   CarSchema,
   DogSchema,
   GearContributionSchema,
+  GearDeclineSchema,
   ExpenseSchema,
   SettlementSchema,
   FeedbackSchema,
@@ -34,6 +36,7 @@ import type {
   PollAnswerSchema,
 } from "@cragstronauts/contract";
 import { computeSimplifiedBalances, distributeEqual } from "./lib/balances";
+import { decideClaimBinding } from "./lib/claim";
 
 type Trip = z.infer<typeof TripSchema>;
 type TripLink = z.infer<typeof TripLinkSchema>;
@@ -43,6 +46,7 @@ type Category = z.infer<typeof GearCategorySchema>;
 type Car = z.infer<typeof CarSchema>;
 type Dog = z.infer<typeof DogSchema>;
 type Contribution = z.infer<typeof GearContributionSchema>;
+type Decline = z.infer<typeof GearDeclineSchema>;
 type Expense = z.infer<typeof ExpenseSchema>;
 type Settlement = z.infer<typeof SettlementSchema>;
 type Poll = z.infer<typeof PollSchema>;
@@ -93,6 +97,7 @@ export class TripDO extends DurableObject<Env> {
       name: string;
       fields: { key: string; label: string; type: string }[];
       summary_mode?: "people" | "total";
+      catalog_key?: string | null;
     }[];
     polls?: PollInput[];
     organizer_name: string;
@@ -123,6 +128,7 @@ export class TripDO extends DurableObject<Env> {
         name: cat.name.trim(),
         fields: JSON.stringify(fields),
         summary_mode: cat.summary_mode ?? "people",
+        catalog_key: cat.catalog_key ?? null,
       });
     }
 
@@ -288,6 +294,7 @@ export class TripDO extends DurableObject<Env> {
     this.db.raw("DELETE FROM poll_answer", []);
     this.db.raw("DELETE FROM poll_option", []);
     this.db.raw("DELETE FROM poll", []);
+    this.db.raw("DELETE FROM gear_decline", []);
     this.db.raw("DELETE FROM gear_contribution", []);
     this.db.raw("DELETE FROM car_signup", []);
     this.db.raw("DELETE FROM car", []);
@@ -322,15 +329,35 @@ export class TripDO extends DurableObject<Env> {
 
   // Mark a user as taken by a device. Adopting an existing identity
   // (pick-yourself or the "that's me" confirm) flips this flag server-side so
-  // other devices see the slot as claimed.
-  async claimUser(userId: number): Promise<User> {
+  // other devices see the slot as claimed. When the caller is signed in we also
+  // bind the slot to their Google account; once bound, only that account may
+  // re-claim it (the impersonation guard lives in decideClaimBinding).
+  async claimUser(userId: number, sessionAccountId: string | null = null): Promise<User> {
     const row = this.db.get(user, { where: eq("id", userId) });
     if (!row) throw new Error("User not found");
 
-    this.db.update(user, { claimed: 1 }, { where: eq("id", userId) });
+    const decision = decideClaimBinding({
+      boundAccountId: row.account_id ?? null,
+      sessionAccountId,
+    });
+    if (!decision.ok) {
+      throw new Error(
+        decision.reason === "account_required" ? "ACCOUNT_REQUIRED" : "ACCOUNT_MISMATCH"
+      );
+    }
+
+    const patch: { claimed: number; account_id?: string } = { claimed: 1 };
+    if (decision.bind !== null) patch.account_id = decision.bind;
+    this.db.update(user, patch, { where: eq("id", userId) });
 
     const updated = this.db.get(user, { where: eq("id", userId) })!;
     return formatUser(updated);
+  }
+
+  // Resolve which trip user (if any) a signed-in account has claimed here.
+  async findUserByAccount(accountId: string): Promise<User | null> {
+    const row = this.db.get(user, { where: eq("account_id", accountId) });
+    return row ? formatUser(row) : null;
   }
 
   async deleteUser(userId: number): Promise<{ ok: boolean }> {
@@ -415,12 +442,18 @@ export class TripDO extends DurableObject<Env> {
       name: string;
       fields: { key: string; label: string; type: string }[];
       summary_mode?: "people" | "total";
+      catalog_key?: string | null;
     }
   ): Promise<Category> {
     const row = this.db.insertReturning(
       gearCategory,
-      { name: data.name, fields: JSON.stringify(data.fields), summary_mode: data.summary_mode ?? "people" },
-      ["id", "name", "fields", "summary_mode"]
+      {
+        name: data.name,
+        fields: JSON.stringify(data.fields),
+        summary_mode: data.summary_mode ?? "people",
+        catalog_key: data.catalog_key ?? null,
+      },
+      ["id", "name", "fields", "summary_mode", "catalog_key"]
     );
     return formatCategory(row);
   }
@@ -431,12 +464,18 @@ export class TripDO extends DurableObject<Env> {
       name?: string;
       fields?: { key: string; label: string; type: string }[];
       summary_mode?: "people" | "total";
+      catalog_key?: string | null;
     }
   ): Promise<Category> {
     const row = this.db.get(gearCategory, { where: eq("id", catId) });
     if (!row) throw new Error("Category not found");
 
-    const patch: { name?: string; fields?: string; summary_mode?: string } = {};
+    const patch: {
+      name?: string;
+      fields?: string;
+      summary_mode?: string;
+      catalog_key?: string | null;
+    } = {};
     if (data.name !== undefined) {
       const trimmed = data.name.trim();
       if (!trimmed) throw new Error("Name cannot be empty");
@@ -447,6 +486,9 @@ export class TripDO extends DurableObject<Env> {
     }
     if (data.summary_mode !== undefined) {
       patch.summary_mode = data.summary_mode;
+    }
+    if (data.catalog_key !== undefined) {
+      patch.catalog_key = data.catalog_key;
     }
 
     this.db.update(gearCategory, patch, { where: eq("id", catId) });
@@ -693,6 +735,12 @@ export class TripDO extends DurableObject<Env> {
     const u = this.db.get(user, { where: eq("id", data.user_id) });
     if (!u) throw new Error("User not found");
 
+    // Bringing one supersedes a prior "not bringing one" answer.
+    this.db.raw(
+      "DELETE FROM gear_decline WHERE user_id = ? AND category_id = ?",
+      [data.user_id, data.category_id]
+    );
+
     const row = this.db.insertReturning(
       gearContribution,
       {
@@ -707,6 +755,39 @@ export class TripDO extends DurableObject<Env> {
 
   async deleteGear(contribId: number): Promise<{ ok: boolean }> {
     this.db.delete(gearContribution, { where: eq("id", contribId) });
+    return { ok: true };
+  }
+
+  async listGearDeclines(): Promise<Decline[]> {
+    return this.db.all(gearDecline).map((r) => this.formatDecline(r));
+  }
+
+  async addGearDecline(data: {
+    user_id: number;
+    category_id: number;
+  }): Promise<Decline> {
+    const u = this.db.get(user, { where: eq("id", data.user_id) });
+    if (!u) throw new Error("User not found");
+
+    // Idempotent: a repeat tap returns the existing row, never a duplicate.
+    const existing = this.db
+      .all(gearDecline)
+      .find(
+        (d) =>
+          d.user_id === data.user_id && d.category_id === data.category_id
+      );
+    if (existing) return this.formatDecline(existing);
+
+    const row = this.db.insertReturning(
+      gearDecline,
+      { user_id: data.user_id, category_id: data.category_id },
+      ["id", "user_id", "category_id"]
+    );
+    return this.formatDecline(row);
+  }
+
+  async deleteGearDecline(declineId: number): Promise<{ ok: boolean }> {
+    this.db.delete(gearDecline, { where: eq("id", declineId) });
     return { ok: true };
   }
 
@@ -1208,6 +1289,20 @@ export class TripDO extends DurableObject<Env> {
       details: typeof r.details === "string" ? JSON.parse(r.details) : r.details,
     };
   }
+
+  private formatDecline(r: {
+    id: number;
+    user_id: number;
+    category_id: number;
+  }): Decline {
+    const u = this.db.get(user, { where: eq("id", r.user_id) });
+    return {
+      id: r.id,
+      user_id: r.user_id,
+      user_name: u ? u.name : "(unknown)",
+      category_id: r.category_id,
+    };
+  }
 }
 
 function formatTrip(r: {
@@ -1250,6 +1345,7 @@ function formatUser(r: {
   is_organizer: number;
   signup_completed: number;
   claimed: number;
+  account_id?: string | null;
 }): User {
   return {
     id: r.id,
@@ -1258,6 +1354,7 @@ function formatUser(r: {
     is_organizer: Boolean(r.is_organizer),
     signup_completed: Boolean(r.signup_completed),
     claimed: Boolean(r.claimed),
+    linked: r.account_id != null,
   };
 }
 
@@ -1266,11 +1363,13 @@ function formatCategory(r: {
   name: string;
   fields: string;
   summary_mode?: string;
+  catalog_key?: string | null;
 }): Category {
   return {
     id: r.id,
     name: r.name,
     fields: typeof r.fields === "string" ? JSON.parse(r.fields) : r.fields,
     summary_mode: (r.summary_mode as "people" | "total") ?? "people",
+    catalog_key: r.catalog_key ?? null,
   };
 }

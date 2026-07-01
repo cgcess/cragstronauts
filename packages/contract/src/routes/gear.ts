@@ -6,6 +6,8 @@ import {
   UpdateGearCategoryBodySchema,
   GearContributionSchema,
   AddGearBodySchema,
+  GearDeclineSchema,
+  AddGearDeclineBodySchema,
 } from "../schemas/gear";
 import { ErrorSchema, OkSchema } from "../schemas/common";
 
@@ -21,6 +23,11 @@ const CategoryParamsSchema = z.object({
 const ContribParamsSchema = z.object({
   trip_id: z.string(),
   contrib_id: z.string(),
+});
+
+const DeclineParamsSchema = z.object({
+  trip_id: z.string(),
+  decline_id: z.string(),
 });
 
 export const listCategoriesRoute = createRoute({
@@ -133,6 +140,54 @@ export const deleteGearRoute = createRoute({
     200: {
       content: { "application/json": { schema: OkSchema } },
       description: "Gear deleted",
+    },
+  },
+});
+
+export const listGearDeclinesRoute = createRoute({
+  method: "get",
+  path: "/api/trips/{trip_id}/gear-declines",
+  summary: "List gear declines",
+  request: { params: TripParamsSchema },
+  responses: {
+    200: {
+      content: { "application/json": { schema: z.array(GearDeclineSchema) } },
+      description: "List of gear declines",
+    },
+  },
+});
+
+export const addGearDeclineRoute = createRoute({
+  method: "post",
+  path: "/api/trips/{trip_id}/gear-declines",
+  summary: "Record a \"not bringing one\" answer for a gear category",
+  request: {
+    params: TripParamsSchema,
+    body: {
+      content: { "application/json": { schema: AddGearDeclineBodySchema } },
+    },
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: GearDeclineSchema } },
+      description: "Decline recorded",
+    },
+    400: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Error",
+    },
+  },
+});
+
+export const deleteGearDeclineRoute = createRoute({
+  method: "delete",
+  path: "/api/trips/{trip_id}/gear-declines/{decline_id}",
+  summary: "Undo a gear decline",
+  request: { params: DeclineParamsSchema },
+  responses: {
+    200: {
+      content: { "application/json": { schema: OkSchema } },
+      description: "Decline removed",
     },
   },
 });

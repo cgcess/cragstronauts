@@ -8,11 +8,13 @@ import { api } from "../api";
 import { tripPath, slugify } from "../lib/tripUrl";
 import { cleanLinks } from "../lib/links";
 import { unansweredPolls } from "../lib/remaining";
+import { pendingGearCategories } from "../lib/pendingGear";
 import { summarizeSplit } from "../lib/expense-summary";
 import LinksEditor from "../components/LinksEditor";
 import {
   useTripContext,
   type Category,
+  type GearDecline,
   type Poll,
   type PollAnswer,
 } from "../context/TripContext";
@@ -149,6 +151,7 @@ function CalendarIcon() {
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <rect x="3" y="4.5" width="18" height="16" rx="2" />
       <path d="M3 9.5h18M8 2.5v4M16 2.5v4" />
+      <path d="M12 12.5v5M9.5 15h5" />
     </svg>
   );
 }
@@ -607,6 +610,8 @@ export default function TripDashboard() {
     trip,
     users,
     categories,
+    gear,
+    gearDeclines,
     polls,
     pollAnswers,
     currentUserId,
@@ -623,7 +628,6 @@ export default function TripDashboard() {
 
   const [cars, setCars] = useState<Car[]>([]);
   const [dogs, setDogs] = useState<Dog[]>([]);
-  const [gear, setGear] = useState<Contribution[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [balances, setBalances] = useState<Settlement[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -678,16 +682,14 @@ export default function TripDashboard() {
   const reload = async () => {
     setError(null);
     try {
-      const [c, g, ex, bal, dg] = await Promise.all([
+      const [c, ex, bal, dg] = await Promise.all([
         api.listCars(tripId),
-        api.listGear(tripId),
         api.listExpenses(tripId),
         api.getBalances(tripId),
         api.listDogs(tripId),
       ]);
       setCars(c);
       setDogs(dg);
-      setGear(g);
       setExpenses(ex);
       setBalances(bal);
       await refresh();
@@ -752,7 +754,6 @@ export default function TripDashboard() {
   const amInCar = Boolean(myCar || ridingIn);
   const seatsTotal = cars.reduce((n, c) => n + Math.max(0, c.total_seats), 0);
   const seatsFilled = cars.reduce((n, c) => n + 1 + c.passengers.length + c.dogs.length + c.reserved_seats, 0);
-  const myGear = gear.filter((g) => g.user_id === currentUserId);
   const coveredCats = new Set(gear.map((g) => g.category_id)).size;
   const dUntil = daysUntil(trip.start_date);
   const tripUpcoming = dUntil == null || dUntil >= 0;
@@ -868,8 +869,18 @@ export default function TripDashboard() {
     ),
   });
 
-  // Gear — prominent if you (once identified) haven't claimed anything.
-  const gearUrgent = Boolean(me) && categories.length > 0 && myGear.length === 0;
+  // Gear — prominent if you (once identified) still have categories you've
+  // neither brought one for nor declined. Declining clears it like bringing one.
+  const myPendingGear =
+    me != null
+      ? pendingGearCategories({
+          categories,
+          gear,
+          declines: gearDeclines,
+          userId: currentUserId!,
+        })
+      : [];
+  const gearUrgent = Boolean(me) && myPendingGear.length > 0;
   cards.push({
     id: "gear",
     score: gearUrgent ? 80 : 33,
@@ -928,6 +939,7 @@ export default function TripDashboard() {
         tripId={tripId}
         categories={categories}
         gear={gear}
+        declines={gearDeclines}
         currentUserId={currentUserId}
         ensureUser={ensureUser}
         isOrganizer={isOrganizer}
@@ -1079,11 +1091,13 @@ export default function TripDashboard() {
   // Tiles open into a bottom sheet; no auto-open on mount.
   const selectedCard = cards.find((c) => c.id === expandedId) ?? null;
 
-  // Polls this identified user still owes an answer — drives the nudge card.
+  // Polls and gear this identified user still owes an answer — drives the nudge
+  // card. Tapping it reopens the deck filtered to exactly these.
   const myUnansweredPolls =
     me != null
       ? unansweredPolls({ polls, pollAnswers, userId: currentUserId! })
       : [];
+  const nudgeCount = myUnansweredPolls.length + myPendingGear.length;
 
   // Guard fires the redirect above; render nothing while it takes effect so
   // the members-only board never flashes for a non-member.
@@ -1115,8 +1129,8 @@ export default function TripDashboard() {
             {(trip.start_date || trip.end_date) && (
               <button
                 className="fl-detail-hero__iconbtn"
-                onClick={() => setCalendarSheetOpen(true)}
-                aria-label="Open trip calendar"
+                onClick={addToCalendar}
+                aria-label="Add trip to calendar"
               >
                 <CalendarIcon />
               </button>
@@ -1278,15 +1292,24 @@ export default function TripDashboard() {
                     </span>
                     <span className="fl-detail-hero__logistics-detail fl-detail-hero__links">
                       {trip.links.map((l, i) => (
-                        <a
-                          key={i}
-                          href={l.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="fl-detail-hero__link"
-                        >
-                          {l.name}
-                        </a>
+                        <React.Fragment key={i}>
+                          {i > 0 && (
+                            <span
+                              className="landing-fact__links-sep"
+                              aria-hidden="true"
+                            >
+                              ·
+                            </span>
+                          )}
+                          <a
+                            href={l.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="fl-detail-hero__link"
+                          >
+                            {l.name}
+                          </a>
+                        </React.Fragment>
                       ))}
                     </span>
                   </div>
@@ -1388,12 +1411,18 @@ export default function TripDashboard() {
                       Climbers · {joining.length}
                     </span>
                     <span className="fl-detail-hero__logistics-detail fl-detail-hero__climbers">
-                      {joining.map((u, i) => (
-                        <span key={u.id}>
-                          {u.name}{u.is_organizer ? " 👑" : ""}
-                          {i < joining.length - 1 ? ", " : ""}
-                        </span>
-                      ))}
+                      {joining.map((u, i) => {
+                        const isMe = u.id === currentUserId;
+                        return (
+                          <span key={u.id}>
+                            <span style={isMe ? { fontWeight: 600 } : undefined}>
+                              {u.name}{u.is_organizer ? " 👑" : ""}
+                              {isMe ? " (you)" : ""}
+                            </span>
+                            {i < joining.length - 1 ? ", " : ""}
+                          </span>
+                        );
+                      })}
                     </span>
                   </div>
                 </div>
@@ -1426,10 +1455,10 @@ export default function TripDashboard() {
         </div>
         )}
 
-        {myUnansweredPolls.length > 0 && (
+        {nudgeCount > 0 && (
           <NudgeCard
-            count={myUnansweredPolls.length}
-            onClick={() => openQuestions(myUnansweredPolls)}
+            count={nudgeCount}
+            onClick={() => openQuestions(myUnansweredPolls, myPendingGear)}
           />
         )}
 
@@ -2454,6 +2483,9 @@ function CarsBody({
   const [error, setError] = useState<string | null>(null);
   // Which car's empty seat is showing the chooser / dog picker.
   const [chooserCar, setChooserCar] = useState<number | null>(null);
+  // Which car's notes are being edited (driver only), and the draft value.
+  const [editingNotes, setEditingNotes] = useState<number | null>(null);
+  const [notesDraft, setNotesDraft] = useState("");
   const [newDogName, setNewDogName] = useState("");
   // Whether the chooser's compact "new dog" name field is expanded.
   const [showNewDog, setShowNewDog] = useState(false);
@@ -2575,14 +2607,14 @@ function CarsBody({
         const iAmIn =
           isDriver ||
           c.passengers.some((p) => p.user_id === currentUserId);
-        const updateCar = async (patch: { total_seats?: number; reserved_seats?: number }) => {
+        const updateCar = async (patch: { total_seats?: number; reserved_seats?: number; notes?: string | null }) => {
           setError(null);
           try {
             await api.createCar(tripId, {
               driver_user_id: c.driver_user_id,
               total_seats: patch.total_seats ?? c.total_seats,
               reserved_seats: patch.reserved_seats ?? c.reserved_seats,
-              notes: c.notes,
+              notes: "notes" in patch ? (patch.notes ?? null) : c.notes,
             });
             onChanged();
           } catch (e) {
@@ -2644,13 +2676,72 @@ function CarsBody({
                 </button>
               )}
             </div>
-            {c.notes && (
-              <p style={{ marginTop: 8 }}>
-                <Linkify>{c.notes}</Linkify>
-              </p>
+            {editingNotes === c.id ? (
+              <div style={{ marginTop: 8 }}>
+                <input
+                  value={notesDraft}
+                  onChange={(e) => setNotesDraft(e.target.value)}
+                  placeholder="e.g. leaving Friday 5pm"
+                />
+                <div className="row" style={{ marginTop: 8 }}>
+                  <button
+                    className="th-btn th-btn--secondary"
+                    onClick={() => setEditingNotes(null)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="th-btn th-btn--primary"
+                    style={{ flex: 1 }}
+                    onClick={async () => {
+                      await updateCar({ notes: notesDraft.trim() || null });
+                      setEditingNotes(null);
+                    }}
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            ) : c.notes ? (
+              <div className="row between" style={{ marginTop: 8, alignItems: "flex-start", gap: 8 }}>
+                <p style={{ margin: 0 }}>
+                  <Linkify>{c.notes}</Linkify>
+                </p>
+                {isDriver && (
+                  <button
+                    type="button"
+                    className="th-btn th-btn--tertiary th-btn--sm"
+                    onClick={() => {
+                      setNotesDraft(c.notes ?? "");
+                      setEditingNotes(c.id);
+                    }}
+                  >
+                    Edit
+                  </button>
+                )}
+              </div>
+            ) : (
+              isDriver && (
+                <button
+                  type="button"
+                  className="th-btn th-btn--tertiary th-btn--sm"
+                  style={{ marginTop: 8 }}
+                  onClick={() => {
+                    setNotesDraft("");
+                    setEditingNotes(c.id);
+                  }}
+                >
+                  + Add notes
+                </button>
+              )
             )}
             <div className="seat-row">
-              <span className="seat driver">🚗 {c.driver_name}</span>
+              <span
+                className="seat driver"
+                style={isDriver ? { fontWeight: 600 } : undefined}
+              >
+                🚗 {c.driver_name}{isDriver ? " (you)" : ""}
+              </span>
               {c.passengers.map((p) => (
                 <span className="seat" key={p.user_id}>
                   {p.name}
@@ -3121,6 +3212,7 @@ function GearBody({
   tripId,
   categories,
   gear,
+  declines,
   currentUserId,
   ensureUser,
   isOrganizer,
@@ -3129,6 +3221,7 @@ function GearBody({
   tripId: string;
   categories: Category[];
   gear: Contribution[];
+  declines: GearDecline[];
   currentUserId: number | null;
   ensureUser: () => Promise<number | null>;
   isOrganizer: boolean;
@@ -3234,6 +3327,31 @@ function GearBody({
       });
       setAddingFor(null);
       setValues({});
+      onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  // Record "not bringing one" for this category. Mirrors addContribution but
+  // carries no details — it just clears the pending/action-needed state.
+  const declineGear = async (cat: Category) => {
+    setError(null);
+    try {
+      const uid = await ensureUser();
+      if (uid == null) return;
+      await api.addGearDecline(tripId, { user_id: uid, category_id: cat.id });
+      onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  // Undo a decline, returning the category to pending for the current user.
+  const undoDecline = async (declineId: number) => {
+    setError(null);
+    try {
+      await api.deleteGearDecline(tripId, declineId);
       onChanged();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -3386,18 +3504,55 @@ function GearBody({
                 </button>
               </div>
             </div>
-          ) : (
-            <button
-              className="th-btn th-btn--fill"
-              onClick={() => {
-                setAddingFor(cat.id);
-                setValues({});
-              }}
-              style={{ marginTop: 10 }}
-            >
-              + I&apos;m bringing one
-            </button>
-          )}
+          ) : (() => {
+            const myDecline = declines.find(
+              (d) => d.user_id === currentUserId && d.category_id === cat.id
+            );
+            const mineHere = byCat[cat.id].some(
+              (g) => g.user_id === currentUserId
+            );
+            if (myDecline) {
+              return (
+                <div
+                  className="row between"
+                  style={{ marginTop: 10, alignItems: "center" }}
+                >
+                  <span className="muted" style={{ fontSize: 14 }}>
+                    You&apos;re not bringing one.
+                  </span>
+                  <button
+                    className="th-btn th-btn--tertiary th-btn--sm"
+                    onClick={() => undoDecline(myDecline.id)}
+                  >
+                    ↺ Undo
+                  </button>
+                </div>
+              );
+            }
+            return (
+              <>
+                <button
+                  className="th-btn th-btn--fill"
+                  onClick={() => {
+                    setAddingFor(cat.id);
+                    setValues({});
+                  }}
+                  style={{ marginTop: 10 }}
+                >
+                  + I&apos;m bringing one
+                </button>
+                {!mineHere && (
+                  <button
+                    className="th-btn th-btn--tertiary th-btn--full"
+                    onClick={() => declineGear(cat)}
+                    style={{ marginTop: 6 }}
+                  >
+                    Not bringing one
+                  </button>
+                )}
+              </>
+            );
+          })()}
         </div>
         )
         ))}

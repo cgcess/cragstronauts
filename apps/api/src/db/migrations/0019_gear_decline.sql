@@ -1,0 +1,5 @@
+CREATE TABLE `gear_decline` (
+  `id` INTEGER PRIMARY KEY AUTOINCREMENT,
+  `user_id` INTEGER NOT NULL REFERENCES `user`(`id`) ON DELETE CASCADE,
+  `category_id` INTEGER NOT NULL REFERENCES `gear_category`(`id`) ON DELETE CASCADE
+);

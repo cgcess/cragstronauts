@@ -9,6 +9,7 @@ const user = (id: number, name: string): User => ({
   is_organizer: false,
   signup_completed: false,
   claimed: true,
+  linked: false,
 });
 
 const users = [user(1, "Ada"), user(2, "Grace"), user(3, "ada")];

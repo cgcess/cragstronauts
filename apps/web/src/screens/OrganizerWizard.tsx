@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router";
 import { api } from "../api";
@@ -7,6 +7,9 @@ import { cleanLinks } from "../lib/links";
 import LinksEditor from "../components/LinksEditor";
 import DateRangePicker from "../components/DateRangePicker";
 import { Button } from "../components/ui";
+import ProfileBridge from "../components/ProfileBridge";
+import type { CragProfile } from "../lib/profile";
+import { GEAR_CATALOG } from "@cragstronauts/contract";
 
 // Leading field icons (lucide-style, inherit color via currentColor).
 const iconProps = {
@@ -53,6 +56,9 @@ interface CategoryDraft {
   name: string;
   fields: CategoryField[];
   summary_mode: "people" | "total";
+  // Canonical catalog slug when this draft came from a preset; lets a member's
+  // saved profile kit match this category at join time. Undefined = custom.
+  catalog_key?: string;
 }
 
 interface GeoResult {
@@ -71,11 +77,13 @@ const defaultCategories: CategoryDraft[] = [
       { key: "diameter", label: "Diameter (mm)", type: "number" },
     ],
     summary_mode: "total",
+    catalog_key: "rope",
   },
   {
     name: "Quickdraws",
     fields: [{ key: "count", label: "How many", type: "number" }],
     summary_mode: "total",
+    catalog_key: "quickdraws",
   },
 ];
 
@@ -136,6 +144,25 @@ export default function OrganizerWizard() {
   const [organizerName, setOrganizerName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [createdTripUrl, setCreatedTripUrl] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  // Signed-in organizer: their name is already known (saved username, else their
+  // account/Google name), lifted by ProfileBridge below. Prefill it instead of
+  // asking them to type it — same idea as the join flow. Runs once when the
+  // profile arrives and leaves a typed value alone; the signature mirrors it
+  // until the organizer edits the sign-off themselves.
+  const [memberProfile, setMemberProfile] = useState<CragProfile | null>(null);
+  const [accountName, setAccountName] = useState<string | null>(null);
+  const memberName =
+    memberProfile?.username?.trim() || accountName?.trim() || "";
+  const namePrefilled = useRef(false);
+  useEffect(() => {
+    if (namePrefilled.current || !memberName) return;
+    namePrefilled.current = true;
+    setOrganizerName((cur) => (cur.trim() ? cur : memberName));
+    setSignature((cur) => (cur.trim() || signatureTouched ? cur : memberName));
+  }, [memberName, signatureTouched]);
 
   const reduceMotion = useReducedMotion();
   const today = useMemo(todayLocal, []);
@@ -171,10 +198,31 @@ export default function OrganizerWizard() {
     }
   };
 
+  // Auto-search the place shortly after the last keystroke — no "Find" button needed.
+  useEffect(() => {
+    const q = location.trim();
+    // Nothing typed, or a place is already pinned → don't search.
+    if (!q || placeLabel) return;
+    const t = setTimeout(() => {
+      geoSearch();
+    }, 600);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location, placeLabel]);
+
   const pickPlace = (r: GeoResult) => {
     setPinLat(r.latitude);
     setPinLon(r.longitude);
     setPlaceLabel(labelForGeo(r));
+    // Fill the field itself with the chosen address (calendar-app style).
+    setLocation(labelForGeo(r));
+    setGeoResults([]);
+    setGeoSearched(false);
+  };
+
+  const clearLocation = () => {
+    clearPin();
+    setLocation("");
     setGeoResults([]);
     setGeoSearched(false);
   };
@@ -213,10 +261,13 @@ export default function OrganizerWizard() {
             name: c.name.trim(),
             fields: c.fields.filter((f) => f.key.trim() && f.label.trim()),
             summary_mode: c.summary_mode,
+            catalog_key: c.catalog_key ?? null,
           })),
       });
       localStorage.setItem(userKey(res.trip_id), String(res.organizer_user_id));
-      navigate(tripPath(name.trim(), res.trip_id, "board"), { replace: true });
+      const path = tripPath(name.trim(), res.trip_id);
+      setCreatedTripUrl(window.location.origin + path);
+      setStep(3);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -242,28 +293,36 @@ export default function OrganizerWizard() {
 
   return (
     <div className="app-shell">
+      <ProfileBridge
+        onProfile={setMemberProfile}
+        onAccountName={setAccountName}
+      />
       <div className="content">
         <div className="column">
-        <motion.div
-          className="row between"
-          initial={reduceMotion ? false : { opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.32, ease: EASE_OUT }}
-        >
-          <div className="h1">{STEP_TITLES[step]}</div>
-          <Button variant="secondary" pill onClick={() => navigate("/")}>
-            Cancel
-          </Button>
-        </motion.div>
-        <motion.p
-          className="step-tag"
-          initial={reduceMotion ? false : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.32, delay: 0.06, ease: EASE_OUT }}
-          key={`tag-${step}`}
-        >
-          {STEP_TAGS[step]}
-        </motion.p>
+        {step < 3 && (
+          <>
+            <motion.div
+              className="row between"
+              initial={reduceMotion ? false : { opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.32, ease: EASE_OUT }}
+            >
+              <div className="h1">{STEP_TITLES[step]}</div>
+              <Button variant="secondary" pill onClick={() => navigate("/")}>
+                Cancel
+              </Button>
+            </motion.div>
+            <motion.p
+              className="step-tag"
+              initial={reduceMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.32, delay: 0.06, ease: EASE_OUT }}
+              key={`tag-${step}`}
+            >
+              {STEP_TAGS[step]}
+            </motion.p>
+          </>
+        )}
 
         {error && <div className="error-banner">{error}</div>}
 
@@ -287,8 +346,73 @@ export default function OrganizerWizard() {
               </motion.div>
               <motion.div variants={item}>
                 <label>Where are we climbing? *</label>
-                <div className="row" style={{ gap: 6 }}>
-                  <span className="input-icon-field" style={{ flex: 1 }}>
+                {placeLabel ? (
+                  (() => {
+                    // Selected address fills the bar, split into name + region.
+                    const ci = placeLabel.indexOf(", ");
+                    const primary = ci === -1 ? placeLabel : placeLabel.slice(0, ci);
+                    const secondary = ci === -1 ? "" : placeLabel.slice(ci + 2);
+                    return (
+                      <div className="list-item">
+                        <div style={{ minWidth: 0 }}>
+                          <div
+                            style={{
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {primary}
+                          </div>
+                          {secondary && (
+                            <div className="muted" style={{ fontSize: 13 }}>
+                              {secondary}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          aria-label="Clear location"
+                          onClick={clearLocation}
+                          style={{
+                            flexShrink: 0,
+                            boxSizing: "border-box",
+                            width: 26,
+                            height: 26,
+                            minWidth: 26,
+                            padding: 0,
+                            borderRadius: "50%",
+                            border: "none",
+                            appearance: "none",
+                            WebkitAppearance: "none",
+                            cursor: "pointer",
+                            background: "var(--stone-200, rgba(120,120,128,0.18))",
+                            color: "var(--stone-600, #667085)",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 13,
+                            lineHeight: 1,
+                          }}
+                        >
+                          <span
+                            aria-hidden="true"
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              width: 26,
+                              height: 26,
+                            }}
+                          >
+                            ✕
+                          </span>
+                        </button>
+                      </div>
+                    );
+                  })()
+                ) : (
+                  <span className="input-icon-field">
                     <span className="input-icon">
                       <MountainIcon />
                     </span>
@@ -304,43 +428,33 @@ export default function OrganizerWizard() {
                       }}
                     />
                   </span>
-                  <button
-                    type="button"
-                    className="th-btn th-btn--secondary"
-                    onClick={geoSearch}
-                    disabled={geoSearching || !location.trim()}
-                  >
-                    {geoSearching ? "…" : "Find"}
-                  </button>
-                </div>
+                )}
 
-                {placeLabel ? (
-                  <div className="list-item" style={{ marginTop: 8 }}>
-                    <span>📍 {placeLabel}</span>
-                    <button type="button" className="th-btn th-btn--tertiary" onClick={clearPin}>
-                      Clear
-                    </button>
-                  </div>
-                ) : (
+                {!placeLabel && (
                   <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-                    Search and pin a place to load the weather forecast.
-                    Optional — you can set it later.
+                    {geoSearching
+                      ? "Searching…"
+                      : "Type a place and pick it to load the weather forecast. Optional — you can set it later."}
                   </p>
                 )}
 
-                {geoResults.length > 0 && (
+                {!placeLabel && geoResults.length > 0 && (
                   <div style={{ marginTop: 8 }}>
                     {geoResults.map((r, i) => (
-                      <div className="list-item" key={i}>
+                      <button
+                        type="button"
+                        className="list-item"
+                        key={i}
+                        onClick={() => pickPlace(r)}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          font: "inherit",
+                          cursor: "pointer",
+                        }}
+                      >
                         <span>{labelForGeo(r)}</span>
-                        <button
-                          type="button"
-                          className="th-btn th-btn--tertiary"
-                          onClick={() => pickPlace(r)}
-                        >
-                          Pin
-                        </button>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -545,6 +659,41 @@ export default function OrganizerWizard() {
                   </div>
                 </motion.div>
               ))}
+              {GEAR_CATALOG.some(
+                (g) => !categories.some((c) => c.catalog_key === g.slug)
+              ) && (
+                <motion.div
+                  variants={item}
+                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                >
+                  <span className="muted">Quick-add common gear</span>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {GEAR_CATALOG.filter(
+                      (g) => !categories.some((c) => c.catalog_key === g.slug)
+                    ).map((g) => (
+                      <button
+                        key={g.slug}
+                        type="button"
+                        className="th-btn th-btn--secondary th-btn--pill"
+                        style={{ minHeight: 0, padding: "8px 14px" }}
+                        onClick={() =>
+                          setCategories([
+                            ...categories,
+                            {
+                              name: g.label,
+                              fields: g.fields.map((f) => ({ ...f })),
+                              summary_mode: "total",
+                              catalog_key: g.slug,
+                            },
+                          ])
+                        }
+                      >
+                        {g.emoji} {g.label}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
               <motion.button
                 variants={item}
                 className="th-btn th-btn--secondary"
@@ -639,6 +788,52 @@ export default function OrganizerWizard() {
                 >
                   {submitting ? "Pitching the tent…" : "Send it →"}
                 </motion.button>
+              </motion.div>
+            </motion.div>
+          )}
+          {step === 3 && createdTripUrl && (
+            <motion.div
+              key="step-3"
+              className="col"
+              variants={stagger}
+              initial="hidden"
+              animate="show"
+            >
+              <motion.div variants={item} className="h1" style={{ textAlign: "center" }}>
+                Trip created!
+              </motion.div>
+              <motion.div variants={item} className="card" style={{ textAlign: "center" }}>
+                <p style={{ marginBottom: 12 }}>
+                  <strong>Save this link</strong> — it's the only way back to
+                  your trip. Bookmark it or send it to yourself before sharing
+                  with the crew.
+                </p>
+                <input
+                  readOnly
+                  value={createdTripUrl}
+                  onFocus={(e) => e.target.select()}
+                  style={{ textAlign: "center", marginBottom: 12 }}
+                />
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  onClick={() => {
+                    navigator.clipboard.writeText(createdTripUrl);
+                    setLinkCopied(true);
+                    setTimeout(() => setLinkCopied(false), 2000);
+                  }}
+                >
+                  {linkCopied ? "Copied!" : "Copy link"}
+                </Button>
+              </motion.div>
+              <motion.div variants={item}>
+                <Button
+                  variant="primary"
+                  fullWidth
+                  onClick={() => navigate(createdTripUrl.replace(window.location.origin, "") + "/board", { replace: true })}
+                >
+                  Go to trip →
+                </Button>
               </motion.div>
             </motion.div>
           )}

@@ -1,14 +1,17 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
+import { ClerkProvider } from "@clerk/clerk-react";
 
 import App from "./App";
+import { clerkPublishableKey } from "./lib/clerk";
 import TripListing from "./screens/TripListing";
 import OrganizerWizard from "./screens/OrganizerWizard";
 import TripLayout from "./screens/TripLayout";
 import Landing from "./screens/Landing";
 import TripDashboard from "./screens/TripDashboard";
 import UIKit from "./screens/UIKit";
+import AllTrips from "./screens/AllTrips";
 import NotFound from "./screens/NotFound";
 import { partyDayActive } from "./lib/partyDay";
 
@@ -73,6 +76,7 @@ const router = createBrowserRouter([
     element: <App />,
     children: [
       { index: true, element: <TripListing /> },
+      { path: "nicoisnotthestrongestclimber", element: <AllTrips /> },
       { path: "ui-kit", element: <UIKit /> },
       { path: "trips/new", element: <OrganizerWizard /> },
       {
@@ -91,6 +95,10 @@ const router = createBrowserRouter([
 // NOTE: StrictMode was deadlocking framer-motion's AnimatePresence
 // (cards stuck at opacity 0 on first mount). Disabled until we move to
 // a more StrictMode-tolerant animation pattern.
+// Clerk is required — the publishable key must be present (clerk.ts throws
+// otherwise), so we always wrap the app in ClerkProvider.
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <RouterProvider router={router} />
+  <ClerkProvider publishableKey={clerkPublishableKey} afterSignOutUrl="/">
+    <RouterProvider router={router} />
+  </ClerkProvider>
 );

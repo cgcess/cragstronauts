@@ -12,6 +12,7 @@ import type {
   DogSchema,
   GearCategorySchema,
   GearContributionSchema,
+  GearDeclineSchema,
   PollSchema,
   PollAnswerSchema,
   ExpenseSchema,
@@ -28,6 +29,7 @@ type Car = z.infer<typeof CarSchema>;
 export type Dog = z.infer<typeof DogSchema>;
 type Category = z.infer<typeof GearCategorySchema>;
 type Contribution = z.infer<typeof GearContributionSchema>;
+type Decline = z.infer<typeof GearDeclineSchema>;
 type Poll = z.infer<typeof PollSchema>;
 type PollAnswer = z.infer<typeof PollAnswerSchema>;
 type PollInput = {
@@ -41,11 +43,41 @@ type Settlement = z.infer<typeof SettlementSchema>;
 type Feedback = z.infer<typeof FeedbackSchema>;
 type Ok = { ok: boolean };
 
+// Clerk session-token getter, registered by ClerkTokenBridge while signed in.
+// Null when signed out, in which case requests go out unauthenticated and the
+// backend treats the caller as an anonymous, cooperative visitor (public trips).
+let authTokenGetter: (() => Promise<string | null>) | null = null;
+export function setAuthTokenGetter(getter: (() => Promise<string | null>) | null) {
+  authTokenGetter = getter;
+}
+
+// Thrown for any non-2xx response. `status` carries the HTTP status so callers
+// can branch on it (e.g. a 403 from claim means the slot is bound to another
+// account and retrying is pointless). `message` stays the human-facing detail,
+// so existing code that surfaces `err.message` is unchanged.
+export class ApiError extends Error {
+  readonly status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const opts: RequestInit = { method, headers: {} };
+  const headers: Record<string, string> = {};
+  const opts: RequestInit = { method, headers };
   if (body !== undefined) {
-    (opts.headers as Record<string, string>)["Content-Type"] = "application/json";
+    headers["Content-Type"] = "application/json";
     opts.body = JSON.stringify(body);
+  }
+  if (authTokenGetter) {
+    try {
+      const token = await authTokenGetter();
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+    } catch {
+      // No token (e.g. expired session); fall through unauthenticated.
+    }
   }
   const r = await fetch(path, opts);
   if (!r.ok) {
@@ -56,7 +88,7 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
     } catch {}
     // 4xx are user-facing domain errors with a meaningful detail message, so
     // show it as-is. 5xx are unexpected — keep the status code to aid debugging.
-    throw new Error(r.status >= 500 ? `${r.status} ${detail}` : detail);
+    throw new ApiError(r.status, r.status >= 500 ? `${r.status} ${detail}` : detail);
   }
   if (r.status === 204) return null as T;
   return r.json() as Promise<T>;
@@ -80,7 +112,7 @@ export const api = {
     signature: string;
     links?: { name: string; url: string }[];
     organizer_name: string;
-    gear_categories: { name: string; fields: { key: string; label: string; type: string }[] }[];
+    gear_categories: { name: string; fields: { key: string; label: string; type: string }[]; summary_mode?: "people" | "total"; catalog_key?: string | null }[];
     polls?: { question: string; description?: string | null; emoji?: string | null; options: { label: string; emoji?: string | null }[] }[];
   }) => req<CreateTripResponse>("POST", "/api/trips", data),
   getTrip: (tripId: string) => req<Trip>("GET", `/api/trips/${tripId}`),
@@ -90,6 +122,10 @@ export const api = {
 
   // Users (within a trip)
   listUsers: (tripId: string) => req<User[]>("GET", `/api/trips/${tripId}/users`),
+  // Resolve the signed-in Clerk account to its trip user (null when signed out
+  // or not yet linked on this trip).
+  myTripUser: (tripId: string) =>
+    req<{ user_id: number | null }>("GET", `/api/trips/${tripId}/users/me`),
   createUser: (tripId: string, name: string) =>
     req<User>("POST", `/api/trips/${tripId}/users`, { name, joining: true }),
   // Organizer adds a member on someone's behalf — left unclaimed so the real
@@ -117,12 +153,12 @@ export const api = {
   // Gear categories
   listCategories: (tripId: string) =>
     req<Category[]>("GET", `/api/trips/${tripId}/gear-categories`),
-  addCategory: (tripId: string, data: { name: string; fields: { key: string; label: string; type: string }[]; summary_mode?: "people" | "total" }) =>
+  addCategory: (tripId: string, data: { name: string; fields: { key: string; label: string; type: string }[]; summary_mode?: "people" | "total"; catalog_key?: string | null }) =>
     req<Category>("POST", `/api/trips/${tripId}/gear-categories`, data),
   updateCategory: (
     tripId: string,
     id: number,
-    data: { name?: string; fields?: { key: string; label: string; type: string }[]; summary_mode?: "people" | "total" }
+    data: { name?: string; fields?: { key: string; label: string; type: string }[]; summary_mode?: "people" | "total"; catalog_key?: string | null }
   ) => req<Category>("PATCH", `/api/trips/${tripId}/gear-categories/${id}`, data),
   deleteCategory: (tripId: string, id: number) =>
     req<Ok>("DELETE", `/api/trips/${tripId}/gear-categories/${id}`),
@@ -155,6 +191,14 @@ export const api = {
     req<Contribution>("POST", `/api/trips/${tripId}/gear`, data),
   deleteGear: (tripId: string, id: number) =>
     req<Ok>("DELETE", `/api/trips/${tripId}/gear/${id}`),
+
+  // Gear declines ("not bringing one")
+  listGearDeclines: (tripId: string) =>
+    req<Decline[]>("GET", `/api/trips/${tripId}/gear-declines`),
+  addGearDecline: (tripId: string, data: { user_id: number; category_id: number }) =>
+    req<Decline>("POST", `/api/trips/${tripId}/gear-declines`, data),
+  deleteGearDecline: (tripId: string, id: number) =>
+    req<Ok>("DELETE", `/api/trips/${tripId}/gear-declines/${id}`),
 
   // Polls
   listPolls: (tripId: string) => req<Poll[]>("GET", `/api/trips/${tripId}/polls`),

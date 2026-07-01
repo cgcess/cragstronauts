@@ -24,6 +24,9 @@ export const user = table("user", {
   is_organizer: column.integer().notNull().default(0),
   signup_completed: column.integer().notNull().default(0),
   claimed: column.integer().notNull().default(0),
+  // Google account `sub` this person is bound to, or NULL when unlinked (the
+  // cooperative-identity default). Set when a signed-in user claims this slot.
+  account_id: column.text(),
 });
 
 export const poll = table("poll", {
@@ -54,6 +57,9 @@ export const gearCategory = table("gear_category", {
   name: column.text().notNull(),
   fields: column.text().notNull(),
   summary_mode: column.text().notNull().default("people"),
+  // Canonical catalog slug (GEAR_CATALOG) when this category came from a preset,
+  // or NULL for free-form custom gear. Lets a profile's kit match the category.
+  catalog_key: column.text(),
 });
 
 export const car = table("car", {
@@ -87,6 +93,15 @@ export const gearContribution = table("gear_contribution", {
   user_id: column.integer().notNull().references(ref(user, "id")),
   category_id: column.integer().notNull().references(ref(gearCategory, "id")),
   details: column.text().notNull(),
+});
+
+// A user's explicit "not bringing one" answer for a gear category. The presence
+// of a row (with zero contributions) means the user answered "no"; absence of
+// both means the category is still pending for them.
+export const gearDecline = table("gear_decline", {
+  id: column.integer().notNull().primaryKey().autoIncrement(),
+  user_id: column.integer().notNull().references(ref(user, "id")),
+  category_id: column.integer().notNull().references(ref(gearCategory, "id")),
 });
 
 export const expense = table("expense", {

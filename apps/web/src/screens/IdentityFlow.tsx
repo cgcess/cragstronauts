@@ -11,6 +11,7 @@ import { api } from "../api";
 import type { User, Category, Poll } from "../context/TripContext";
 import { Button, Tag } from "../components/ui";
 import { findNameMatches } from "../lib/identity";
+import { gearForCategory, firstCar, type CragProfile } from "../lib/profile";
 
 /* ------------------------------------------------------------------ */
 /* IdentityFlow                                                        */
@@ -58,6 +59,15 @@ interface IdentityFlowProps {
    */
   mode?: "identify" | "questions";
   questionUserId?: number | null;
+  /** Signed-in member's saved kit, used to prefill the questionnaire. */
+  profile?: CragProfile | null;
+  /**
+   * The signed-in account's own display name (e.g. Google). Prefills the name
+   * field for a member who hasn't set a username yet, and switches the copy to
+   * explain the name they enter is remembered for next time. Null when signed
+   * out. (The saved username itself lives on `profile` and drives auto-skip.)
+   */
+  accountName?: string | null;
 }
 
 export default function IdentityFlow({
@@ -71,10 +81,20 @@ export default function IdentityFlow({
   onDone,
   mode = "identify",
   questionUserId = null,
+  profile = null,
+  accountName = null,
 }: IdentityFlowProps) {
   const pollsOnly = mode === "questions";
   const [phase, setPhase] = useState<Phase>("identify");
   const [userId, setUserId] = useState<number | null>(null);
+  // A signed-in member already has a name — their Clerk profile username — so we
+  // can skip the manual name-entry step and resolve identity for them. `autoJoin`
+  // gates that: "running" while we create/adopt, "failed" if it errors (we then
+  // fall back to the manual panel, name pre-filled). Empty username → no auto.
+  const autoName = (!pollsOnly && profile?.username?.trim()) || "";
+  const [autoJoin, setAutoJoin] = useState<"idle" | "running" | "failed">(
+    "idle"
+  );
 
   // Reset to a clean state every time the overlay opens. In questions mode the
   // user is already known, so jump straight to the deck.
@@ -82,8 +102,9 @@ export default function IdentityFlow({
     if (open) {
       setPhase(pollsOnly ? "questions" : "identify");
       setUserId(pollsOnly ? questionUserId : null);
+      setAutoJoin(autoName ? "running" : "idle");
     }
-  }, [open, pollsOnly, questionUserId]);
+  }, [open, pollsOnly, questionUserId, autoName]);
 
   // New visitor typed a name → create them, then run the questionnaire.
   const createAndContinue = async (name: string) => {
@@ -153,6 +174,28 @@ export default function IdentityFlow({
     else finishQuestions();
   };
 
+  // Signed-in member: resolve identity automatically instead of asking for a
+  // name. Adopt a matching person if one is already on the trip (re-claim / reuse
+  // their completed signup); otherwise create them. Then the questionnaire runs
+  // as usual. Runs once per open; a users refresh mid-flight must not re-trigger
+  // the create, so the effect deps stay narrow and lean on the phase guard.
+  useEffect(() => {
+    if (!open || autoJoin !== "running" || phase !== "identify") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const match = findNameMatches(users, autoName)[0];
+        if (match) await pickExisting(match.id);
+        else await createAndContinue(autoName);
+      } catch {
+        if (!cancelled) setAutoJoin("failed"); // fall back to the manual panel
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, autoJoin, phase]);
+
   return createPortal(
     <AnimatePresence>
       {open && (
@@ -173,11 +216,19 @@ export default function IdentityFlow({
               ✕
             </button>
             {phase === "identify" ? (
-              <IdentifyPanel
-                users={users}
-                onCreate={createAndContinue}
-                onPick={pickExisting}
-              />
+              autoJoin === "running" ? (
+                <AutoJoinPanel />
+              ) : (
+                <IdentifyPanel
+                  users={users}
+                  onCreate={createAndContinue}
+                  onPick={pickExisting}
+                  defaultName={profile?.username ?? accountName ?? undefined}
+                  rememberHint={
+                    !profile?.username?.trim() && !!accountName?.trim()
+                  }
+                />
+              )
             ) : (
               <Questionnaire
                 tripId={tripId}
@@ -185,6 +236,7 @@ export default function IdentityFlow({
                 categories={categories}
                 polls={polls}
                 pollsOnly={pollsOnly}
+                profile={profile}
                 onComplete={finishQuestions}
                 onNotJoining={notJoining}
               />
@@ -201,16 +253,36 @@ export default function IdentityFlow({
 /* Phase 1 — identify                                                  */
 /* ------------------------------------------------------------------ */
 
+// A brief holding view shown while a signed-in member is auto-joined, so the
+// name form never flashes for someone who won't type in it.
+function AutoJoinPanel() {
+  return (
+    <div className="content identity-identify">
+      <div className="identity-identify__inner">
+        <div className="identity-identify__head">
+          <h1 className="identity-identify__title">Getting you in… 🧗</h1>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function IdentifyPanel({
   users,
   onCreate,
   onPick,
+  defaultName,
+  rememberHint = false,
 }: {
   users: User[];
   onCreate: (name: string) => Promise<void>;
   onPick: (id: number) => Promise<void>;
+  defaultName?: string;
+  /** Signed-in, no username yet: prefill is their account name and we tell them
+   * it'll be remembered for next time. */
+  rememberHint?: boolean;
 }) {
-  const [name, setName] = useState("");
+  const [name, setName] = useState(defaultName ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // When the typed name collides with existing people, hold them here so the
@@ -318,7 +390,9 @@ function IdentifyPanel({
     <div className="content identity-identify">
       <div className="identity-identify__inner">
         <div className="identity-identify__head">
-          <h1 className="identity-identify__title">Hop in 🧗</h1>
+          <h1 className="identity-identify__title">
+            {rememberHint ? "Pick your name 🧗" : "Hop in 🧗"}
+          </h1>
           <input
             className="identity-identify__input"
             placeholder="Your name"
@@ -327,6 +401,12 @@ function IdentifyPanel({
             onKeyDown={(e) => e.key === "Enter" && submitName()}
             autoFocus
           />
+          {rememberHint && (
+            <p className="identity-identify__note">
+              This is how you'll show up on trips — we'll remember it so you can
+              skip this next time.
+            </p>
+          )}
           {error && <div className="error-banner">{error}</div>}
           <Button
             variant="primary"
@@ -390,10 +470,12 @@ interface Question {
 function buildQuestions(
   categories: Category[],
   polls: Poll[],
-  pollsOnly = false
+  pollsOnly = false,
+  profile?: CragProfile | null
 ): Question[] {
-  // The nudge deck only mops up unanswered polls — skip the joining, gear and
-  // driving cards entirely.
+  // The nudge deck skips the joining and driving cards (and never touches
+  // signup state), but still includes polls and gear so a user can answer
+  // "bringing one" / "not bringing one" straight from the dashboard nudge.
   const qs: Question[] = pollsOnly
     ? []
     : [
@@ -412,22 +494,34 @@ function buildQuestions(
       poll: p,
     });
   }
-  if (pollsOnly) return qs;
   for (const c of categories) {
+    // When the member's saved kit matches this category (by catalog slug), the
+    // card greets their gear and the detail form arrives pre-filled.
+    const mine = gearForCategory(profile, c);
     qs.push({
       id: `gear:${c.id}`,
-      title: `Are you bringing a ${c.name.toLowerCase()}?`,
-      sub: c.fields.length
-        ? "If yes, we'll ask for details."
-        : "Swipe right if you'll bring one.",
+      title: mine
+        ? `Bring your ${c.name.toLowerCase()}?`
+        : `Are you bringing a ${c.name.toLowerCase()}?`,
+      sub: mine
+        ? c.fields.length
+          ? "From your kit. Confirm the details."
+          : "From your kit. Swipe right to bring it."
+        : c.fields.length
+          ? "If yes, we'll ask for details."
+          : "Swipe right if you'll bring one.",
       kind: "gear",
       category: c,
     });
   }
+  if (pollsOnly) return qs;
+  const car = firstCar(profile);
   qs.push({
     id: "driving",
-    title: "Are you driving?",
-    sub: "If yes, we'll ask how many seats.",
+    title: car ? "Bring your car?" : "Are you driving?",
+    sub: car
+      ? `You saved ${car.seats} seats. Swipe right if you're in.`
+      : "If yes, we'll ask how many seats.",
     kind: "driving",
   });
   return qs;
@@ -439,6 +533,7 @@ function Questionnaire({
   categories,
   polls,
   pollsOnly = false,
+  profile = null,
   onComplete,
   onNotJoining,
 }: {
@@ -447,12 +542,13 @@ function Questionnaire({
   categories: Category[];
   polls: Poll[];
   pollsOnly?: boolean;
+  profile?: CragProfile | null;
   onComplete: () => void;
   onNotJoining: () => void;
 }) {
   const questions = useMemo(
-    () => buildQuestions(categories, polls, pollsOnly),
-    [categories, polls, pollsOnly]
+    () => buildQuestions(categories, polls, pollsOnly, profile),
+    [categories, polls, pollsOnly, profile]
   );
   const [idx, setIdx] = useState(0);
   const [details, setDetails] = useState<DetailState | null>(null);
@@ -477,6 +573,12 @@ function Questionnaire({
           details: extra || {},
         });
       }
+      if (qq.kind === "gear" && !yes) {
+        await api.addGearDecline(tripId, {
+          user_id: userId,
+          category_id: qq.category!.id,
+        });
+      }
       if (qq.kind === "driving" && yes) {
         await api.createCar(tripId, {
           driver_user_id: userId,
@@ -499,11 +601,24 @@ function Questionnaire({
 
   const handleAnswer = async (yes: boolean) => {
     if (yes && q.kind === "gear" && q.category!.fields.length) {
-      setDetails({ kind: "gear", category: q.category!, values: {} });
+      // Pre-fill the detail form from the member's matching saved gear.
+      const mine = gearForCategory(profile, q.category!);
+      const values: Record<string, string> = {};
+      if (mine?.values) {
+        for (const f of q.category!.fields) {
+          const v = mine.values[f.key];
+          if (v != null) values[f.key] = String(v);
+        }
+      }
+      setDetails({ kind: "gear", category: q.category!, values });
       return;
     }
     if (yes && q.kind === "driving") {
-      setDetails({ kind: "driving", values: { seats: "4" } });
+      const car = firstCar(profile);
+      setDetails({
+        kind: "driving",
+        values: { seats: car ? String(car.seats) : "4" },
+      });
       return;
     }
     if (q.id === "joining" && !yes) {

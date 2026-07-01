@@ -15,5 +15,8 @@ import m0013 from './migrations/0013_drop_lead_belay.sql';
 import m0014 from './migrations/0014_gear_summary_mode.sql';
 import m0015 from './migrations/0015_user_claimed.sql';
 import m0016 from './migrations/0016_dogs.sql';
+import m0017 from './migrations/0017_user_account_link.sql';
+import m0018 from './migrations/0018_gear_category_catalog_key.sql';
+import m0019 from './migrations/0019_gear_decline.sql';
 
-export const migrations = { m0000, m0001, m0002, m0003, m0004, m0005, m0006, m0007, m0008, m0009, m0010, m0011, m0012, m0013, m0014, m0015, m0016 };
+export const migrations = { m0000, m0001, m0002, m0003, m0004, m0005, m0006, m0007, m0008, m0009, m0010, m0011, m0012, m0013, m0014, m0015, m0016, m0017, m0018, m0019 };

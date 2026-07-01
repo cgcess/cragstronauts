@@ -10,3 +10,8 @@ claude_instructions.md
 !.claude/commands/
 .pnpm-store
 .DS_Store
+# Local Worker secrets (Clerk secret key). Never commit.
+.dev.vars
+# Local env overrides (Vite); holds the Clerk publishable key for dev.
+.env.local
+.env.*.local

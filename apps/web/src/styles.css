@@ -424,6 +424,30 @@ label {
   margin-bottom: 6px;
 }
 
+/* Leading icon inside a field (input / select / date button). Wrap the
+   control in <span class="input-icon-field"> with an <span class="input-icon">
+   holding an inline SVG as the first child. */
+.input-icon-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.input-icon-field > .input-icon {
+  position: absolute;
+  left: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--brown-500);
+  pointer-events: none;
+}
+.input-icon-field > input,
+.input-icon-field > select,
+.input-icon-field > .date-range-input {
+  /* Override the shorthand padding minimalist.css sets with !important. */
+  padding-left: 40px !important;
+}
+
 /* Step indicator under the wizard headline */
 .step-tag {
   display: inline-block;

@@ -85,6 +85,12 @@ export interface UseProfile {
   signedIn: boolean;
   /** The current, normalized profile (empty when none saved yet). */
   profile: CragProfile;
+  /**
+   * The signed-in account's own display name (from Clerk / the SSO provider,
+   * e.g. Google). Used to prefill the join name and back-fill the profile
+   * username for a member who never set one. Undefined when signed out.
+   */
+  accountName?: string;
   /** Persist a new profile. Throws if signed out or the network write fails. */
   save: (next: CragProfile) => Promise<void>;
   saving: boolean;
@@ -92,6 +98,8 @@ export interface UseProfile {
 
 export function useProfile(): UseProfile {
   const { isLoaded, user } = useUser();
+  const accountName =
+    user?.fullName?.trim() || user?.firstName?.trim() || undefined;
   const profile = useMemo(
     () =>
       normalizeProfile(
@@ -116,7 +124,7 @@ export function useProfile(): UseProfile {
     [user]
   );
 
-  return { ready: isLoaded, signedIn: !!user, profile, save, saving };
+  return { ready: isLoaded, signedIn: !!user, profile, accountName, save, saving };
 }
 
 // --- Join-time matching (Phase 2) -------------------------------------------

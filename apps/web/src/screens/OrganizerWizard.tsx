@@ -11,6 +11,41 @@ import ProfileBridge from "../components/ProfileBridge";
 import type { CragProfile } from "../lib/profile";
 import { GEAR_CATALOG } from "@cragstronauts/contract";
 
+// Leading field icons (lucide-style, inherit color via currentColor).
+const iconProps = {
+  width: 18,
+  height: 18,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 2,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+};
+const MountainIcon = () => (
+  <svg {...iconProps} aria-hidden="true">
+    <path d="m8 3 4 8 5-5 5 15H2L8 3z" />
+  </svg>
+);
+const CalendarIcon = () => (
+  <svg {...iconProps} aria-hidden="true">
+    <path d="M8 2v4M16 2v4" />
+    <rect width="18" height="18" x="3" y="4" rx="2" />
+    <path d="M3 10h18" />
+  </svg>
+);
+const BedIcon = () => (
+  <svg {...iconProps} aria-hidden="true">
+    <path d="M2 4v16M2 8h18a2 2 0 0 1 2 2v10M2 17h20M6 8v9" />
+  </svg>
+);
+const PinIcon = () => (
+  <svg {...iconProps} aria-hidden="true">
+    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+);
+
 interface CategoryField {
   key: string;
   label: string;
@@ -377,17 +412,22 @@ export default function OrganizerWizard() {
                     );
                   })()
                 ) : (
-                  <input
-                    placeholder="e.g. Yosemite Valley"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        geoSearch();
-                      }
-                    }}
-                  />
+                  <span className="input-icon-field">
+                    <span className="input-icon">
+                      <MountainIcon />
+                    </span>
+                    <input
+                      placeholder="e.g. Yosemite Valley"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          geoSearch();
+                        }
+                      }}
+                    />
+                  </span>
                 )}
 
                 {!placeLabel && (
@@ -436,33 +476,48 @@ export default function OrganizerWizard() {
 
               <motion.div variants={item}>
                 <label>When</label>
-                <DateRangePicker
-                  value={range}
-                  onChange={onRangeChange}
-                  minDate={today}
-                />
+                <span className="input-icon-field">
+                  <span className="input-icon">
+                    <CalendarIcon />
+                  </span>
+                  <DateRangePicker
+                    value={range}
+                    onChange={onRangeChange}
+                    minDate={today}
+                  />
+                </span>
               </motion.div>
 
               <motion.div variants={item}>
                 <label>Where do we sleep?</label>
-                <select
-                  value={accomType}
-                  onChange={(e) => setAccomType(e.target.value)}
-                >
-                  <option value="campsite">Campsite</option>
-                  <option value="airbnb">Airbnb</option>
-                  <option value="hotel">Hotel</option>
-                  <option value="hut">Hut / Refuge</option>
-                  <option value="other">Other</option>
-                </select>
+                <span className="input-icon-field">
+                  <span className="input-icon">
+                    <BedIcon />
+                  </span>
+                  <select
+                    value={accomType}
+                    onChange={(e) => setAccomType(e.target.value)}
+                  >
+                    <option value="campsite">Campsite</option>
+                    <option value="airbnb">Airbnb</option>
+                    <option value="hotel">Hotel</option>
+                    <option value="hut">Hut / Refuge</option>
+                    <option value="other">Other</option>
+                  </select>
+                </span>
               </motion.div>
               <motion.div variants={item}>
                 <label>Drop the address (or a link)</label>
-                <input
-                  placeholder="Name, address, link…"
-                  value={accomDetails}
-                  onChange={(e) => setAccomDetails(e.target.value)}
-                />
+                <span className="input-icon-field">
+                  <span className="input-icon">
+                    <PinIcon />
+                  </span>
+                  <input
+                    placeholder="Name, address, link…"
+                    value={accomDetails}
+                    onChange={(e) => setAccomDetails(e.target.value)}
+                  />
+                </span>
               </motion.div>
               <motion.div variants={item}>
                 <label>Field notes (optional)</label>

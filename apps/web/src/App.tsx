@@ -4,7 +4,6 @@ import AlpsBackground from "./components/AlpsBackground";
 import GlassFilter from "./components/GlassFilter";
 import ThemeToggle from "./components/ThemeToggle";
 import { ConfirmProvider } from "./components/ui";
-import { clerkEnabled } from "./lib/clerk";
 import ClerkTokenBridge from "./components/ClerkTokenBridge";
 import ProfileButton from "./components/profile/ProfileButton";
 
@@ -13,10 +12,10 @@ export default function App() {
     <ConfirmProvider>
       <GlassFilter />
       <AlpsBackground />
-      {clerkEnabled && <ClerkTokenBridge />}
+      <ClerkTokenBridge />
       <div className="app-topbar">
         <ThemeToggle />
-        {clerkEnabled && <ProfileButton />}
+        <ProfileButton />
       </div>
       <Outlet />
     </ConfirmProvider>

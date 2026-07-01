@@ -2,14 +2,16 @@
 
 How auth is wired (so the steps below make sense):
 
+- **Clerk is required.** The app does not run without its keys — there is no
+  "disabled" fallback. The frontend throws at boot if the publishable key is
+  missing; the backend runs `clerkMiddleware` unconditionally.
 - **Backend** (Worker) reads `CLERK_SECRET_KEY` and `CLERK_PUBLISHABLE_KEY` from
-  env at request time. Both must be set or the Worker skips Clerk and serves the
-  public cooperative board. Secrets can be added/changed anytime without a
+  env at request time. Both must be set. Secrets can be changed anytime without a
   rebuild.
 - **Frontend** bakes `VITE_CLERK_PUBLISHABLE_KEY` in at **build** time. It must
   be present when `vite build` runs; changing it requires a rebuild + redeploy.
-- Auth is additive: deploy with no keys and the app behaves exactly as it does
-  today (no sign-in), then "turn on" auth by adding the keys.
+- A signed-out visitor is still served (public trips allow anonymous,
+  cooperative use); private trips require sign-in.
 
 ## Decide first: custom domain or workers.dev?
 
@@ -87,5 +89,6 @@ How auth is wired (so the steps below make sense):
 - **Rotate** the dev Google client secret that was shared in chat earlier. Clerk
   dev does not use it, but it is good hygiene.
 - Local dev keys live in `apps/api/.dev.vars` and `apps/web/.env.local` (both
-  gitignored). Refresh with
-  `npx clerk env pull --app app_3FJAeiPJvMuQS9Yfo3X0ivLoaRO --file apps/api/.dev.vars`.
+  gitignored). Because Clerk is required, these must exist before `pnpm turbo
+  dev`. Populate both with `bin/fetch-secrets` (wraps `npx clerk env pull`;
+  needs Clerk app membership + a logged-in Clerk CLI).

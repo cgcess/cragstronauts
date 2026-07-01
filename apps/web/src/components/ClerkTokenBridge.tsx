@@ -3,8 +3,7 @@ import { useAuth } from "@clerk/clerk-react";
 import { setAuthTokenGetter } from "../api";
 
 // Bridges Clerk's session token into the plain `api` module so every request
-// carries `Authorization: Bearer <token>` while signed in. Rendered only when
-// Clerk is enabled (inside ClerkProvider).
+// carries `Authorization: Bearer <token>` while signed in.
 export default function ClerkTokenBridge() {
   const { getToken } = useAuth();
   useEffect(() => {

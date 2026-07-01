@@ -44,9 +44,8 @@ type Feedback = z.infer<typeof FeedbackSchema>;
 type Ok = { ok: boolean };
 
 // Clerk session-token getter, registered by ClerkTokenBridge while signed in.
-// Null when Clerk is disabled or signed out, in which case requests go out
-// unauthenticated and the backend treats the caller as an anonymous,
-// cooperative visitor.
+// Null when signed out, in which case requests go out unauthenticated and the
+// backend treats the caller as an anonymous, cooperative visitor (public trips).
 let authTokenGetter: (() => Promise<string | null>) | null = null;
 export function setAuthTokenGetter(getter: (() => Promise<string | null>) | null) {
   authTokenGetter = getter;

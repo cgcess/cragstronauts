@@ -332,16 +332,20 @@ export default function OrganizerWizard() {
                 {geoResults.length > 0 && (
                   <div style={{ marginTop: 8 }}>
                     {geoResults.map((r, i) => (
-                      <div className="list-item" key={i}>
+                      <button
+                        type="button"
+                        className="list-item"
+                        key={i}
+                        onClick={() => pickPlace(r)}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          font: "inherit",
+                          cursor: "pointer",
+                        }}
+                      >
                         <span>{labelForGeo(r)}</span>
-                        <button
-                          type="button"
-                          className="th-btn th-btn--tertiary"
-                          onClick={() => pickPlace(r)}
-                        >
-                          Pin
-                        </button>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}

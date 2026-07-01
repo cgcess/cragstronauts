@@ -14,6 +14,15 @@ A small webapp for coordinating a single group climbing trip: the organizer sets
 
 ## Running locally
 
+Fetch the local secrets first (needs Clerk app membership and a logged-in Clerk
+CLI). This writes the gitignored `apps/api/.dev.vars` and `apps/web/.env.local`:
+
+```bash
+bin/fetch-secrets
+```
+
+Then:
+
 ```bash
 pnpm install
 pnpm turbo dev

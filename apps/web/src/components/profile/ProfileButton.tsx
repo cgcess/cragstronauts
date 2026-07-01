@@ -5,7 +5,6 @@ import ProfileDialog from "./ProfileDialog";
 // Top-right entry point (replaces the old standalone Clerk control). Shows the
 // signed-in avatar, or a neutral person glyph when signed out. Either way it
 // opens the Profile dialog — Clerk's own controls now live on its Account tab.
-// Rendered only when Clerk is enabled (so it sits inside ClerkProvider).
 export default function ProfileButton() {
   const { user } = useUser();
   const [open, setOpen] = useState(false);

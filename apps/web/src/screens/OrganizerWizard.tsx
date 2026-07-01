@@ -8,7 +8,6 @@ import LinksEditor from "../components/LinksEditor";
 import DateRangePicker from "../components/DateRangePicker";
 import { Button } from "../components/ui";
 import ProfileBridge from "../components/ProfileBridge";
-import { clerkEnabled } from "../lib/clerk";
 import type { CragProfile } from "../lib/profile";
 import { GEAR_CATALOG } from "@cragstronauts/contract";
 
@@ -238,12 +237,10 @@ export default function OrganizerWizard() {
 
   return (
     <div className="app-shell">
-      {clerkEnabled && (
-        <ProfileBridge
-          onProfile={setMemberProfile}
-          onAccountName={setAccountName}
-        />
-      )}
+      <ProfileBridge
+        onProfile={setMemberProfile}
+        onAccountName={setAccountName}
+      />
       <div className="content">
         <div className="column">
         {step < 3 && (

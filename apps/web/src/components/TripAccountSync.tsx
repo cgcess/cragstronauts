@@ -5,7 +5,6 @@ import { useTripContext } from "../context/TripContext";
 import { useProfile } from "../lib/profile";
 
 // Reconciles the signed-in Clerk account with this trip. No-op when signed out.
-// Rendered only when Clerk is enabled, inside TripProvider.
 export default function TripAccountSync() {
   const { isSignedIn } = useAuth();
   const { profile, save } = useProfile();

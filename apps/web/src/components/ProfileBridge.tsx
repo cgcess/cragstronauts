@@ -3,9 +3,7 @@ import { useProfile, type CragProfile } from "../lib/profile";
 
 // Lifts the signed-in user's profile up to TripLayout so the join questionnaire
 // can prefill from it, along with the account's own display name (used to
-// prefill the join name for a member who hasn't set a username yet). Mirrors
-// TripAccountSync's gating: only mounted when Clerk is enabled (inside
-// ClerkProvider), so the public no-Clerk path never calls Clerk hooks. Reports
+// prefill the join name for a member who hasn't set a username yet). Reports
 // null when signed out / not ready.
 export default function ProfileBridge({
   onProfile,

@@ -10,19 +10,15 @@ import { carRoutes } from "./routes/cars";
 import { expenseRoutes } from "./routes/expenses";
 import { feedbackRoutes } from "./routes/feedback";
 
-const clerk = clerkMiddleware();
-
 export const createApp = () => {
   const app = new OpenAPIHono<{ Bindings: Env }>();
 
   app.use("/api/*", cors({ origin: "*" }));
 
-  // Populate Clerk auth on API requests when configured. Auth is additive: with
-  // no keys set we skip Clerk and routes behave as the public, cooperative board
-  // (getAccountId returns null).
-  app.use("/api/*", (c, next) =>
-    c.env.CLERK_SECRET_KEY && c.env.CLERK_PUBLISHABLE_KEY ? clerk(c, next) : next()
-  );
+  // Populate Clerk auth on every API request. Clerk is required: the keys
+  // (CLERK_SECRET_KEY / CLERK_PUBLISHABLE_KEY) must be set. getAccountId then
+  // returns the signed-in account, or null when the caller is signed out.
+  app.use("/api/*", clerkMiddleware());
 
   app.route("/", tripRoutes);
   app.route("/", userRoutes);

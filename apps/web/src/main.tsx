@@ -95,15 +95,10 @@ const router = createBrowserRouter([
 // NOTE: StrictMode was deadlocking framer-motion's AnimatePresence
 // (cards stuck at opacity 0 on first mount). Disabled until we move to
 // a more StrictMode-tolerant animation pattern.
-// Clerk is additive: only wrap when a publishable key is configured, so the app
-// still boots as the public cooperative board without it.
-const tree = <RouterProvider router={router} />;
+// Clerk is required — the publishable key must be present (clerk.ts throws
+// otherwise), so we always wrap the app in ClerkProvider.
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  clerkPublishableKey ? (
-    <ClerkProvider publishableKey={clerkPublishableKey} afterSignOutUrl="/">
-      {tree}
-    </ClerkProvider>
-  ) : (
-    tree
-  )
+  <ClerkProvider publishableKey={clerkPublishableKey} afterSignOutUrl="/">
+    <RouterProvider router={router} />
+  </ClerkProvider>
 );

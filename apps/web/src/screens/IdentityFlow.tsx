@@ -79,6 +79,14 @@ export default function IdentityFlow({
   const pollsOnly = mode === "questions";
   const [phase, setPhase] = useState<Phase>("identify");
   const [userId, setUserId] = useState<number | null>(null);
+  // A signed-in member already has a name — their Clerk profile username — so we
+  // can skip the manual name-entry step and resolve identity for them. `autoJoin`
+  // gates that: "running" while we create/adopt, "failed" if it errors (we then
+  // fall back to the manual panel, name pre-filled). Empty username → no auto.
+  const autoName = (!pollsOnly && profile?.username?.trim()) || "";
+  const [autoJoin, setAutoJoin] = useState<"idle" | "running" | "failed">(
+    "idle"
+  );
 
   // Reset to a clean state every time the overlay opens. In questions mode the
   // user is already known, so jump straight to the deck.
@@ -86,8 +94,9 @@ export default function IdentityFlow({
     if (open) {
       setPhase(pollsOnly ? "questions" : "identify");
       setUserId(pollsOnly ? questionUserId : null);
+      setAutoJoin(autoName ? "running" : "idle");
     }
-  }, [open, pollsOnly, questionUserId]);
+  }, [open, pollsOnly, questionUserId, autoName]);
 
   // New visitor typed a name → create them, then run the questionnaire.
   const createAndContinue = async (name: string) => {
@@ -157,6 +166,28 @@ export default function IdentityFlow({
     else finishQuestions();
   };
 
+  // Signed-in member: resolve identity automatically instead of asking for a
+  // name. Adopt a matching person if one is already on the trip (re-claim / reuse
+  // their completed signup); otherwise create them. Then the questionnaire runs
+  // as usual. Runs once per open; a users refresh mid-flight must not re-trigger
+  // the create, so the effect deps stay narrow and lean on the phase guard.
+  useEffect(() => {
+    if (!open || autoJoin !== "running" || phase !== "identify") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const match = findNameMatches(users, autoName)[0];
+        if (match) await pickExisting(match.id);
+        else await createAndContinue(autoName);
+      } catch {
+        if (!cancelled) setAutoJoin("failed"); // fall back to the manual panel
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, autoJoin, phase]);
+
   return createPortal(
     <AnimatePresence>
       {open && (
@@ -177,12 +208,16 @@ export default function IdentityFlow({
               ✕
             </button>
             {phase === "identify" ? (
-              <IdentifyPanel
-                users={users}
-                onCreate={createAndContinue}
-                onPick={pickExisting}
-                defaultName={profile?.username}
-              />
+              autoJoin === "running" ? (
+                <AutoJoinPanel />
+              ) : (
+                <IdentifyPanel
+                  users={users}
+                  onCreate={createAndContinue}
+                  onPick={pickExisting}
+                  defaultName={profile?.username}
+                />
+              )
             ) : (
               <Questionnaire
                 tripId={tripId}
@@ -206,6 +241,20 @@ export default function IdentityFlow({
 /* ------------------------------------------------------------------ */
 /* Phase 1 — identify                                                  */
 /* ------------------------------------------------------------------ */
+
+// A brief holding view shown while a signed-in member is auto-joined, so the
+// name form never flashes for someone who won't type in it.
+function AutoJoinPanel() {
+  return (
+    <div className="content identity-identify">
+      <div className="identity-identify__inner">
+        <div className="identity-identify__head">
+          <h1 className="identity-identify__title">Getting you in… 🧗</h1>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function IdentifyPanel({
   users,

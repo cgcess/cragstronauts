@@ -163,14 +163,14 @@ export default function OrganizerWizard() {
     }
   };
 
-  // Auto-search the place ~2s after the last keystroke — no "Find" button needed.
+  // Auto-search the place shortly after the last keystroke — no "Find" button needed.
   useEffect(() => {
     const q = location.trim();
     // Nothing typed, or a place is already pinned → don't search.
     if (!q || placeLabel) return;
     const t = setTimeout(() => {
       geoSearch();
-    }, 2000);
+    }, 600);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location, placeLabel]);

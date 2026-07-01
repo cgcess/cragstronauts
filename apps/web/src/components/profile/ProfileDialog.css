@@ -38,7 +38,9 @@
 .pf-scrim {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  /* Above the identity overlay (1100) so "Edit your name" can open the profile
+     dialog on top of the join sheet; confirms (1300) still sit above this. */
+  z-index: 1200;
   display: flex;
   /* Anchor the dialog near the top rather than centering it, so switching
      General↔Account (which changes the body height) doesn't re-center the

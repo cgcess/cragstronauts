@@ -179,6 +179,15 @@ export default function OrganizerWizard() {
     setPinLat(r.latitude);
     setPinLon(r.longitude);
     setPlaceLabel(labelForGeo(r));
+    // Fill the field itself with the chosen address (calendar-app style).
+    setLocation(labelForGeo(r));
+    setGeoResults([]);
+    setGeoSearched(false);
+  };
+
+  const clearLocation = () => {
+    clearPin();
+    setLocation("");
     setGeoResults([]);
     setGeoSearched(false);
   };
@@ -302,26 +311,70 @@ export default function OrganizerWizard() {
               </motion.div>
               <motion.div variants={item}>
                 <label>Where are we climbing? *</label>
-                <input
-                  placeholder="e.g. Yosemite Valley"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      geoSearch();
-                    }
-                  }}
-                />
-
                 {placeLabel ? (
-                  <div className="list-item" style={{ marginTop: 8 }}>
-                    <span>📍 {placeLabel}</span>
-                    <button type="button" className="th-btn th-btn--tertiary" onClick={clearPin}>
-                      Clear
-                    </button>
-                  </div>
+                  (() => {
+                    // Selected address fills the bar, split into name + region.
+                    const ci = placeLabel.indexOf(", ");
+                    const primary = ci === -1 ? placeLabel : placeLabel.slice(0, ci);
+                    const secondary = ci === -1 ? "" : placeLabel.slice(ci + 2);
+                    return (
+                      <div className="list-item">
+                        <div style={{ minWidth: 0 }}>
+                          <div
+                            style={{
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {primary}
+                          </div>
+                          {secondary && (
+                            <div className="muted" style={{ fontSize: 13 }}>
+                              {secondary}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          aria-label="Clear location"
+                          onClick={clearLocation}
+                          style={{
+                            flexShrink: 0,
+                            width: 26,
+                            height: 26,
+                            borderRadius: "50%",
+                            border: "none",
+                            cursor: "pointer",
+                            background: "var(--stone-200, rgba(120,120,128,0.18))",
+                            color: "var(--stone-600, #667085)",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 14,
+                            lineHeight: 1,
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    );
+                  })()
                 ) : (
+                  <input
+                    placeholder="e.g. Yosemite Valley"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        geoSearch();
+                      }
+                    }}
+                  />
+                )}
+
+                {!placeLabel && (
                   <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
                     {geoSearching
                       ? "Searching…"
@@ -329,7 +382,7 @@ export default function OrganizerWizard() {
                   </p>
                 )}
 
-                {geoResults.length > 0 && (
+                {!placeLabel && geoResults.length > 0 && (
                   <div style={{ marginTop: 8 }}>
                     {geoResults.map((r, i) => (
                       <button

@@ -341,21 +341,37 @@ export default function OrganizerWizard() {
                           onClick={clearLocation}
                           style={{
                             flexShrink: 0,
+                            boxSizing: "border-box",
                             width: 26,
                             height: 26,
+                            minWidth: 26,
+                            padding: 0,
                             borderRadius: "50%",
                             border: "none",
+                            appearance: "none",
+                            WebkitAppearance: "none",
                             cursor: "pointer",
                             background: "var(--stone-200, rgba(120,120,128,0.18))",
                             color: "var(--stone-600, #667085)",
                             display: "inline-flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            fontSize: 14,
+                            fontSize: 13,
                             lineHeight: 1,
                           }}
                         >
-                          ✕
+                          <span
+                            aria-hidden="true"
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              width: 26,
+                              height: 26,
+                            }}
+                          >
+                            ✕
+                          </span>
                         </button>
                       </div>
                     );

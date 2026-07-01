@@ -163,10 +163,31 @@ export default function OrganizerWizard() {
     }
   };
 
+  // Auto-search the place shortly after the last keystroke — no "Find" button needed.
+  useEffect(() => {
+    const q = location.trim();
+    // Nothing typed, or a place is already pinned → don't search.
+    if (!q || placeLabel) return;
+    const t = setTimeout(() => {
+      geoSearch();
+    }, 600);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location, placeLabel]);
+
   const pickPlace = (r: GeoResult) => {
     setPinLat(r.latitude);
     setPinLon(r.longitude);
     setPlaceLabel(labelForGeo(r));
+    // Fill the field itself with the chosen address (calendar-app style).
+    setLocation(labelForGeo(r));
+    setGeoResults([]);
+    setGeoSearched(false);
+  };
+
+  const clearLocation = () => {
+    clearPin();
+    setLocation("");
     setGeoResults([]);
     setGeoSearched(false);
   };
@@ -290,7 +311,72 @@ export default function OrganizerWizard() {
               </motion.div>
               <motion.div variants={item}>
                 <label>Where are we climbing? *</label>
-                <div className="row" style={{ gap: 6 }}>
+                {placeLabel ? (
+                  (() => {
+                    // Selected address fills the bar, split into name + region.
+                    const ci = placeLabel.indexOf(", ");
+                    const primary = ci === -1 ? placeLabel : placeLabel.slice(0, ci);
+                    const secondary = ci === -1 ? "" : placeLabel.slice(ci + 2);
+                    return (
+                      <div className="list-item">
+                        <div style={{ minWidth: 0 }}>
+                          <div
+                            style={{
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {primary}
+                          </div>
+                          {secondary && (
+                            <div className="muted" style={{ fontSize: 13 }}>
+                              {secondary}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          aria-label="Clear location"
+                          onClick={clearLocation}
+                          style={{
+                            flexShrink: 0,
+                            boxSizing: "border-box",
+                            width: 26,
+                            height: 26,
+                            minWidth: 26,
+                            padding: 0,
+                            borderRadius: "50%",
+                            border: "none",
+                            appearance: "none",
+                            WebkitAppearance: "none",
+                            cursor: "pointer",
+                            background: "var(--stone-200, rgba(120,120,128,0.18))",
+                            color: "var(--stone-600, #667085)",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 13,
+                            lineHeight: 1,
+                          }}
+                        >
+                          <span
+                            aria-hidden="true"
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              width: 26,
+                              height: 26,
+                            }}
+                          >
+                            ✕
+                          </span>
+                        </button>
+                      </div>
+                    );
+                  })()
+                ) : (
                   <input
                     placeholder="e.g. Yosemite Valley"
                     value={location}
@@ -301,45 +387,34 @@ export default function OrganizerWizard() {
                         geoSearch();
                       }
                     }}
-                    style={{ flex: 1 }}
                   />
-                  <button
-                    type="button"
-                    className="th-btn th-btn--secondary"
-                    onClick={geoSearch}
-                    disabled={geoSearching || !location.trim()}
-                  >
-                    {geoSearching ? "…" : "Find"}
-                  </button>
-                </div>
+                )}
 
-                {placeLabel ? (
-                  <div className="list-item" style={{ marginTop: 8 }}>
-                    <span>📍 {placeLabel}</span>
-                    <button type="button" className="th-btn th-btn--tertiary" onClick={clearPin}>
-                      Clear
-                    </button>
-                  </div>
-                ) : (
+                {!placeLabel && (
                   <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-                    Search and pin a place to load the weather forecast.
-                    Optional — you can set it later.
+                    {geoSearching
+                      ? "Searching…"
+                      : "Type a place and pick it to load the weather forecast. Optional — you can set it later."}
                   </p>
                 )}
 
-                {geoResults.length > 0 && (
+                {!placeLabel && geoResults.length > 0 && (
                   <div style={{ marginTop: 8 }}>
                     {geoResults.map((r, i) => (
-                      <div className="list-item" key={i}>
+                      <button
+                        type="button"
+                        className="list-item"
+                        key={i}
+                        onClick={() => pickPlace(r)}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          font: "inherit",
+                          cursor: "pointer",
+                        }}
+                      >
                         <span>{labelForGeo(r)}</span>
-                        <button
-                          type="button"
-                          className="th-btn th-btn--tertiary"
-                          onClick={() => pickPlace(r)}
-                        >
-                          Pin
-                        </button>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}

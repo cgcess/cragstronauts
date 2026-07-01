@@ -40,7 +40,10 @@
   inset: 0;
   z-index: 1000;
   display: flex;
-  align-items: center;
+  /* Anchor the dialog near the top rather than centering it, so switching
+     General↔Account (which changes the body height) doesn't re-center the
+     dialog and shift the tabs/close under the user's finger. */
+  align-items: flex-start;
   justify-content: center;
   padding: 20px;
   background: rgba(0, 0, 0, 0.55);

@@ -110,6 +110,8 @@ export default function OrganizerWizard() {
   const [organizerName, setOrganizerName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [createdTripUrl, setCreatedTripUrl] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // Signed-in organizer: their name is already known (saved username, else their
   // account/Google name), lifted by ProfileBridge below. Prefill it instead of
@@ -208,7 +210,9 @@ export default function OrganizerWizard() {
           })),
       });
       localStorage.setItem(userKey(res.trip_id), String(res.organizer_user_id));
-      navigate(tripPath(name.trim(), res.trip_id, "board"), { replace: true });
+      const path = tripPath(name.trim(), res.trip_id);
+      setCreatedTripUrl(window.location.origin + path);
+      setStep(3);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -242,26 +246,30 @@ export default function OrganizerWizard() {
       )}
       <div className="content">
         <div className="column">
-        <motion.div
-          className="row between"
-          initial={reduceMotion ? false : { opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.32, ease: EASE_OUT }}
-        >
-          <div className="h1">{STEP_TITLES[step]}</div>
-          <Button variant="secondary" pill onClick={() => navigate("/")}>
-            Cancel
-          </Button>
-        </motion.div>
-        <motion.p
-          className="step-tag"
-          initial={reduceMotion ? false : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.32, delay: 0.06, ease: EASE_OUT }}
-          key={`tag-${step}`}
-        >
-          {STEP_TAGS[step]}
-        </motion.p>
+        {step < 3 && (
+          <>
+            <motion.div
+              className="row between"
+              initial={reduceMotion ? false : { opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.32, ease: EASE_OUT }}
+            >
+              <div className="h1">{STEP_TITLES[step]}</div>
+              <Button variant="secondary" pill onClick={() => navigate("/")}>
+                Cancel
+              </Button>
+            </motion.div>
+            <motion.p
+              className="step-tag"
+              initial={reduceMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.32, delay: 0.06, ease: EASE_OUT }}
+              key={`tag-${step}`}
+            >
+              {STEP_TAGS[step]}
+            </motion.p>
+          </>
+        )}
 
         {error && <div className="error-banner">{error}</div>}
 
@@ -653,6 +661,52 @@ export default function OrganizerWizard() {
                 >
                   {submitting ? "Pitching the tent…" : "Send it →"}
                 </motion.button>
+              </motion.div>
+            </motion.div>
+          )}
+          {step === 3 && createdTripUrl && (
+            <motion.div
+              key="step-3"
+              className="col"
+              variants={stagger}
+              initial="hidden"
+              animate="show"
+            >
+              <motion.div variants={item} className="h1" style={{ textAlign: "center" }}>
+                Trip created!
+              </motion.div>
+              <motion.div variants={item} className="card" style={{ textAlign: "center" }}>
+                <p style={{ marginBottom: 12 }}>
+                  <strong>Save this link</strong> — it's the only way back to
+                  your trip. Bookmark it or send it to yourself before sharing
+                  with the crew.
+                </p>
+                <input
+                  readOnly
+                  value={createdTripUrl}
+                  onFocus={(e) => e.target.select()}
+                  style={{ textAlign: "center", marginBottom: 12 }}
+                />
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  onClick={() => {
+                    navigator.clipboard.writeText(createdTripUrl);
+                    setLinkCopied(true);
+                    setTimeout(() => setLinkCopied(false), 2000);
+                  }}
+                >
+                  {linkCopied ? "Copied!" : "Copy link"}
+                </Button>
+              </motion.div>
+              <motion.div variants={item}>
+                <Button
+                  variant="primary"
+                  fullWidth
+                  onClick={() => navigate(createdTripUrl.replace(window.location.origin, "") + "/board", { replace: true })}
+                >
+                  Go to trip →
+                </Button>
               </motion.div>
             </motion.div>
           )}

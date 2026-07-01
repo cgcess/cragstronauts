@@ -163,6 +163,18 @@ export default function OrganizerWizard() {
     }
   };
 
+  // Auto-search the place ~2s after the last keystroke — no "Find" button needed.
+  useEffect(() => {
+    const q = location.trim();
+    // Nothing typed, or a place is already pinned → don't search.
+    if (!q || placeLabel) return;
+    const t = setTimeout(() => {
+      geoSearch();
+    }, 2000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location, placeLabel]);
+
   const pickPlace = (r: GeoResult) => {
     setPinLat(r.latitude);
     setPinLon(r.longitude);
@@ -290,28 +302,17 @@ export default function OrganizerWizard() {
               </motion.div>
               <motion.div variants={item}>
                 <label>Where are we climbing? *</label>
-                <div className="row" style={{ gap: 6 }}>
-                  <input
-                    placeholder="e.g. Yosemite Valley"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        geoSearch();
-                      }
-                    }}
-                    style={{ flex: 1 }}
-                  />
-                  <button
-                    type="button"
-                    className="th-btn th-btn--secondary"
-                    onClick={geoSearch}
-                    disabled={geoSearching || !location.trim()}
-                  >
-                    {geoSearching ? "…" : "Find"}
-                  </button>
-                </div>
+                <input
+                  placeholder="e.g. Yosemite Valley"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      geoSearch();
+                    }
+                  }}
+                />
 
                 {placeLabel ? (
                   <div className="list-item" style={{ marginTop: 8 }}>
@@ -322,8 +323,9 @@ export default function OrganizerWizard() {
                   </div>
                 ) : (
                   <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-                    Search and pin a place to load the weather forecast.
-                    Optional — you can set it later.
+                    {geoSearching
+                      ? "Searching…"
+                      : "Type a place and pick it to load the weather forecast. Optional — you can set it later."}
                   </p>
                 )}
 

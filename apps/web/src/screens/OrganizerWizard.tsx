@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router";
 import { api } from "../api";
@@ -8,6 +8,7 @@ import LinksEditor from "../components/LinksEditor";
 import DateRangePicker from "../components/DateRangePicker";
 import { Button } from "../components/ui";
 import ProfileBridge from "../components/ProfileBridge";
+import ProfileDialog from "../components/profile/ProfileDialog";
 import { clerkEnabled } from "../lib/clerk";
 import type { CragProfile } from "../lib/profile";
 import { GEAR_CATALOG } from "@cragstronauts/contract";
@@ -112,21 +113,23 @@ export default function OrganizerWizard() {
   const [submitting, setSubmitting] = useState(false);
 
   // Signed-in organizer: their name is already known (saved username, else their
-  // account/Google name), lifted by ProfileBridge below. Prefill it instead of
-  // asking them to type it — same idea as the join flow. Runs once when the
-  // profile arrives and leaves a typed value alone; the signature mirrors it
-  // until the organizer edits the sign-off themselves.
+  // account/Google name), lifted by ProfileBridge below. Rather than ask them to
+  // type it, show it read-only with an Edit that opens the profile dialog — same
+  // idea as the join flow. `memberProfile` is null when signed out (then the
+  // manual field is used). The organizer name mirrors it, and the sign-off keeps
+  // mirroring until the organizer edits the sign-off themselves.
   const [memberProfile, setMemberProfile] = useState<CragProfile | null>(null);
   const [accountName, setAccountName] = useState<string | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const signedIn = memberProfile != null;
   const memberName =
     memberProfile?.username?.trim() || accountName?.trim() || "";
-  const namePrefilled = useRef(false);
+  const memberJoin = signedIn && !!memberName;
   useEffect(() => {
-    if (namePrefilled.current || !memberName) return;
-    namePrefilled.current = true;
-    setOrganizerName((cur) => (cur.trim() ? cur : memberName));
-    setSignature((cur) => (cur.trim() || signatureTouched ? cur : memberName));
-  }, [memberName, signatureTouched]);
+    if (!memberJoin) return;
+    setOrganizerName(memberName);
+    if (!signatureTouched) setSignature(memberName);
+  }, [memberJoin, memberName, signatureTouched]);
 
   const reduceMotion = useReducedMotion();
   const today = useMemo(todayLocal, []);
@@ -238,6 +241,12 @@ export default function OrganizerWizard() {
         <ProfileBridge
           onProfile={setMemberProfile}
           onAccountName={setAccountName}
+        />
+      )}
+      {signedIn && (
+        <ProfileDialog
+          open={profileOpen}
+          onClose={() => setProfileOpen(false)}
         />
       )}
       <div className="content">
@@ -599,14 +608,36 @@ export default function OrganizerWizard() {
               </motion.p>
               <motion.div variants={item}>
                 <label>Your name *</label>
-                <input
-                  placeholder="Your name"
-                  value={organizerName}
-                  onChange={(e) => {
-                    setOrganizerName(e.target.value);
-                    if (!signatureTouched) setSignature(e.target.value);
-                  }}
-                />
+                {memberJoin ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 8,
+                      padding: "10px 14px",
+                      borderRadius: 12,
+                      border: "1px solid rgba(128,128,128,0.35)",
+                    }}
+                  >
+                    <span style={{ fontWeight: 600 }}>{memberName}</span>
+                    <Button
+                      variant="text"
+                      onClick={() => setProfileOpen(true)}
+                    >
+                      Edit
+                    </Button>
+                  </div>
+                ) : (
+                  <input
+                    placeholder="Your name"
+                    value={organizerName}
+                    onChange={(e) => {
+                      setOrganizerName(e.target.value);
+                      if (!signatureTouched) setSignature(e.target.value);
+                    }}
+                  />
+                )}
               </motion.div>
               <motion.div variants={item}>
                 <label>The welcome message *</label>

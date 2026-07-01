@@ -12,6 +12,7 @@ import type { User, Category, Poll } from "../context/TripContext";
 import { Button, Tag } from "../components/ui";
 import { findNameMatches } from "../lib/identity";
 import { gearForCategory, firstCar, type CragProfile } from "../lib/profile";
+import ProfileDialog from "../components/profile/ProfileDialog";
 
 /* ------------------------------------------------------------------ */
 /* IdentityFlow                                                        */
@@ -95,6 +96,14 @@ export default function IdentityFlow({
   const [autoJoin, setAutoJoin] = useState<"idle" | "running" | "failed">(
     "idle"
   );
+
+  // Signed in when we have a profile at all (ProfileBridge reports null when
+  // signed out). Their name is their saved username, else their account/Google
+  // name — shown read-only with an "Edit" that opens the profile dialog, rather
+  // than a free-text field that could silently diverge from their identity.
+  const signedIn = profile != null;
+  const memberName = profile?.username?.trim() || accountName?.trim() || "";
+  const [profileOpen, setProfileOpen] = useState(false);
 
   // Reset to a clean state every time the overlay opens. In questions mode the
   // user is already known, so jump straight to the deck.
@@ -223,10 +232,9 @@ export default function IdentityFlow({
                   users={users}
                   onCreate={createAndContinue}
                   onPick={pickExisting}
-                  defaultName={profile?.username ?? accountName ?? undefined}
-                  rememberHint={
-                    !profile?.username?.trim() && !!accountName?.trim()
-                  }
+                  signedIn={signedIn}
+                  memberName={memberName}
+                  onEditProfile={() => setProfileOpen(true)}
                 />
               )
             ) : (
@@ -239,6 +247,12 @@ export default function IdentityFlow({
                 profile={profile}
                 onComplete={finishQuestions}
                 onNotJoining={notJoining}
+              />
+            )}
+            {signedIn && (
+              <ProfileDialog
+                open={profileOpen}
+                onClose={() => setProfileOpen(false)}
               />
             )}
           </div>
@@ -271,18 +285,21 @@ function IdentifyPanel({
   users,
   onCreate,
   onPick,
-  defaultName,
-  rememberHint = false,
+  signedIn = false,
+  memberName = "",
+  onEditProfile,
 }: {
   users: User[];
   onCreate: (name: string) => Promise<void>;
   onPick: (id: number) => Promise<void>;
-  defaultName?: string;
-  /** Signed-in, no username yet: prefill is their account name and we tell them
-   * it'll be remembered for next time. */
-  rememberHint?: boolean;
+  /** Signed in: show the known name read-only with an Edit that opens profile,
+   * instead of the anonymous free-text field. */
+  signedIn?: boolean;
+  /** The signed-in member's name (saved username, else account/Google name). */
+  memberName?: string;
+  onEditProfile?: () => void;
 }) {
-  const [name, setName] = useState(defaultName ?? "");
+  const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // When the typed name collides with existing people, hold them here so the
@@ -290,6 +307,9 @@ function IdentifyPanel({
   const [matches, setMatches] = useState<User[] | null>(null);
   // The collapsed "pick yourself" disclosure.
   const [pickOpen, setPickOpen] = useState(false);
+
+  // A signed-in member with a known name joins under it directly (no typing).
+  const memberJoin = signedIn && !!memberName.trim();
 
   const guard = async (fn: () => Promise<void>) => {
     if (busy) return;
@@ -303,16 +323,19 @@ function IdentifyPanel({
     }
   };
 
-  // Submitting the name: a collision opens the confirm, otherwise create.
-  const submitName = () => {
-    if (!name.trim() || busy) return;
-    const found = findNameMatches(users, name);
+  // Submitting a name (the typed one, or a signed-in member's known name): a
+  // collision opens the confirm, otherwise create.
+  const submitName = (value?: string) => {
+    const n = (value ?? name).trim();
+    if (!n || busy) return;
+    if (n !== name) setName(n); // keep the confirm step + create() in sync
+    const found = findNameMatches(users, n);
     if (found.length > 0) {
       setError(null);
       setMatches(found);
       return;
     }
-    guard(() => onCreate(name));
+    guard(() => onCreate(n));
   };
 
   const create = () => guard(() => onCreate(name));
@@ -390,35 +413,54 @@ function IdentifyPanel({
     <div className="content identity-identify">
       <div className="identity-identify__inner">
         <div className="identity-identify__head">
-          <h1 className="identity-identify__title">
-            {rememberHint ? "Pick your name 🧗" : "Hop in 🧗"}
-          </h1>
-          <input
-            className="identity-identify__input"
-            placeholder="Your name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && submitName()}
-            autoFocus
-          />
-          {rememberHint && (
-            <p className="identity-identify__note">
-              This is how you'll show up on trips — we'll remember it so you can
-              skip this next time.
-            </p>
+          <h1 className="identity-identify__title">Hop in 🧗</h1>
+          {memberJoin ? (
+            <>
+              <p className="identity-identify__note">
+                You&apos;re signed in as <strong>{memberName}</strong>.
+              </p>
+              {error && <div className="error-banner">{error}</div>}
+              <Button
+                variant="primary"
+                fullWidth
+                disabled={busy}
+                onClick={() => submitName(memberName)}
+              >
+                {busy ? "One sec…" : `Join as ${memberName} →`}
+              </Button>
+              <Button
+                variant="text"
+                fullWidth
+                disabled={busy}
+                onClick={onEditProfile}
+              >
+                Not you? Edit your name
+              </Button>
+            </>
+          ) : (
+            <>
+              <input
+                className="identity-identify__input"
+                placeholder="Your name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && submitName()}
+                autoFocus
+              />
+              {error && <div className="error-banner">{error}</div>}
+              <Button
+                variant="primary"
+                fullWidth
+                disabled={!name.trim() || busy}
+                onClick={() => submitName()}
+              >
+                {busy ? "One sec…" : "Continue →"}
+              </Button>
+            </>
           )}
-          {error && <div className="error-banner">{error}</div>}
-          <Button
-            variant="primary"
-            fullWidth
-            disabled={!name.trim() || busy}
-            onClick={submitName}
-          >
-            {busy ? "One sec…" : "Continue →"}
-          </Button>
         </div>
 
-        {users.length > 0 && (
+        {!memberJoin && users.length > 0 && (
           <div className="identity-identify__list">
             <button
               type="button"

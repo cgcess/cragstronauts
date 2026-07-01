@@ -7,7 +7,9 @@
 .confirm-scrim {
   position: fixed;
   inset: 0;
-  z-index: 1100;
+  /* Confirms are always the top layer — above the identity overlay (1100) and
+     the profile dialog (1200), e.g. the profile dialog's own discard confirm. */
+  z-index: 1300;
   display: flex;
   align-items: center;
   justify-content: center;

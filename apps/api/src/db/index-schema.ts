@@ -7,3 +7,8 @@ export const tripIndex = table("trip_index", {
   start_date: column.text(),
   end_date: column.text(),
 });
+
+export const tripMember = table("trip_member", {
+  account_id: column.text().notNull(),
+  trip_id: column.text().notNull(),
+});

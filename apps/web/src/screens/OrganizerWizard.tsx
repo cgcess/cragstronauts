@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useNavigate } from "react-router";
+import { Navigate, useNavigate } from "react-router";
+import { useUser } from "@clerk/clerk-react";
 import { api } from "../api";
 import { tripPath } from "../lib/tripUrl";
 import { cleanLinks } from "../lib/links";
@@ -86,7 +87,19 @@ const EASE_OUT = [0.23, 1, 0.32, 1];
 
 const userKey = (tripId: string) => `climbingTrip.userId.${tripId}`;
 
+function AuthGate() {
+  const { isSignedIn, isLoaded } = useUser();
+  if (!isLoaded) return null;
+  if (!isSignedIn) return <Navigate to="/" replace />;
+  return <OrganizerWizardInner />;
+}
+
 export default function OrganizerWizard() {
+  if (clerkEnabled) return <AuthGate />;
+  return <OrganizerWizardInner />;
+}
+
+function OrganizerWizardInner() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");

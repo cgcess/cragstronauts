@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import { Navigate, useNavigate } from "react-router";
 import { SignedIn, SignedOut } from "@clerk/clerk-react";
 import { api } from "../api";
 import { tripPath } from "../lib/tripUrl";
+import { useIsAdmin } from "../lib/admins";
 import TripsView from "../components/TripsView";
 import SignInPrompt from "../components/SignInPrompt";
 import type { z } from "zod";
@@ -38,10 +39,19 @@ function LegacyFinder() {
 }
 
 export default function AllTrips() {
+  const isAdmin = useIsAdmin();
+
   return (
     <>
       <SignedIn>
-        <LegacyFinder />
+        {/* Admin-only. Non-admins are bounced to their own trips; the redirect
+            waits until Clerk has loaded so we don't bounce a real admin.
+            NOTE: UI gate only — GET /api/legacy-trips is still open. */}
+        {isAdmin === undefined ? null : isAdmin ? (
+          <LegacyFinder />
+        ) : (
+          <Navigate to="/" replace />
+        )}
       </SignedIn>
       <SignedOut>
         <SignInPrompt sub="Sign in to browse every trip." />

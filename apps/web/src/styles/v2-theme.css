@@ -241,6 +241,36 @@ button { background: var(--fl-surface-3); color: var(--fl-fg); }
   margin: 14px 4px 6px;
 }
 
+/* Trips overview scope switcher (My trips / All trips) — admins only.
+   Mirrors the profile dialog's .pf-seg segmented control. */
+.trips-seg {
+  display: flex;
+  gap: 2px;
+  width: fit-content;
+  margin: 2px auto 16px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--min-surface-2);
+  border: 1px solid var(--min-line);
+}
+.trips-seg__opt {
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--min-ink-3);
+  font: inherit;
+  font-weight: 600;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+.trips-seg__opt.is-active {
+  background: var(--min-surface);
+  color: var(--min-ink);
+  box-shadow: var(--min-shadow-sm);
+}
+
 /* ---------- Trip card (compact list row) ---------- */
 .fl-trip-card {
   position: relative;

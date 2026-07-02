@@ -2,6 +2,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Env } from "../types";
 import { getTripDO } from "../do";
 import { getAccountId } from "../lib/auth";
+import { trackTripEvent, nameOf } from "../events";
 import {
   listUsersRoute,
   createUserRoute,
@@ -28,6 +29,11 @@ userRoutes.openapi(createUserRoute, async (c) => {
   try {
     const stub = getTripDO(c.env, tripId);
     const user = await stub.createUser(body);
+    trackTripEvent(c.env, (p) => c.executionCtx.waitUntil(p), stub, ({ tripName }) => ({
+      type: "user_joined",
+      tripName,
+      userName: user.name,
+    }));
     return c.json(user, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -44,6 +50,11 @@ userRoutes.openapi(deleteUserRoute, async (c) => {
   try {
     const stub = getTripDO(c.env, tripId);
     const result = await stub.deleteUser(userId);
+    trackTripEvent(c.env, (p) => c.executionCtx.waitUntil(p), stub, ({ tripName, users }) => ({
+      type: "user_left",
+      tripName,
+      userName: nameOf(users, userId),
+    }));
     return c.json(result, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -57,6 +68,11 @@ userRoutes.openapi(completeSignupRoute, async (c) => {
   try {
     const stub = getTripDO(c.env, tripId);
     const user = await stub.completeSignup(userId);
+    trackTripEvent(c.env, (p) => c.executionCtx.waitUntil(p), stub, ({ tripName }) => ({
+      type: "signup_completed",
+      tripName,
+      userName: user.name,
+    }));
     return c.json(user, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -74,6 +90,11 @@ userRoutes.openapi(claimUserRoute, async (c) => {
   try {
     const stub = getTripDO(c.env, tripId);
     const user = await stub.claimUser(userId, accountId);
+    trackTripEvent(c.env, (p) => c.executionCtx.waitUntil(p), stub, ({ tripName }) => ({
+      type: "user_claimed",
+      tripName,
+      userName: user.name,
+    }));
     return c.json(user, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -99,6 +120,11 @@ userRoutes.openapi(makeOrganizerRoute, async (c) => {
   try {
     const stub = getTripDO(c.env, tripId);
     const user = await stub.makeOrganizer(userId);
+    trackTripEvent(c.env, (p) => c.executionCtx.waitUntil(p), stub, ({ tripName }) => ({
+      type: "user_made_organizer",
+      tripName,
+      userName: user.name,
+    }));
     return c.json(user, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

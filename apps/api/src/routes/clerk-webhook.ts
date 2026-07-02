@@ -31,7 +31,7 @@ export const handleClerkEvent = (
 ): void => {
   if (event.type !== "user.created") return;
   const message = formatSignupMessage(event.data);
-  schedule(notifyDiscord(env.DISCORD_SIGNUP_WEBHOOK_URL, message));
+  schedule(notifyDiscord(env.DISCORD_WEBHOOK_URL, message));
 };
 
 export const createClerkWebhookRoute = () => {

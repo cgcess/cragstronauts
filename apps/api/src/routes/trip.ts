@@ -2,6 +2,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Env } from "../types";
 import { getTripDO, getTripIndexDO, getAccountIndexDO } from "../do";
 import { getAccountId } from "../lib/auth";
+import { trackEvent } from "../events";
 import {
   listTripsRoute,
   createTripRoute,
@@ -39,6 +40,13 @@ tripRoutes.openapi(createTripRoute, async (c) => {
       end_date: body.end_date ?? null,
     });
 
+    trackEvent(c.env, (p) => c.executionCtx.waitUntil(p), {
+      type: "trip_created",
+      tripName: body.name,
+      location: body.location ?? null,
+      organizer: body.organizer_name ?? null,
+    });
+
     return c.json({ trip_id: tripId, organizer_user_id: result.organizer_user_id }, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -73,6 +81,10 @@ tripRoutes.openapi(updateTripRoute, async (c) => {
         getAccountIndexDO(c.env, a).updateMeta(tripId, meta).catch(() => {})
       )
     );
+    trackEvent(c.env, (p) => c.executionCtx.waitUntil(p), {
+      type: "trip_updated",
+      tripName: trip.name,
+    });
     return c.json(trip, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -95,10 +107,15 @@ tripRoutes.openapi(deleteTripRoute, async (c) => {
       }
     }
     const accountIds = await stub.memberAccountIds();
+    const doomed = await stub.getTrip();
     await Promise.all(
       accountIds.map((a) => getAccountIndexDO(c.env, a).remove(tripId).catch(() => {}))
     );
     await stub.destroy();
+    trackEvent(c.env, (p) => c.executionCtx.waitUntil(p), {
+      type: "trip_deleted",
+      tripName: doomed?.name ?? null,
+    });
     return c.json({ ok: true }, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -124,6 +141,11 @@ tripRoutes.openapi(joinTripRoute, async (c) => {
       // no/invalid body
     }
     const member = await stub.join(accountId, displayName);
+    trackEvent(c.env, (p) => c.executionCtx.waitUntil(p), {
+      type: "user_joined",
+      tripName: trip.name,
+      userName: member.name,
+    });
     await getAccountIndexDO(c.env, accountId).add(tripId, "member", {
       name: trip.name,
       location: trip.location,

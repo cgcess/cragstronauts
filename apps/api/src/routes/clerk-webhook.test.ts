@@ -83,7 +83,7 @@ describe("formatSignupMessage", () => {
 
 describe("handleClerkEvent", () => {
   const env = {
-    DISCORD_SIGNUP_WEBHOOK_URL: "https://discord.test/webhook",
+    DISCORD_WEBHOOK_URL: "https://discord.test/webhook",
   } as Env;
 
   beforeEach(() => {

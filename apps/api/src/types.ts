@@ -6,5 +6,5 @@ export type Env = Cloudflare.Env & {
   CLERK_PUBLISHABLE_KEY: string;
   CLERK_SECRET_KEY: string;
   CLERK_WEBHOOK_SIGNING_SECRET: string;
-  DISCORD_SIGNUP_WEBHOOK_URL: string;
+  DISCORD_WEBHOOK_URL: string;
 };

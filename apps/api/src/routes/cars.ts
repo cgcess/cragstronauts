@@ -1,6 +1,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Env } from "../types";
 import { getTripDO } from "../do";
+import { trackTripEvent } from "../events";
 import {
   listCarsRoute,
   createCarRoute,
@@ -29,6 +30,11 @@ carRoutes.openapi(createCarRoute, async (c) => {
   try {
     const stub = getTripDO(c.env, tripId);
     const car = await stub.createCar(body);
+    trackTripEvent(c.env, (p) => c.executionCtx.waitUntil(p), stub, ({ tripName }) => ({
+      type: "car_created",
+      tripName,
+      driverName: car.driver_name,
+    }));
     return c.json(car, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -41,6 +47,10 @@ carRoutes.openapi(deleteCarRoute, async (c) => {
   const carId = Number(car_id);
   const stub = getTripDO(c.env, tripId);
   const result = await stub.deleteCar(carId);
+  trackTripEvent(c.env, (p) => c.executionCtx.waitUntil(p), stub, ({ tripName }) => ({
+    type: "car_deleted",
+    tripName,
+  }));
   return c.json(result, 200);
 });
 
@@ -51,6 +61,12 @@ carRoutes.openapi(carSignupRoute, async (c) => {
   try {
     const stub = getTripDO(c.env, tripId);
     const car = await stub.carSignup(carId, body.user_id, body.from_reserved);
+    trackTripEvent(c.env, (p) => c.executionCtx.waitUntil(p), stub, ({ tripName }) => ({
+      type: "car_seat_taken",
+      tripName,
+      passengerName: car.passengers.find((s) => s.user_id === body.user_id)?.name ?? null,
+      driverName: car.driver_name,
+    }));
     return c.json(car, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -68,6 +84,12 @@ carRoutes.openapi(carSignoffRoute, async (c) => {
   try {
     const stub = getTripDO(c.env, tripId);
     const car = await stub.carSignoff(carId, userId);
+    trackTripEvent(c.env, (p) => c.executionCtx.waitUntil(p), stub, ({ tripName, users }) => ({
+      type: "car_seat_vacated",
+      tripName,
+      passengerName: users.find((u) => u.id === userId)?.name ?? null,
+      driverName: car.driver_name,
+    }));
     return c.json(car, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -91,6 +113,12 @@ carRoutes.openapi(createDogRoute, async (c) => {
   try {
     const stub = getTripDO(c.env, tripId);
     const dog = await stub.createDog(body.owner_user_id, body.name);
+    trackTripEvent(c.env, (p) => c.executionCtx.waitUntil(p), stub, ({ tripName }) => ({
+      type: "dog_added",
+      tripName,
+      dogName: dog.name,
+      ownerName: dog.owner_name,
+    }));
     return c.json(dog, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -103,6 +131,10 @@ carRoutes.openapi(deleteDogRoute, async (c) => {
   const dogId = Number(dog_id);
   const stub = getTripDO(c.env, tripId);
   const result = await stub.deleteDog(dogId);
+  trackTripEvent(c.env, (p) => c.executionCtx.waitUntil(p), stub, ({ tripName }) => ({
+    type: "dog_removed",
+    tripName,
+  }));
   return c.json(result, 200);
 });
 
@@ -113,6 +145,12 @@ carRoutes.openapi(assignDogRoute, async (c) => {
   try {
     const stub = getTripDO(c.env, tripId);
     const car = await stub.assignDog(carId, body.dog_id);
+    trackTripEvent(c.env, (p) => c.executionCtx.waitUntil(p), stub, ({ tripName }) => ({
+      type: "dog_assigned_to_car",
+      tripName,
+      dogName: car.dogs.find((d) => d.dog_id === body.dog_id)?.name ?? null,
+      driverName: car.driver_name,
+    }));
     return c.json(car, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -130,6 +168,15 @@ carRoutes.openapi(unassignDogRoute, async (c) => {
   try {
     const stub = getTripDO(c.env, tripId);
     const car = await stub.unassignDog(carId, dogId);
+    trackTripEvent(c.env, (p) => c.executionCtx.waitUntil(p), stub, async ({ tripName }) => {
+      const dogs = await stub.listDogs();
+      return {
+        type: "dog_unassigned_from_car",
+        tripName,
+        dogName: dogs.find((d) => d.id === dogId)?.name ?? null,
+        driverName: car.driver_name,
+      };
+    });
     return c.json(car, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

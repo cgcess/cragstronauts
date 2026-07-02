@@ -1,6 +1,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Env } from "../types";
 import { getTripDO } from "../do";
+import { trackTripEvent } from "../events";
 import {
   listExpensesRoute,
   createExpenseRoute,
@@ -24,6 +25,13 @@ expenseRoutes.openapi(createExpenseRoute, async (c) => {
   try {
     const stub = getTripDO(c.env, tripId);
     const expense = await stub.createExpense(body);
+    trackTripEvent(c.env, (p) => c.executionCtx.waitUntil(p), stub, ({ tripName }) => ({
+      type: "expense_added",
+      tripName,
+      payerName: expense.payer_name,
+      description: expense.description,
+      amountCents: expense.amount_cents,
+    }));
     return c.json(expense, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -38,6 +46,11 @@ expenseRoutes.openapi(updateExpenseRoute, async (c) => {
   try {
     const stub = getTripDO(c.env, tripId);
     const updated = await stub.updateExpense(expenseId, body);
+    trackTripEvent(c.env, (p) => c.executionCtx.waitUntil(p), stub, ({ tripName }) => ({
+      type: "expense_updated",
+      tripName,
+      description: updated.description,
+    }));
     return c.json(updated, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -52,6 +65,10 @@ expenseRoutes.openapi(deleteExpenseRoute, async (c) => {
   try {
     const stub = getTripDO(c.env, tripId);
     const result = await stub.deleteExpense(expenseId);
+    trackTripEvent(c.env, (p) => c.executionCtx.waitUntil(p), stub, ({ tripName }) => ({
+      type: "expense_deleted",
+      tripName,
+    }));
     return c.json(result, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

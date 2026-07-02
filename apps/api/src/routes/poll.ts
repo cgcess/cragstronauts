@@ -1,6 +1,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Env } from "../types";
 import { getTripDO } from "../do";
+import { trackTripEvent, nameOf } from "../events";
 import {
   listPollsRoute,
   addPollRoute,
@@ -25,6 +26,11 @@ pollRoutes.openapi(addPollRoute, async (c) => {
   try {
     const stub = getTripDO(c.env, tripId);
     const p = await stub.addPoll(body);
+    trackTripEvent(c.env, (pr) => c.executionCtx.waitUntil(pr), stub, ({ tripName }) => ({
+      type: "poll_added",
+      tripName,
+      question: p.question,
+    }));
     return c.json(p, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -52,6 +58,10 @@ pollRoutes.openapi(deletePollRoute, async (c) => {
   const pollId = Number(poll_id);
   const stub = getTripDO(c.env, tripId);
   const result = await stub.deletePoll(pollId);
+  trackTripEvent(c.env, (pr) => c.executionCtx.waitUntil(pr), stub, ({ tripName }) => ({
+    type: "poll_removed",
+    tripName,
+  }));
   return c.json(result, 200);
 });
 
@@ -68,6 +78,15 @@ pollRoutes.openapi(setPollAnswerRoute, async (c) => {
   try {
     const stub = getTripDO(c.env, tripId);
     const answers = await stub.setPollAnswer(body);
+    trackTripEvent(c.env, (pr) => c.executionCtx.waitUntil(pr), stub, async ({ tripName, users }) => {
+      const polls = await stub.listPolls();
+      return {
+        type: "poll_answered",
+        tripName,
+        userName: answers[0]?.user_name ?? nameOf(users, body.user_id),
+        question: polls.find((poll) => poll.id === body.poll_id)?.question ?? null,
+      };
+    });
     return c.json([...answers], 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

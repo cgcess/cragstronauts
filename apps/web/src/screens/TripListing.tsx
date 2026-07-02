@@ -1,43 +1,52 @@
-import React from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
+import { SignedIn, SignedOut } from "@clerk/clerk-react";
+import { api } from "../api";
+import { tripPath } from "../lib/tripUrl";
+import TripsView from "../components/TripsView";
+import SignInPrompt from "../components/SignInPrompt";
+import type { z } from "zod";
+import type { TripIndexEntrySchema } from "@cragstronauts/contract";
 
-export default function TripListing() {
+type TripEntry = z.infer<typeof TripIndexEntrySchema>;
+
+// The signed-in account's own trips (owned + joined).
+function MyTrips() {
   const navigate = useNavigate();
-  const reduceMotion = useReducedMotion();
+  const [trips, setTrips] = useState<TripEntry[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    api
+      .listTrips()
+      .then((t) => {
+        setTrips(t);
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
+  }, []);
 
   return (
-    <div className="app-shell">
-      <div className="fade-overlay fade-overlay--top" aria-hidden="true" />
-      <div className="content">
-        <div className="column">
-        <motion.div
-          className="fl-brand"
-          initial={reduceMotion ? false : { opacity: 0, y: -6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.32 }}
-        >
-          <span className="fl-brand__glyph">🧗</span>
-          Cragstronauts
-        </motion.div>
-        <div className="fl-brand__sub">Plan the climb. Pack the car.</div>
+    <TripsView
+      trips={trips}
+      loaded={loaded}
+      onCreate={() => navigate("/trips/new")}
+      onSelect={(trip) => navigate(tripPath(trip.name, trip.id))}
+      emptyTitle="No trips on the wall yet"
+      emptySub="Tap to plan your first cragstronaut mission."
+    />
+  );
+}
 
-        <motion.button
-          type="button"
-          className="fl-empty"
-          onClick={() => navigate("/trips/new")}
-          initial={reduceMotion ? false : { opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.36, delay: 0.1 }}
-          whileHover={{ y: -2 }}
-          whileTap={{ scale: 0.99 }}
-        >
-          <div className="fl-empty__plus">+</div>
-          <div className="fl-empty__title">Plan a new trip</div>
-          <div className="fl-empty__sub">Tap to start your next cragstronaut mission.</div>
-        </motion.button>
-        </div>
-      </div>
-    </div>
+export default function TripListing() {
+  return (
+    <>
+      <SignedIn>
+        <MyTrips />
+      </SignedIn>
+      <SignedOut>
+        <SignInPrompt />
+      </SignedOut>
+    </>
   );
 }

@@ -15,6 +15,9 @@
   "observability": {
     "enabled": true
   },
+  "version_metadata": {
+    "binding": "CF_VERSION_METADATA"
+  },
   "durable_objects": {
     "bindings": [
       {
@@ -24,6 +27,10 @@
       {
         "name": "TRIP_INDEX",
         "class_name": "TripIndexDO"
+      },
+      {
+        "name": "ACCOUNT_INDEX",
+        "class_name": "AccountIndexDO"
       }
     ]
   },
@@ -35,6 +42,10 @@
     {
       "tag": "v2",
       "new_sqlite_classes": ["TripIndexDO"]
+    },
+    {
+      "tag": "v3",
+      "new_sqlite_classes": ["AccountIndexDO"]
     }
   ]
 }

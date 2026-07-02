@@ -9,6 +9,7 @@ import { pollRoutes } from "./routes/poll";
 import { carRoutes } from "./routes/cars";
 import { expenseRoutes } from "./routes/expenses";
 import { feedbackRoutes } from "./routes/feedback";
+import { createClerkWebhookRoute } from "./routes/clerk-webhook";
 import { tripAccess } from "./middleware/tripAccess";
 
 export const createApp = () => {
@@ -37,6 +38,8 @@ export const createApp = () => {
   app.route("/", carRoutes);
   app.route("/", expenseRoutes);
   app.route("/", feedbackRoutes);
+
+  app.route("/", createClerkWebhookRoute());
 
   return app;
 };

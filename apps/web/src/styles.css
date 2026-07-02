@@ -527,6 +527,36 @@ label {
   top: auto;
   bottom: auto;
 }
+/* Centered brand shown in the top bar wherever the "My trips" button is
+   hidden (everywhere except a trip detail page). Compact, stacked, and
+   non-interactive so it never eats a tap meant for the strip. Colours come
+   from the shared .fl-brand / .fl-brand__sub rules so themes still apply. */
+.app-topbar__brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+  text-align: center;
+  pointer-events: none;
+}
+.app-topbar__brand .fl-brand {
+  padding: 0;
+  gap: 5px;
+  font-size: 15px;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+.app-topbar__brand .fl-brand__glyph {
+  font-size: 15px;
+}
+.app-topbar__brand .fl-brand__sub {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.15;
+  white-space: nowrap;
+}
 
 @media (min-width: 640px) {
   :root { --col: 600px; }

@@ -500,6 +500,14 @@ input:focus, textarea:focus, select:focus {
 .fl-trip-card__details { color: var(--min-ink-3) !important; }
 .fl-trip-card__icon { color: var(--min-ink-2) !important; }
 .fl-trip-card__accent { display: none !important; }
+.fl-trip-card--organizer,
+.fl-hero--organizer {
+  border: 2px solid var(--fl-accent) !important;
+}
+.fl-organizer-badge {
+  color: var(--min-surface) !important;
+  background: var(--fl-accent) !important;
+}
 
 .fl-hero {
   background: var(--min-surface) !important;

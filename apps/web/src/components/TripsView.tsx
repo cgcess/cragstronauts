@@ -69,10 +69,12 @@ function HeroTripCard({
   trip,
   model,
   onClick,
+  isOrganizer,
 }: {
   trip: TripEntry;
   model: TripModel;
   onClick: () => void;
+  isOrganizer?: boolean;
 }) {
   const isPast = model.status === "past";
   const isNow = model.status === "now";
@@ -109,6 +111,7 @@ function HeroTripCard({
     "fl-hero",
     isPast ? "fl-hero--past" : "",
     isNow ? "fl-hero--now" : "",
+    isOrganizer ? "fl-hero--organizer" : "",
   ].filter(Boolean).join(" ");
 
   return (
@@ -120,6 +123,7 @@ function HeroTripCard({
       whileTap={{ scale: 0.99 }}
       transition={{ type: "spring", stiffness: 380, damping: 28 }}
     >
+      {isOrganizer && <span className="fl-organizer-badge">Organizer</span>}
       <span className="fl-hero__accent-glow" aria-hidden="true" />
       <div className="fl-hero__top">
         <span aria-hidden="true">🧗</span>
@@ -143,10 +147,12 @@ function TripCard({
   trip,
   model,
   onClick,
+  isOrganizer,
 }: {
   trip: TripEntry;
   model: TripModel;
   onClick: () => void;
+  isOrganizer?: boolean;
 }) {
   const isPast = model.status === "past";
   const isNow = model.status === "now";
@@ -171,6 +177,7 @@ function TripCard({
     "fl-trip-card",
     isPast ? "fl-trip-card--past" : "",
     isNow ? "fl-trip-card--now" : "",
+    isOrganizer ? "fl-trip-card--organizer" : "",
   ].filter(Boolean).join(" ");
 
   return (
@@ -182,6 +189,7 @@ function TripCard({
       whileTap={{ scale: 0.985 }}
       transition={{ type: "spring", stiffness: 400, damping: 30 }}
     >
+      {isOrganizer && <span className="fl-organizer-badge">Organizer</span>}
       <div className="fl-trip-card__count-col">
         {countNode}
         {labelNode}
@@ -296,6 +304,7 @@ export default function TripsView({
                     trip={hero.trip}
                     model={hero.model}
                     onClick={() => onSelect(hero.trip)}
+                    isOrganizer={hero.trip.role === "owner"}
                   />
                 </motion.div>
               )}
@@ -312,7 +321,7 @@ export default function TripsView({
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.32, delay: 0.08 + i * 0.04 }}
                     >
-                      <TripCard trip={trip} model={model} onClick={() => onSelect(trip)} />
+                      <TripCard trip={trip} model={model} onClick={() => onSelect(trip)} isOrganizer={trip.role === "owner"} />
                     </motion.div>
                   ))}
                 </>
@@ -328,7 +337,7 @@ export default function TripsView({
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.32, delay: 0.04 + i * 0.03 }}
                     >
-                      <TripCard trip={trip} model={model} onClick={() => onSelect(trip)} />
+                      <TripCard trip={trip} model={model} onClick={() => onSelect(trip)} isOrganizer={trip.role === "owner"} />
                     </motion.div>
                   ))}
                 </>

@@ -1,9 +1,10 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
-import { ClerkProvider } from "@clerk/clerk-react";
+import { ClerkProvider, SignedIn, SignedOut } from "@clerk/clerk-react";
 
 import App from "./App";
+import SignInPrompt from "./components/SignInPrompt";
 import { clerkPublishableKey } from "./lib/clerk";
 import TripListing from "./screens/TripListing";
 import OrganizerWizard from "./screens/OrganizerWizard";
@@ -78,7 +79,22 @@ const router = createBrowserRouter([
       { index: true, element: <TripListing /> },
       { path: "nicoisnotthestrongestclimber", element: <AllTrips /> },
       { path: "ui-kit", element: <UIKit /> },
-      { path: "trips/new", element: <OrganizerWizard /> },
+      {
+        path: "trips/new",
+        element: (
+          <>
+            <SignedIn>
+              <OrganizerWizard />
+            </SignedIn>
+            <SignedOut>
+              <SignInPrompt
+                lead="Sign in to plan a trip"
+                sub="An account owns your trip and keeps your kit across every trip."
+              />
+            </SignedOut>
+          </>
+        ),
+      },
       {
         path: "trips/:tripId",
         element: <TripLayout />,

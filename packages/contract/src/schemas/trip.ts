@@ -19,6 +19,7 @@ export const TripSchema = z.object({
   welcome_message: z.string().nullable(),
   signature: z.string().nullable(),
   links: z.array(TripLinkSchema).default([]),
+  public: z.boolean().default(false),
 });
 
 export const GearCategoryFieldSchema = z.object({
@@ -96,4 +97,5 @@ export const TripIndexEntrySchema = z.object({
   location: z.string(),
   start_date: z.string().nullable(),
   end_date: z.string().nullable(),
+  role: z.enum(["owner", "member"]).optional(),
 });

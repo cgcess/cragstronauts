@@ -101,9 +101,11 @@ export class TripDO extends DurableObject<Env> {
     }[];
     polls?: PollInput[];
     organizer_name: string;
+    organizer_account_id: string;
   }): Promise<{ organizer_user_id: number }> {
     this.db.insert(trip, {
       id: 1,
+      public: 0,
       name: data.name,
       location: data.location,
       start_date: data.start_date,
@@ -147,6 +149,7 @@ export class TripDO extends DurableObject<Env> {
         is_organizer: 1,
         signup_completed: 1,
         claimed: 1,
+        account_id: data.organizer_account_id,
       },
       ["id"]
     );
@@ -218,6 +221,65 @@ export class TripDO extends DurableObject<Env> {
 
     const updated = this.db.get(trip, { where: eq("id", 1) })!;
     return formatTrip(updated);
+  }
+
+  // ---- Visibility & membership ----
+
+  /** Is this a public (cooperative) trip? */
+  async getVisibility(): Promise<{ isPublic: boolean }> {
+    const row = this.db.get(trip, { where: eq("id", 1) });
+    return { isPublic: !!row && !!row.public };
+  }
+
+  /** Flip the trip's visibility (admin bootstrap). */
+  async setVisibility(isPublic: boolean): Promise<{ isPublic: boolean }> {
+    const row = this.db.get(trip, { where: eq("id", 1) });
+    if (!row) throw new Error("Trip not found");
+    this.db.update(trip, { public: isPublic ? 1 : 0 }, { where: eq("id", 1) });
+    return { isPublic };
+  }
+
+  /** Does a `user` row here bind to this account? */
+  async isMember(accountId: string | null): Promise<boolean> {
+    if (accountId === null) return false;
+    const row = this.db.get(user, { where: eq("account_id", accountId) });
+    return !!row;
+  }
+
+  /** Does the account own this trip (the organizer slot binds to it)? */
+  async isOwner(accountId: string | null): Promise<boolean> {
+    if (accountId === null) return false;
+    const row = this.db.get(user, { where: eq("is_organizer", 1) });
+    return !!row && row.account_id === accountId;
+  }
+
+  /** Every distinct non-null account_id on the trip (for index fan-out). */
+  async memberAccountIds(): Promise<string[]> {
+    return this.db
+      .all(user)
+      .map((u) => u.account_id ?? null)
+      .filter((a): a is string => a !== null);
+  }
+
+  /** Join as a signed-in account (idempotent: returns any existing slot). */
+  async join(accountId: string, name: string): Promise<User> {
+    const existing = this.db.get(user, { where: eq("account_id", accountId) });
+    if (existing) return formatUser(existing);
+
+    const trimmed = name.trim() || "Climber";
+    const row = this.db.insertReturning(
+      user,
+      {
+        name: trimmed,
+        joining: 1,
+        is_organizer: 0,
+        signup_completed: 0,
+        claimed: 1,
+        account_id: accountId,
+      },
+      ["id", "name", "joining", "is_organizer", "signup_completed", "claimed", "account_id"]
+    );
+    return formatUser(row);
   }
 
   /* -------------------------- Feedback -------------------------- */
@@ -1320,6 +1382,7 @@ function formatTrip(r: {
   welcome_message?: string | null;
   signature?: string | null;
   links?: string | null;
+  public?: number | null;
 }): Trip {
   return {
     name: r.name,
@@ -1335,6 +1398,7 @@ function formatTrip(r: {
     welcome_message: r.welcome_message ?? null,
     signature: r.signature ?? null,
     links: r.links ? (JSON.parse(r.links) as TripLink[]) : [],
+    public: Boolean(r.public),
   };
 }
 

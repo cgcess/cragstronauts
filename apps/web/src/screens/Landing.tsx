@@ -40,7 +40,8 @@ function daysUntil(dateStr: string | null): number | null {
 }
 
 export default function Landing() {
-  const { tripId, trip, users, currentUserId, ensureUser } = useTripContext();
+  const { tripId, trip, users, currentUserId, ensureUser, joinPrivateTrip } =
+    useTripContext();
   const navigate = useNavigate();
   const [signoffIndex, setSignoffIndex] = useState(0);
 
@@ -67,11 +68,16 @@ export default function Landing() {
     return () => ro.disconnect();
   }, [trip, users]);
 
-  // "Join trip" runs the identity flow; once the visitor establishes who they
-  // are, we drop them onto the board. Dismissing the flow keeps them here.
+  // Public trips run the cooperative identity flow; private trips bind the
+  // signed-in account as a member. Either way, land on the board once in.
   const joinTrip = async () => {
-    const id = await ensureUser();
-    if (id != null) navigate(tripPath(trip.name, tripId, "board"));
+    if (trip.public) {
+      const id = await ensureUser();
+      if (id != null) navigate(tripPath(trip.name, tripId, "board"));
+      return;
+    }
+    await joinPrivateTrip();
+    navigate(tripPath(trip.name, tripId, "board"));
   };
 
   const accom = accomMeta(trip.accommodation_type);

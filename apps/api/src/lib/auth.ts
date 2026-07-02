@@ -7,7 +7,7 @@ import type { Env } from "../types";
  * the value a trip `user` row binds to via account_id. Public trips still allow
  * anonymous, cooperative visitors (a null account id).
  */
-export function getAccountId(c: Context<{ Bindings: Env }>): string | null {
+export function getAccountId<E extends { Bindings: Env }>(c: Context<E>): string | null {
   try {
     return getAuth(c)?.userId ?? null;
   } catch {

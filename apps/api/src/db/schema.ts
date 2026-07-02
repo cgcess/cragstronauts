@@ -15,6 +15,7 @@ export const trip = table("trip", {
   welcome_message: column.text(),
   signature: column.text(),
   links: column.text(),
+  public: column.integer().notNull().default(0),
 });
 
 export const user = table("user", {

@@ -18,5 +18,6 @@ import m0016 from './migrations/0016_dogs.sql';
 import m0017 from './migrations/0017_user_account_link.sql';
 import m0018 from './migrations/0018_gear_category_catalog_key.sql';
 import m0019 from './migrations/0019_gear_decline.sql';
+import m0020 from './migrations/0020_trip_public.sql';
 
-export const migrations = { m0000, m0001, m0002, m0003, m0004, m0005, m0006, m0007, m0008, m0009, m0010, m0011, m0012, m0013, m0014, m0015, m0016, m0017, m0018, m0019 };
+export const migrations = { m0000, m0001, m0002, m0003, m0004, m0005, m0006, m0007, m0008, m0009, m0010, m0011, m0012, m0013, m0014, m0015, m0016, m0017, m0018, m0019, m0020 };

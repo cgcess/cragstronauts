@@ -45,6 +45,8 @@ export interface TripContextValue {
   openQuestions: (polls: Poll[], categories?: Category[]) => void;
   refresh: () => Promise<void>;
   deleteTrip: () => Promise<void>;
+  /** Join a private trip as the signed-in account, then load member data. */
+  joinPrivateTrip: () => Promise<void>;
 }
 
 const TripContext = createContext<TripContextValue | null>(null);

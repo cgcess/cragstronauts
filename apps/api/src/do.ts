@@ -1,5 +1,6 @@
 import type { TripDO } from "./TripDO";
 import type { TripIndexDO } from "./TripIndexDO";
+import type { AccountIndexDO } from "./AccountIndexDO";
 import type { Env } from "./types";
 
 /** Get a TripDO stub by its hex ID. Throws a clear error for malformed IDs. */
@@ -13,4 +14,11 @@ export function getTripDO(env: Env, tripId: string) {
 /** Get the single global TripIndexDO stub. */
 export function getTripIndexDO(env: Env) {
   return env.TRIP_INDEX.get(env.TRIP_INDEX.idFromName("global")) as DurableObjectStub<TripIndexDO>;
+}
+
+/** Get the per-account AccountIndexDO stub (the account's owned + joined list). */
+export function getAccountIndexDO(env: Env, accountId: string) {
+  return env.ACCOUNT_INDEX.get(
+    env.ACCOUNT_INDEX.idFromName(accountId)
+  ) as DurableObjectStub<AccountIndexDO>;
 }

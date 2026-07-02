@@ -9,3 +9,4 @@ export default {
 
 export { TripDO } from "./TripDO";
 export { TripIndexDO } from "./TripIndexDO";
+export { AccountIndexDO } from "./AccountIndexDO";

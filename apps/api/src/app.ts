@@ -20,6 +20,10 @@ export const createApp = () => {
   // returns the signed-in account, or null when the caller is signed out.
   app.use("/api/*", clerkMiddleware());
 
+  // Unauthenticated version marker — curl /api/version to confirm which
+  // deployed version served the request.
+  app.get("/api/version", (c) => c.json(c.env.CF_VERSION_METADATA));
+
   app.route("/", tripRoutes);
   app.route("/", userRoutes);
   app.route("/", gearRoutes);

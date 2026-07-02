@@ -14,12 +14,7 @@ export default function SignInPrompt({
       <div className="fade-overlay fade-overlay--top" aria-hidden="true" />
       <div className="content">
         <div className="column">
-          <div className="fl-brand">
-            <span className="fl-brand__glyph">🧗</span>
-            Cragstronauts
-          </div>
-          <div className="fl-brand__sub">Plan the climb. Pack the car.</div>
-
+          {/* Brand lives in the global top bar (App.tsx) on this screen. */}
           <div className="pf-account" style={{ marginTop: 24 }}>
             <div className="pf-account__empty">
               <div className="pf-account__emoji" aria-hidden="true">⛺</div>

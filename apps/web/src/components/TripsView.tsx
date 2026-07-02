@@ -269,17 +269,8 @@ export default function TripsView({
       <div className="fade-overlay fade-overlay--top" aria-hidden="true" />
       <div className="content">
         <div className="column">
-          <motion.div
-            className="fl-brand"
-            initial={reduceMotion ? false : { opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.32 }}
-          >
-            <span className="fl-brand__glyph">🧗</span>
-            Cragstronauts
-          </motion.div>
-          <div className="fl-brand__sub">Plan the climb. Pack the car.</div>
-
+          {/* Brand now lives in the global top bar (App.tsx) whenever the
+              "My trips" button is hidden, so it's not repeated here. */}
           {tabs}
 
           {!hasAnyTrip ? (

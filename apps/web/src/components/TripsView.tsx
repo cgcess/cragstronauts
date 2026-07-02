@@ -214,6 +214,7 @@ export default function TripsView({
   loaded,
   onSelect,
   onCreate,
+  tabs,
   emptyTitle = "No trips on the wall yet",
   emptySub = "Tap to plan your first cragstronaut mission.",
 }: {
@@ -221,6 +222,8 @@ export default function TripsView({
   loaded: boolean;
   onSelect: (trip: TripEntry) => void;
   onCreate: () => void;
+  /** Optional scope switcher rendered under the brand header (e.g. My/All). */
+  tabs?: React.ReactNode;
   emptyTitle?: string;
   emptySub?: string;
 }) {
@@ -276,6 +279,8 @@ export default function TripsView({
             Cragstronauts
           </motion.div>
           <div className="fl-brand__sub">Plan the climb. Pack the car.</div>
+
+          {tabs}
 
           {!hasAnyTrip ? (
             <motion.button

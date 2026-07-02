@@ -126,7 +126,7 @@ function HeroTripCard({
       {isOrganizer && <span className="fl-organizer-badge">Organizer</span>}
       <span className="fl-hero__accent-glow" aria-hidden="true" />
       <div className="fl-hero__top">
-        <span aria-hidden="true">🧗</span>
+        <img src="/logo.jpeg" alt="" className="fl-logo-icon" />
         <span style={{ color: "var(--fl-fg-3)", letterSpacing: "0.14em" }}>
           {isPast ? "Last trip" : isNow ? "Happening now" : "Next trip"}
         </span>
@@ -196,7 +196,7 @@ function TripCard({
       </div>
       <div className="fl-trip-card__details">
         <div className="fl-trip-card__meta">
-          <span className="fl-trip-card__icon" aria-hidden="true">🧗</span>
+          <img src="/logo.jpeg" alt="" className="fl-logo-icon fl-trip-card__icon" />
           <h3 className="fl-trip-card__title">{trip.name || "Untitled trip"}</h3>
         </div>
         <div className={"fl-trip-card__dates" + (model.dateMuted ? " fl-trip-card__dates--muted" : "")}>
@@ -269,8 +269,9 @@ export default function TripsView({
       <div className="fade-overlay fade-overlay--top" aria-hidden="true" />
       <div className="content">
         <div className="column">
-          {/* Brand now lives in the global top bar (App.tsx) whenever the
-              "My trips" button is hidden, so it's not repeated here. */}
+          <div className="fl-home-logo">
+            <img src="/logo.jpeg" alt="Cragstronauts" className="fl-logo-icon fl-logo-icon--hero" />
+          </div>
           {tabs}
 
           {!hasAnyTrip ? (

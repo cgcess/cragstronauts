@@ -205,7 +205,7 @@ function GeneralGate() {
   return (
     <div className="pf-gate">
       <div className="pf-gate__emoji" aria-hidden="true">
-        🧗
+        <img src="/logo.jpeg" alt="" className="fl-logo-icon" style={{ width: 48, height: 48 }} />
       </div>
       <p className="pf-gate__lead">Build your climbing kit</p>
       <p className="pf-gate__sub">

@@ -26,19 +26,17 @@ export default function App() {
       <ClerkTokenBridge />
       <div className="app-topbar">
         <ThemeToggle />
-        {/* Center: the "My trips" button only on a trip detail page; on every
-            other screen the brand takes its place. */}
         {onTripDetail ? (
           <Button variant="secondary" onClick={() => navigate("/")}>
+            <img src="/logo.jpeg" alt="" className="fl-logo-icon" />
             My trips
           </Button>
         ) : (
           <div className="app-topbar__brand">
             <span className="fl-brand">
-              <span className="fl-brand__glyph">🧗</span>
+              <img src="/logo.jpeg" alt="" className="fl-logo-icon" />
               Cragstronauts
             </span>
-            <span className="fl-brand__sub">Plan the climb. Pack the car.</span>
           </div>
         )}
         <ProfileButton />

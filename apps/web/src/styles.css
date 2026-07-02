@@ -558,6 +558,26 @@ label {
   white-space: nowrap;
 }
 
+/* ----------  Logo images  ---------- */
+.fl-logo-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: cover;
+  object-position: center 25%;
+  border-radius: 50%;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.fl-logo-icon--hero {
+  width: 80px;
+  height: 80px;
+}
+.fl-home-logo {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0 4px;
+}
+
 @media (min-width: 640px) {
   :root { --col: 600px; }
   .deck-shell, .deck-empty, .deck-hint { max-width: 420px; }

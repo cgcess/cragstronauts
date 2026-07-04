@@ -260,7 +260,7 @@ function AutoJoinPanel() {
     <div className="content identity-identify">
       <div className="identity-identify__inner">
         <div className="identity-identify__head">
-          <h1 className="identity-identify__title">Getting you in… <img src="/logo.jpeg" alt="" className="fl-logo-icon" style={{ verticalAlign: "middle" }} /></h1>
+          <h1 className="identity-identify__title">Getting you in… <img src="/logo-circle.png" alt="" className="fl-logo-icon" style={{ verticalAlign: "middle" }} /></h1>
         </div>
       </div>
     </div>
@@ -391,7 +391,7 @@ function IdentifyPanel({
       <div className="identity-identify__inner">
         <div className="identity-identify__head">
           <h1 className="identity-identify__title">
-            {rememberHint ? "Pick your name " : "Hop in "}<img src="/logo.jpeg" alt="" className="fl-logo-icon" style={{ verticalAlign: "middle" }} />
+            {rememberHint ? "Pick your name " : "Hop in "}<img src="/logo-circle.png" alt="" className="fl-logo-icon" style={{ verticalAlign: "middle" }} />
           </h1>
           <input
             className="identity-identify__input"

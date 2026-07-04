@@ -1219,12 +1219,12 @@ export default function TripDashboard() {
               onClick={() => setCalendarSheetOpen(true)}
               aria-label="Open trip calendar"
             >
-              <img src="/logo.jpeg" alt="" className="fl-logo-icon" />
+              <img src="/logo-circle.png" alt="" className="fl-logo-icon" />
               <span>{formatDateRange(trip.start_date, trip.end_date)}</span>
             </button>
           ) : (
             <div className="fl-detail-hero__meta">
-              <img src="/logo.jpeg" alt="" className="fl-logo-icon" />
+              <img src="/logo-circle.png" alt="" className="fl-logo-icon" />
               <span>Dates TBD</span>
             </div>
           )}
@@ -1404,7 +1404,7 @@ export default function TripDashboard() {
                     className="fl-detail-hero__logistics-icon"
                     aria-hidden="true"
                   >
-                    <img src="/logo.jpeg" alt="" className="fl-logo-icon" style={{ width: 18, height: 18 }} />
+                    <img src="/logo-circle.png" alt="" className="fl-logo-icon" style={{ width: 18, height: 18 }} />
                   </span>
                   <div className="fl-detail-hero__logistics-text">
                     <span className="fl-detail-hero__logistics-label">

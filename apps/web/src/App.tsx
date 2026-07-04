@@ -28,13 +28,13 @@ export default function App() {
         <ThemeToggle />
         {onTripDetail ? (
           <Button variant="secondary" onClick={() => navigate("/")}>
-            <img src="/logo.jpeg" alt="" className="fl-logo-icon" />
+            <img src="/logo-circle.png" alt="" className="fl-logo-icon" />
             My trips
           </Button>
         ) : (
           <div className="app-topbar__brand">
             <span className="fl-brand">
-              <img src="/logo.jpeg" alt="" className="fl-logo-icon" />
+              <img src="/logo-circle.png" alt="" className="fl-logo-icon" />
               Cragstronauts
             </span>
           </div>

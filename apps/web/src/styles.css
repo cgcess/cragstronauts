@@ -562,9 +562,7 @@ label {
 .fl-logo-icon {
   width: 24px;
   height: 24px;
-  object-fit: cover;
-  object-position: center 25%;
-  border-radius: 50%;
+  object-fit: contain;
   vertical-align: middle;
   flex-shrink: 0;
 }

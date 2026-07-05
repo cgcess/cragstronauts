@@ -619,6 +619,7 @@ export default function TripDashboard() {
     ensureUser,
     openQuestions,
     refresh,
+    subscribeToChanges,
     deleteTrip,
   } = useTripContext();
   const navigate = useNavigate();
@@ -679,7 +680,9 @@ export default function TripDashboard() {
     openCalendarFile(`${slugify(trip.name) || "trip"}.ics`, ics);
   };
 
-  const reload = async () => {
+  // Reload only the slices this screen owns (cars/dogs/expenses/balances); the
+  // context data is refreshed separately via `refresh`.
+  const reloadBoard = async () => {
     setError(null);
     try {
       const [c, ex, bal, dg] = await Promise.all([
@@ -692,16 +695,31 @@ export default function TripDashboard() {
       setDogs(dg);
       setExpenses(ex);
       setBalances(bal);
-      await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
+  };
+
+  const reload = async () => {
+    await reloadBoard();
+    await refresh();
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     reload();
   }, [tripId]);
+
+  // Live updates: a "changed" signal from another participant reloads this
+  // screen's own slices. Context data (users/gear/polls) is handled by the
+  // socket's own `refresh`, so here we only reload the board slices. A ref
+  // keeps the subscription stable across renders.
+  const reloadBoardRef = useRef(reloadBoard);
+  reloadBoardRef.current = reloadBoard;
+  useEffect(
+    () => subscribeToChanges(() => reloadBoardRef.current()),
+    [subscribeToChanges]
+  );
 
   // The board is members-only. Anyone who hasn't joined (no established
   // identity for this trip) is bounced back to the landing page, where the

@@ -44,6 +44,13 @@ export interface TripContextValue {
    */
   openQuestions: (polls: Poll[], categories?: Category[]) => void;
   refresh: () => Promise<void>;
+  /**
+   * Subscribe to real-time "changed" signals (another participant mutated the
+   * trip). Screens that hold their own fetched slices not covered by `refresh`
+   * (e.g. the dashboard's cars/dogs/expenses/balances) register a reloader here
+   * so they update live too. Returns an unsubscribe function.
+   */
+  subscribeToChanges: (listener: () => void) => () => void;
   deleteTrip: () => Promise<void>;
   /** Join a private trip as the signed-in account, then load member data. */
   joinPrivateTrip: () => Promise<void>;

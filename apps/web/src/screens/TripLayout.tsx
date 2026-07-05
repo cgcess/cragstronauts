@@ -125,9 +125,31 @@ export default function TripLayout() {
     refresh();
   }, [tripId, refresh]);
 
+  // Extra realtime listeners: screens holding their own fetched slices (the
+  // dashboard's cars/dogs/expenses/balances) register a reloader here so a
+  // "changed" signal updates them too, not just the context data `refresh`
+  // reloads. A ref avoids re-running the socket effect when listeners change.
+  const changeListeners = useRef(new Set<() => void>());
+  const subscribeToChanges = useCallback((listener: () => void) => {
+    changeListeners.current.add(listener);
+    return () => {
+      changeListeners.current.delete(listener);
+    };
+  }, []);
+
   // Live updates: when another participant changes anything, the server pushes
-  // a "changed" signal and we refetch. Only once the viewer can read the trip.
-  useTripSocket(tripId, access === "member" || access === "public", refresh);
+  // a "changed" signal. Refetch the context data and fan out to subscribers.
+  const handleRealtimeChange = useCallback(() => {
+    refresh();
+    changeListeners.current.forEach((listener) => listener());
+  }, [refresh]);
+
+  // Only subscribe once the viewer can read the trip.
+  useTripSocket(
+    tripId,
+    access === "member" || access === "public",
+    handleRealtimeChange
+  );
 
   // Self-heal: clear a stored userId no longer in the roster. Skip the join
   // screen, where users is empty by design.
@@ -253,6 +275,7 @@ export default function TripLayout() {
         ensureUser,
         openQuestions,
         refresh,
+        subscribeToChanges,
         deleteTrip,
         joinPrivateTrip,
       }}

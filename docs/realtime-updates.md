@@ -7,10 +7,12 @@ viewing that trip refetches within ~1s, no manual reload.
 ## Design: invalidate-and-refetch, not deltas
 
 The server broadcasts a tiny **"something changed"** signal, never row data. The
-client reacts by re-running the same full trip load it does on mount
-(`TripLayout.refresh` → six parallel GETs). That load is cheap and idempotent,
-so there is zero client merge logic and no ordering hazard. A leaked frame
-reveals only "this trip changed".
+client reacts by re-running its trip loads: `TripLayout.refresh` reloads the
+context slices (trip, users, categories, gear, declines, polls, poll answers),
+and any screen holding its own fetched slices reloads them via
+`subscribeToChanges` (the dashboard's cars, dogs, expenses, balances). Those
+loads are cheap and idempotent, so there is zero client merge logic and no
+ordering hazard. A leaked frame reveals only "this trip changed".
 
 Message (server → client): `{ "type": "changed", "resource"?: string }`.
 `resource` is an optional path tag (`"cars"`, `"polls"`, …) reserved for a later
@@ -67,7 +69,9 @@ connects when the viewer can read the trip (`member` or `public`), debounces the
 `changed` signal ~250ms so a burst collapses to one refetch, sends a `"ping"`
 heartbeat every ~30s, and reconnects with capped exponential backoff, fetching a
 fresh token per attempt. `nextBackoff` and `makeDebounce` are pure and
-unit-tested. `TripLayout` wires `onChange` to `refresh`.
+unit-tested. `TripLayout` wires `onChange` to a handler that both calls
+`refresh` (context slices) and fans out to `subscribeToChanges` listeners
+(screen-owned slices like the dashboard's cars/dogs/expenses/balances).
 
 ## Dev proxy
 

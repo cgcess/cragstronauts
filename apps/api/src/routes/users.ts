@@ -1,6 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Env } from "../types";
-import { getTripDO } from "../do";
+import { getTripDO, getAccountIndexDO } from "../do";
 import { getAccountId } from "../lib/auth";
 import { trackTripEvent, nameOf } from "../events";
 import {
@@ -95,6 +95,22 @@ userRoutes.openapi(claimUserRoute, async (c) => {
       tripName,
       userName: user.name,
     }));
+    // A claim that binds an account (public-trip auto-claim after identifying)
+    // should surface the trip in that account's "my trips". The users/me
+    // recognize call ran before the bind, so cover the same-session case here.
+    if (accountId && user.linked) {
+      const trip = await stub.getTrip();
+      if (trip) {
+        await getAccountIndexDO(c.env, accountId)
+          .ensureMember(tripId, {
+            name: trip.name,
+            location: trip.location,
+            start_date: trip.start_date,
+            end_date: trip.end_date,
+          })
+          .catch(() => {});
+      }
+    }
     return c.json(user, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -158,5 +174,23 @@ userRoutes.openapi(getMyTripUserRoute, async (c) => {
   if (!accountId) return c.json({ user_id: null }, 200);
   const stub = getTripDO(c.env, tripId);
   const me = await stub.findUserByAccount(accountId);
+  // Self-heal "my trips" for public-trip members: a signed-in account bound to
+  // a slot here never went through the private join path, so land the trip in
+  // its AccountIndexDO now. ensureMember preserves an owner's role; private
+  // non-members resolve to null above and write nothing. Best-effort so an
+  // index hiccup never breaks the read.
+  if (me) {
+    const trip = await stub.getTrip();
+    if (trip) {
+      await getAccountIndexDO(c.env, accountId)
+        .ensureMember(tripId, {
+          name: trip.name,
+          location: trip.location,
+          start_date: trip.start_date,
+          end_date: trip.end_date,
+        })
+        .catch(() => {});
+    }
+  }
   return c.json({ user_id: me?.id ?? null }, 200);
 });

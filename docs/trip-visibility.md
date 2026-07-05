@@ -20,6 +20,15 @@ How trips are gated after PR 1 (ownership + privacy).
   `idFromName(accountId)`) holds the trips an account owns or joined, with
   denormalized meta so "my trips" renders in one read. Trip edits/deletes fan
   out to every member's index.
+  - Populated on create (`owner`) and private join (`member`). On a **public**
+    trip there is no join path: a signed-in account is recognized as a member
+    lazily via `GET /api/trips/:id/users/me` and bound via
+    `POST /api/trips/:id/users/:uid/claim`. Both hooks call
+    `AccountIndexDO.ensureMember` (best-effort), so the public trip also lands
+    in "my trips" — not only the admin finder. `ensureMember` inserts as
+    `member` when absent and otherwise refreshes meta while preserving role, so
+    an owner resolving their own slot is never downgraded. This self-heals
+    retroactively: an existing bound member's next open of the trip indexes it.
 
 ## Access policy
 

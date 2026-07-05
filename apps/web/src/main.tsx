@@ -15,6 +15,9 @@ import UIKit from "./screens/UIKit";
 import AllTrips from "./screens/AllTrips";
 import NotFound from "./screens/NotFound";
 import { partyDayActive } from "./lib/partyDay";
+// Registers the service worker and auto-reloads once when a new deploy takes
+// control. Side-effect import — must stay, or PWA/offline silently breaks.
+import "./lib/pwa";
 
 import "./styles.css";
 import "./styles/v2-theme.css";

@@ -31,7 +31,7 @@ importers:
         version: 0.19.10(hono@4.12.19)(zod@3.25.76)
       do-orm:
         specifier: github:juanibiapina/do-orm
-        version: https://codeload.github.com/juanibiapina/do-orm/tar.gz/fce645fa41346391c42d073f49292b41d106d334
+        version: https://codeload.github.com/juanibiapina/do-orm/tar.gz/434c8995d1bf083f44daba106c94c8890827deb7
       hono:
         specifier: ^4.12.2
         version: 4.12.19
@@ -75,6 +75,9 @@ importers:
       remark-gfm:
         specifier: ^4.0.1
         version: 4.0.1
+      workbox-window:
+        specifier: 7.4.1
+        version: 7.4.1
       zod:
         specifier: ^3.25.67
         version: 3.25.76
@@ -1837,8 +1840,8 @@ packages:
   devlop@1.1.0:
     resolution: {integrity: sha512-RWmIqhcFf1lRYBvNmr7qTNuyCt/7/ns2jbpp1+PalgE/rDQcBT0fioSMUpJ93irlUhC5hrg4cYqe6U+0ImW0rA==}
 
-  do-orm@https://codeload.github.com/juanibiapina/do-orm/tar.gz/fce645fa41346391c42d073f49292b41d106d334:
-    resolution: {tarball: https://codeload.github.com/juanibiapina/do-orm/tar.gz/fce645fa41346391c42d073f49292b41d106d334}
+  do-orm@https://codeload.github.com/juanibiapina/do-orm/tar.gz/434c8995d1bf083f44daba106c94c8890827deb7:
+    resolution: {tarball: https://codeload.github.com/juanibiapina/do-orm/tar.gz/434c8995d1bf083f44daba106c94c8890827deb7}
     version: 0.1.0
 
   dunder-proto@1.0.1:
@@ -4758,7 +4761,7 @@ snapshots:
     dependencies:
       dequal: 2.0.3
 
-  do-orm@https://codeload.github.com/juanibiapina/do-orm/tar.gz/fce645fa41346391c42d073f49292b41d106d334: {}
+  do-orm@https://codeload.github.com/juanibiapina/do-orm/tar.gz/434c8995d1bf083f44daba106c94c8890827deb7: {}
 
   dunder-proto@1.0.1:
     dependencies:

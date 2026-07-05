@@ -37,6 +37,7 @@ import type {
 } from "@cragstronauts/contract";
 import { computeSimplifiedBalances, distributeEqual } from "./lib/balances";
 import { decideClaimBinding } from "./lib/claim";
+import { fanOut, type ChangedMessage } from "./lib/realtime";
 
 type Trip = z.infer<typeof TripSchema>;
 type TripLink = z.infer<typeof TripLinkSchema>;
@@ -70,6 +71,72 @@ export class TripDO extends DurableObject<Env> {
       migrate(ctx.storage, migrations);
       ctx.storage.sql.exec("PRAGMA foreign_keys = ON");
     });
+
+    // Heartbeats keep idle sockets alive without waking the hibernated DO: the
+    // runtime auto-responds "pong" to "ping" without dispatching to us.
+    ctx.setWebSocketAutoResponse(
+      new WebSocketRequestResponsePair("ping", "pong")
+    );
+  }
+
+  // ---- Real-time channel (Hibernatable WebSockets) ----
+
+  // The upgrade is authenticated in the Worker entry (browsers can't set an
+  // Authorization header on `new WebSocket`), so by the time it reaches here
+  // the caller is already allowed to read this trip. We just accept the socket.
+  async fetch(request: Request): Promise<Response> {
+    if (request.headers.get("Upgrade") !== "websocket") {
+      return new Response("Expected WebSocket", { status: 426 });
+    }
+    const pair = new WebSocketPair();
+    const client = pair[0];
+    const server = pair[1];
+    this.ctx.acceptWebSocket(server);
+
+    // Echo the subprotocol only when the client offered it (the token path);
+    // the query-param fallback opens without one and must not get an echo.
+    const headers: Record<string, string> = {};
+    const offered = request.headers.get("Sec-WebSocket-Protocol");
+    if (
+      offered &&
+      offered
+        .split(",")
+        .map((s) => s.trim())
+        .includes("clerktoken")
+    ) {
+      headers["Sec-WebSocket-Protocol"] = "clerktoken";
+    }
+
+    return new Response(null, { status: 101, webSocket: client, headers });
+  }
+
+  // Nudge every connected viewer to refetch. Carries no trip data, so a leaked
+  // frame reveals only "this trip changed". Self-echo is harmless (refetch is
+  // idempotent). Called via RPC from the broadcast middleware.
+  async broadcast(resource?: string): Promise<void> {
+    const msg: ChangedMessage = resource
+      ? { type: "changed", resource }
+      : { type: "changed" };
+    fanOut(this.ctx.getWebSockets(), msg);
+  }
+
+  // Clients send nothing meaningful; heartbeats are handled by the runtime.
+  async webSocketMessage(_ws: WebSocket, _msg: string | ArrayBuffer): Promise<void> {}
+
+  async webSocketClose(ws: WebSocket): Promise<void> {
+    try {
+      ws.close();
+    } catch {
+      // Already closing.
+    }
+  }
+
+  async webSocketError(ws: WebSocket): Promise<void> {
+    try {
+      ws.close();
+    } catch {
+      // Already closing.
+    }
   }
 
   // ---- Trip ----

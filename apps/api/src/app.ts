@@ -11,6 +11,7 @@ import { expenseRoutes } from "./routes/expenses";
 import { feedbackRoutes } from "./routes/feedback";
 import { createClerkWebhookRoute } from "./routes/clerk-webhook";
 import { tripAccess } from "./middleware/tripAccess";
+import { broadcastOnMutation } from "./middleware/broadcast";
 
 export const createApp = () => {
   const app = new OpenAPIHono<{ Bindings: Env }>();
@@ -30,6 +31,11 @@ export const createApp = () => {
   // "/api/trips/:trip_id" (the summary read) and every sub-path, but not the
   // "/api/trips" list/create routes (those gate sign-in in their handlers).
   app.use("/api/trips/:trip_id/*", tripAccess);
+
+  // After a successful mutation, broadcast a "changed" signal to connected
+  // viewers of this trip. Registered after tripAccess so it only runs once the
+  // request is authorized.
+  app.use("/api/trips/:trip_id/*", broadcastOnMutation);
 
   app.route("/", tripRoutes);
   app.route("/", userRoutes);

@@ -51,6 +51,18 @@ export function setAuthTokenGetter(getter: (() => Promise<string | null>) | null
   authTokenGetter = getter;
 }
 
+// Fetch a fresh session token (null when signed out or on any failure). The
+// trip WebSocket calls this per connect attempt so an expired token can never
+// reach `new WebSocket`.
+export async function getAuthToken(): Promise<string | null> {
+  if (!authTokenGetter) return null;
+  try {
+    return await authTokenGetter();
+  } catch {
+    return null;
+  }
+}
+
 // Thrown for any non-2xx response. `status` carries the HTTP status so callers
 // can branch on it (e.g. a 403 from claim means the slot is bound to another
 // account and retrying is pointless). `message` stays the human-facing detail,

@@ -12,6 +12,7 @@ import {
   type PollAnswer,
 } from "../context/TripContext";
 import { extractTripId, slugify } from "../lib/tripUrl";
+import { useTripSocket } from "../lib/useTripSocket";
 import IdentityFlow from "./IdentityFlow";
 import TripAccountSync from "../components/TripAccountSync";
 import ProfileBridge from "../components/ProfileBridge";
@@ -123,6 +124,10 @@ export default function TripLayout() {
     setCurrentUserId(readNum(userKey(tripId)));
     refresh();
   }, [tripId, refresh]);
+
+  // Live updates: when another participant changes anything, the server pushes
+  // a "changed" signal and we refetch. Only once the viewer can read the trip.
+  useTripSocket(tripId, access === "member" || access === "public", refresh);
 
   // Self-heal: clear a stored userId no longer in the roster. Skip the join
   // screen, where users is empty by design.

@@ -5,7 +5,7 @@ A small webapp for coordinating a single group climbing trip: the organizer sets
 ## Architecture
 
 - **Worker** (`apps/api`) — Cloudflare Worker using Hono. Serves the JSON API under `/api/*` and the frontend as static assets.
-- **Durable Object** — `TripDO` with SQLite storage holds all state in a single instance (named `"default"`). Schema managed via do-orm migrations.
+- **Durable Object** — `TripDO` with SQLite storage holds all state in a single instance (named `"default"`). Schema managed via do-orm migrations. It also hosts a Hibernatable WebSocket channel that broadcasts a "changed" signal to connected viewers so a mutation by one participant is picked up by the others within ~1s (see `docs/realtime-updates.md`).
 - **Frontend** (`apps/web`) — React 18 + Vite + framer-motion. A state machine in `src/App.jsx` routes between the Organizer Wizard, Landing, Signup Swipe, and the Main Tabs (Info / Cars / Gear).
 
 ## Requirements

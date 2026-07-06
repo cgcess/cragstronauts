@@ -56,27 +56,25 @@ noisy.
 
 ## Secrets
 
-Both are secrets — never commit real values. They live in `.dev.vars`
-(gitignored) locally and the Worker secret store in production.
+Both are secrets — never commit real values. They live in ZeroVault
+(`cragstronauts-worker`) and flow into the gitignored `apps/api/.dev.vars`
+locally and the Worker secret store in production.
 
 - `CLERK_WEBHOOK_SIGNING_SECRET` — `whsec_…`, from the Clerk Dashboard webhook
   endpoint.
 - `DISCORD_WEBHOOK_URL` — the Discord channel's incoming webhook URL. Leave it
   unset locally to keep dev silent.
 
-Local (`apps/api/.dev.vars`):
-
-```
-CLERK_WEBHOOK_SIGNING_SECRET=whsec_...
-DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
-```
-
-Production:
+Set them in ZeroVault, then propagate:
 
 ```bash
-cd apps/api
-wrangler secret put CLERK_WEBHOOK_SIGNING_SECRET
-wrangler secret put DISCORD_WEBHOOK_URL
+# development or production
+zv secrets set CLERK_WEBHOOK_SIGNING_SECRET=whsec_... \
+  DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/... \
+  -p cragstronauts-worker -e development
+
+bin/fetch-secrets              # writes apps/api/.dev.vars (dev)
+bin/sync-secrets-to-cloudflare # pushes production to the Worker
 ```
 
 The URL lives in the manual `Env` augmentation in `apps/api/src/types.ts`, not

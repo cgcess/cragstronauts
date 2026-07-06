@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Deploy Cragstronauts: push production Worker secrets, refresh build-time vars,
+# then build + deploy. See docs/secrets.md.
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+"$ROOT/bin/sync-secrets-to-cloudflare"
+"$ROOT/bin/fetch-secrets"
+pnpm turbo deploy

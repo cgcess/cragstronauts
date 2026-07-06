@@ -126,12 +126,15 @@ npx @pushforge/builder vapid
 
 It prints a **Public Key** (base64url) and a **Private Key (JWK)** JSON string.
 
-| Value                    | Where                                                            | Secret? |
-| ------------------------ | --------------------------------------------------------------- | ------- |
-| `VAPID_PRIVATE_KEY` (JWK)| API — `.dev.vars` locally, `wrangler secret put` in prod        | yes     |
-| `VAPID_PUBLIC_KEY`       | API — `.dev.vars` / Worker var                                  | no      |
-| `VAPID_SUBJECT`          | API — a `mailto:` contact URL                                   | no      |
-| `VITE_VAPID_PUBLIC_KEY`  | web — `.env.local` / `.env.production` (same value as public)   | no      |
+All four live in ZeroVault. Set them with `zv secrets set`, then propagate
+(`bin/fetch-secrets` for local, `bin/sync-secrets-to-cloudflare` for prod).
+
+| Value                    | ZeroVault location                                          | Secret? |
+| ------------------------ | ---------------------------------------------------------- | ------- |
+| `VAPID_PRIVATE_KEY` (JWK)| `cragstronauts-worker` / dev + production                  | yes     |
+| `VAPID_PUBLIC_KEY`       | `cragstronauts-worker` / dev + production                  | no      |
+| `VAPID_SUBJECT`          | `cragstronauts-worker` / dev + production (`mailto:` URL)  | no      |
+| `VITE_VAPID_PUBLIC_KEY`  | `cragstronauts-web` / dev + production (same as public)    | no      |
 
 When the API vars are unset the push path no-ops; when the web var is unset the
 "Enable notifications" control is hidden.
@@ -146,8 +149,9 @@ limited by design — a product decision deferred past this slice.
 
 ## Testing locally
 
-1. Generate keys (above); set the three API vars in `apps/api/.dev.vars` and
-   `VITE_VAPID_PUBLIC_KEY` in `apps/web/.env.local`.
+1. Generate keys (above); set the three worker vars in `cragstronauts-worker` and
+   `VITE_VAPID_PUBLIC_KEY` in `cragstronauts-web` (both `development`), then run
+   `bin/fetch-secrets` to write `apps/api/.dev.vars` and `apps/web/.env.local`.
 2. `pnpm turbo dev`.
 3. Open the trip on two devices/profiles (Android or desktop Chrome first). Both
    the driver and the joining user must be **signed in** (push is account-scoped).

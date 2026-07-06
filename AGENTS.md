@@ -32,6 +32,15 @@ pnpm turbo dev
 
 Frontend runs at http://localhost:3000, API at http://localhost:8787.
 
+## Secrets
+
+Secrets are managed via [ZeroVault](https://zerovault.juanibiapina.dev). The
+files `apps/api/.dev.vars` and `apps/web/.env.local` / `.env.production` are
+**generated** — never hand-edit them. To set up or refresh local secrets, follow
+[`docs/secrets.md`](docs/secrets.md) (bind the repo to a `zv` context, then run
+`bin/fetch-secrets`). Production Worker secrets sync from ZeroVault with
+`bin/sync-secrets-to-cloudflare` (or the full `bin/deploy`).
+
 ## Checks
 
 Run all checks before pushing:

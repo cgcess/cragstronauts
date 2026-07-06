@@ -15,3 +15,5 @@ claude_instructions.md
 # Local env overrides (Vite); holds the Clerk publishable key for dev.
 .env.local
 .env.*.local
+# Generated from ZeroVault (cragstronauts-web / production). Never hand-edit.
+.env.production

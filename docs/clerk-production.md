@@ -59,26 +59,26 @@ How auth is wired (so the steps below make sense):
 > Run from the repo root with Node 22.
 
 1. `wrangler login`
-2. Set the backend keys on the Worker (paste `*_live` for Path A, `*_test` for
-   Path B). Both are required:
+2. Set the backend keys in ZeroVault (`cragstronauts-worker` / `production`) —
+   paste `*_live` for Path A, `*_test` for Path B. Both are required:
    ```bash
-   wrangler secret put CLERK_SECRET_KEY
-   wrangler secret put CLERK_PUBLISHABLE_KEY
+   zv secrets set CLERK_SECRET_KEY=sk_live_... CLERK_PUBLISHABLE_KEY=pk_live_... \
+     -p cragstronauts-worker -e production
    ```
-   (Publishable can alternatively be a `vars` entry in `apps/api/wrangler.jsonc`,
-   since it is safe to expose. Secret put is simplest.)
-3. Provide the frontend build key. Create `apps/web/.env.production` with the
-   publishable key (safe to commit; publishable keys ship in the bundle):
-   ```
-   VITE_CLERK_PUBLISHABLE_KEY=pk_live_...   # or pk_test_... for Path B
+3. Set the frontend build key in ZeroVault (`cragstronauts-web` / `production`;
+   publishable keys are public and ship in the bundle):
+   ```bash
+   zv secrets set VITE_CLERK_PUBLISHABLE_KEY=pk_live_... \
+     -p cragstronauts-web -e production   # or pk_test_... for Path B
    ```
    Without this, the deployed frontend shows no sign-in until rebuilt with it.
 4. Deploy:
    ```bash
-   pnpm turbo deploy
+   bin/deploy
    ```
-   This builds the web app (baking in the key from step 3) and deploys the
-   Worker + static assets.
+   This pushes the Worker secrets to Cloudflare, refreshes `apps/web/.env.production`
+   from ZeroVault, builds the web app (baking in the key from step 3), and deploys
+   the Worker + static assets. See `docs/secrets.md`.
 
 ---
 
@@ -89,6 +89,6 @@ How auth is wired (so the steps below make sense):
 - **Rotate** the dev Google client secret that was shared in chat earlier. Clerk
   dev does not use it, but it is good hygiene.
 - Local dev keys live in `apps/api/.dev.vars` and `apps/web/.env.local` (both
-  gitignored). Because Clerk is required, these must exist before `pnpm turbo
-  dev`. Populate both with `bin/fetch-secrets` (wraps `npx clerk env pull`;
-  needs Clerk app membership + a logged-in Clerk CLI).
+  gitignored, generated from ZeroVault). Because Clerk is required, these must
+  exist before `pnpm turbo dev`. Populate them with `bin/fetch-secrets` — see
+  `docs/secrets.md`.

@@ -12,6 +12,7 @@
   },
   "devDependencies": {
     "turbo": "^2.8.11",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "zerovault-cli": "0.2.0"
   }
 }

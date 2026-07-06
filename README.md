@@ -14,17 +14,14 @@ A small webapp for coordinating a single group climbing trip: the organizer sets
 
 ## Running locally
 
-Fetch the local secrets first (needs Clerk app membership and a logged-in Clerk
-CLI). This writes the gitignored `apps/api/.dev.vars` and `apps/web/.env.local`:
-
-```bash
-bin/fetch-secrets
-```
-
-Then:
+Secrets are managed with [ZeroVault](https://zerovault.juanibiapina.dev). One-time:
+join the org and bind this repo to a context (see [`docs/secrets.md`](docs/secrets.md)).
+Then fetch the gitignored local secret files (`apps/api/.dev.vars`,
+`apps/web/.env.local`, `apps/web/.env.production`):
 
 ```bash
 pnpm install
+bin/fetch-secrets
 pnpm turbo dev
 ```
 
@@ -37,10 +34,12 @@ Open http://localhost:3000 for development.
 ## Deploying
 
 ```bash
-pnpm turbo deploy
+bin/deploy
 ```
 
-Builds the frontend, then deploys the worker + static assets to Cloudflare.
+Pushes the production Worker secrets from ZeroVault to Cloudflare, refreshes the
+build-time web vars, then builds the frontend and deploys the worker + static
+assets. See [`docs/secrets.md`](docs/secrets.md).
 
 ## Resetting
 

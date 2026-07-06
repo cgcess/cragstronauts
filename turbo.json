@@ -4,6 +4,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "env": ["VITE_CLERK_PUBLISHABLE_KEY", "VITE_VAPID_PUBLIC_KEY"],
       "outputs": ["dist/**"]
     },
     "dev": {

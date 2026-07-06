@@ -23,6 +23,7 @@ import Linkify from "../components/Linkify";
 import Markdown from "../components/Markdown";
 import DateRangePicker from "../components/DateRangePicker";
 import BottomSheet from "../components/BottomSheet";
+import NotificationsButton from "../components/NotificationsButton";
 import { Button, Tag, Menu, useConfirm } from "../components/ui";
 import type { MenuItem } from "../components/ui";
 
@@ -1479,6 +1480,8 @@ export default function TripDashboard() {
             onClick={() => openQuestions(myUnansweredPolls, myPendingGear)}
           />
         )}
+
+        <NotificationsButton />
 
         <div className="dash-grid">
           {cards.map((c) => (

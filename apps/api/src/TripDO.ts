@@ -489,6 +489,14 @@ export class TripDO extends DurableObject<Env> {
     return row ? formatUser(row) : null;
   }
 
+  // The Clerk account bound to a trip user, or null (unknown user, or a
+  // cooperative public-trip member with no account). Used by the car route to
+  // fan a push out to the driver's account-scoped devices.
+  async getUserAccountId(userId: number): Promise<string | null> {
+    const row = this.db.get(user, { where: eq("id", userId) });
+    return row?.account_id ?? null;
+  }
+
   async deleteUser(userId: number): Promise<{ ok: boolean }> {
     const row = this.db.get(user, { where: eq("id", userId) });
     if (!row) throw new Error("User not found");
@@ -705,7 +713,7 @@ export class TripDO extends DurableObject<Env> {
     carId: number,
     userId: number,
     fromReserved = false
-  ): Promise<Car> {
+  ): Promise<{ car: Car; passengerName: string }> {
     const c = this.db.get(car, { where: eq("id", carId) });
     if (!c) throw new Error("Car not found");
 
@@ -741,7 +749,11 @@ export class TripDO extends DurableObject<Env> {
     }
 
     const updated = this.db.get(car, { where: eq("id", carId) })!;
-    return this.formatCar(updated);
+    const car_ = this.formatCar(updated);
+    // We just inserted this user, so they're in the passenger list with a name.
+    const passenger = car_.passengers.find((p) => p.user_id === userId);
+    if (!passenger) throw new Error("Joined passenger missing from car");
+    return { car: car_, passengerName: passenger.name };
   }
 
   async carSignoff(

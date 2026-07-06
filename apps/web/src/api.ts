@@ -253,6 +253,14 @@ export const api = {
   getBalances: (tripId: string) =>
     req<Settlement[]>("GET", `/api/trips/${tripId}/balances`),
 
+  // Web Push subscriptions — account-scoped (the Clerk bearer token identifies
+  // the account), so one opt-in per device covers every trip.
+  pushSubscribe: (
+    subscription: { endpoint: string; keys: { p256dh: string; auth: string } }
+  ) => req<Ok>("POST", `/api/push/subscriptions`, { subscription }),
+  pushUnsubscribe: (endpoint: string) =>
+    req<Ok>("DELETE", `/api/push/subscriptions`, { endpoint }),
+
   // Feedback
   createFeedback: (
     tripId: string,

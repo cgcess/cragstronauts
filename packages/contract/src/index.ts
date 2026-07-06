@@ -7,6 +7,7 @@ export * from "./schemas/gear";
 export * from "./schemas/poll";
 export * from "./schemas/expense";
 export * from "./schemas/feedback";
+export * from "./schemas/push";
 
 // Catalog
 export * from "./catalog/gear";
@@ -19,3 +20,4 @@ export * from "./routes/gear";
 export * from "./routes/poll";
 export * from "./routes/expenses";
 export * from "./routes/feedback";
+export * from "./routes/push";

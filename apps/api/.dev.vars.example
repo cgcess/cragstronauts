@@ -16,3 +16,13 @@ CLERK_SECRET_KEY=
 # unset locally to keep dev silent.
 CLERK_WEBHOOK_SIGNING_SECRET=
 DISCORD_WEBHOOK_URL=
+
+# Web Push / VAPID (docs/web-push.md). Generate a keypair once with
+# `npx @pushforge/builder vapid`. VAPID_PRIVATE_KEY is the printed JWK JSON
+# string (a secret — in production `wrangler secret put VAPID_PRIVATE_KEY`);
+# VAPID_PUBLIC_KEY is the printed base64url key (also set as the frontend's
+# VITE_VAPID_PUBLIC_KEY); VAPID_SUBJECT is a mailto: contact URL. Leave all
+# three unset locally to keep push silent.
+VAPID_PRIVATE_KEY=
+VAPID_PUBLIC_KEY=
+VAPID_SUBJECT=

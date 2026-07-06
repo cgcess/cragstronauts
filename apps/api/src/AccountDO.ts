@@ -2,7 +2,9 @@ import { DurableObject } from "cloudflare:workers";
 import { migrate, createDb, eq, type Database } from "do-orm";
 import type { Env } from "./types";
 import { accountMigrations } from "./db/account-migrations";
-import { accountTripIndex } from "./db/account-schema";
+import { accountTripIndex, pushSubscription } from "./db/account-schema";
+
+type PushSub = { endpoint: string; keys: { p256dh: string; auth: string } };
 
 type Role = "owner" | "member";
 type AccountTripEntry = {
@@ -124,5 +126,36 @@ export class AccountDO extends DurableObject<Env> {
 
   async remove(tripId: string): Promise<void> {
     this.db.delete(accountTripIndex, { where: eq("trip_id", tripId) });
+  }
+
+  // ---- Push subscriptions ----
+
+  /**
+   * Upsert a device's push subscription for this account. Idempotent per
+   * endpoint: re-subscribing the same device replaces the prior row
+   * (delete-then-insert) rather than duplicating.
+   */
+  async savePushSubscription(sub: PushSub): Promise<{ ok: boolean }> {
+    this.db.delete(pushSubscription, { where: eq("endpoint", sub.endpoint) });
+    this.db.insert(pushSubscription, {
+      endpoint: sub.endpoint,
+      p256dh: sub.keys.p256dh,
+      auth: sub.keys.auth,
+      created_at: new Date().toISOString(),
+    });
+    return { ok: true };
+  }
+
+  /** Every push subscription registered for this account, across its devices. */
+  async listPushSubscriptions(): Promise<PushSub[]> {
+    return this.db
+      .all(pushSubscription)
+      .map((r) => ({ endpoint: r.endpoint, keys: { p256dh: r.p256dh, auth: r.auth } }));
+  }
+
+  /** Remove a subscription by endpoint (unsubscribe, or pruning a dead one). */
+  async deletePushSubscription(endpoint: string): Promise<{ ok: boolean }> {
+    this.db.delete(pushSubscription, { where: eq("endpoint", endpoint) });
+    return { ok: true };
   }
 }

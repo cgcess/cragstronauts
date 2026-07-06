@@ -1,7 +1,8 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Env } from "../types";
-import { getTripDO } from "../do";
+import { getTripDO, getAccountDO } from "../do";
 import { trackTripEvent } from "../events";
+import { sendPushToAccount } from "../push";
 import {
   listCarsRoute,
   createCarRoute,
@@ -60,13 +61,30 @@ carRoutes.openapi(carSignupRoute, async (c) => {
   const body = c.req.valid("json");
   try {
     const stub = getTripDO(c.env, tripId);
-    const car = await stub.carSignup(carId, body.user_id, body.from_reserved);
+    const { car, passengerName } = await stub.carSignup(carId, body.user_id, body.from_reserved);
     trackTripEvent(c.env, (p) => c.executionCtx.waitUntil(p), stub, ({ tripName }) => ({
       type: "car_seat_taken",
       tripName,
-      passengerName: car.passengers.find((s) => s.user_id === body.user_id)?.name ?? null,
+      passengerName,
       driverName: car.driver_name,
     }));
+    // Tell the driver a passenger hopped in. The DO already rejects the driver
+    // joining their own car, so there's no self-notify to guard against. Push is
+    // account-scoped: resolve the driver's Clerk account and fan out to its
+    // devices. A cooperative public-trip driver (no account) is a silent no-op.
+    const driverAccountId = await stub.getUserAccountId(car.driver_user_id);
+    if (driverAccountId) {
+      sendPushToAccount(
+        c.env,
+        (p) => c.executionCtx.waitUntil(p),
+        getAccountDO(c.env, driverAccountId),
+        {
+          title: "Someone joined your car",
+          body: `${passengerName} hopped into your car`,
+          url: `/trips/${tripId}/board`,
+        },
+      );
+    }
     return c.json(car, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

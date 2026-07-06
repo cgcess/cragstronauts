@@ -1,8 +1,17 @@
+import { useEffect, useState } from "react";
 import { SignInButton, useClerk, useUser } from "@clerk/clerk-react";
+import { ToggleRow } from "./controls";
+import {
+  disablePush,
+  enablePush,
+  pushEnabled,
+  pushPermission,
+  pushSupported,
+} from "../../lib/push";
 
 // The "Account" tab — Clerk lives here now (it used to be the standalone top-right
-// control). Signed in: identity + manage/sign-out. Signed out: a friendly sign-in
-// prompt. The heavy account management UI stays Clerk's own modal.
+// control). Signed in: identity + notifications + manage/sign-out. Signed out: a
+// friendly sign-in prompt. The heavy account management UI stays Clerk's own modal.
 export default function AccountTab() {
   const { user } = useUser();
   const clerk = useClerk();
@@ -47,6 +56,8 @@ export default function AccountTab() {
         </div>
       </div>
 
+      <NotificationsToggle />
+
       <div className="pf-account__actions">
         <button
           type="button"
@@ -58,11 +69,76 @@ export default function AccountTab() {
         <button
           type="button"
           className="pf-account__btn pf-account__btn--danger"
-          onClick={() => clerk.signOut({ redirectUrl: "/" })}
+          onClick={async () => {
+            // Drop this device's subscription before we lose the token, so the
+            // old account stops pushing here after a sign-out/sign-in swap.
+            try {
+              await disablePush();
+            } catch {
+              // best-effort; sign out regardless
+            }
+            clerk.signOut({ redirectUrl: "/" });
+          }}
         >
           Sign out
         </button>
       </div>
+    </div>
+  );
+}
+
+// The permanent notifications control (per device). Reflects live state
+// (permission + a live browser subscription) and flips enable/disable. When the
+// browser can't subscribe or permission is denied, it's shown disabled with a
+// hint. This is also the re-enable path after a device dismissed the one-time
+// dashboard prompt.
+function NotificationsToggle() {
+  const [enabled, setEnabled] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    pushEnabled().then((on) => {
+      if (alive) setEnabled(on);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (!pushSupported()) return null;
+
+  const denied = pushPermission() === "denied";
+  const hint = denied
+    ? "Blocked — allow notifications in your browser settings"
+    : "Get pinged when someone joins your car";
+
+  const onChange = async (next: boolean) => {
+    if (busy || denied) return;
+    setBusy(true);
+    try {
+      if (next) {
+        const ok = await enablePush();
+        setEnabled(ok);
+      } else {
+        await disablePush();
+        setEnabled(false);
+      }
+    } catch {
+      setEnabled(await pushEnabled());
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="pf-account__notify">
+      <ToggleRow
+        checked={enabled}
+        onChange={onChange}
+        label="Notifications"
+        hint={hint}
+      />
     </div>
   );
 }

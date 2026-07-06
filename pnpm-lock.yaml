@@ -29,6 +29,9 @@ importers:
       '@hono/zod-openapi':
         specifier: ^0.19.6
         version: 0.19.10(hono@4.12.19)(zod@3.25.76)
+      '@pushforge/builder':
+        specifier: ^2.0.5
+        version: 2.0.5
       do-orm:
         specifier: github:juanibiapina/do-orm
         version: https://codeload.github.com/juanibiapina/do-orm/tar.gz/434c8995d1bf083f44daba106c94c8890827deb7
@@ -75,6 +78,18 @@ importers:
       remark-gfm:
         specifier: ^4.0.1
         version: 4.0.1
+      workbox-cacheable-response:
+        specifier: 7.4.1
+        version: 7.4.1
+      workbox-precaching:
+        specifier: 7.4.1
+        version: 7.4.1
+      workbox-routing:
+        specifier: 7.4.1
+        version: 7.4.1
+      workbox-strategies:
+        specifier: 7.4.1
+        version: 7.4.1
       workbox-window:
         specifier: 7.4.1
         version: 7.4.1
@@ -1292,6 +1307,11 @@ packages:
 
   '@poppinss/exception@1.2.3':
     resolution: {integrity: sha512-dCED+QRChTVatE9ibtoaxc+WkdzOSjYTKi/+uacHWIsfodVfpsueo3+DKpgU5Px8qXjgmXkSvhXvSCz3fnP9lw==}
+
+  '@pushforge/builder@2.0.5':
+    resolution: {integrity: sha512-9Q6lBFWUMKUL5vBknwAt+nlS7eWCrNuf1lCMAhC1Iypn8gtYJ0rdVHAnsGFMxPKhbtgkgpU3r6UVduDTQ8jgzw==}
+    engines: {node: '>=20.0.0'}
+    hasBin: true
 
   '@rolldown/pluginutils@1.0.0-beta.27':
     resolution: {integrity: sha512-+d0F4MKMCbeVUJwG96uQ4SgAznZNSq93I3V+9NHA4OpvqG8mRCpGdKmK8l/dl02h2CCDHwW2FqilnTyDcAnqjA==}
@@ -4276,6 +4296,8 @@ snapshots:
       supports-color: 10.2.2
 
   '@poppinss/exception@1.2.3': {}
+
+  '@pushforge/builder@2.0.5': {}
 
   '@rolldown/pluginutils@1.0.0-beta.27': {}
 

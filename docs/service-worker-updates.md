@@ -1,17 +1,25 @@
 # Service worker & deploy freshness
 
 The web app (`apps/web`) is an installable PWA served as Cloudflare Worker
-static assets. `vite-plugin-pwa` generates the service worker. This note
-describes how a deploy reaches an open/returning user so the behavior isn't
+static assets. `vite-plugin-pwa` runs in **`injectManifest`** mode with a
+hand-written service worker at `apps/web/src/sw.ts` (switched from `generateSW`
+so the SW can hold a Web Push `push` handler — see `docs/web-push.md`). This
+note describes how a deploy reaches an open/returning user so the behavior isn't
 later mistaken for a bug.
+
+Because we hand-write the SW, the three pieces below are now **code in
+`src/sw.ts`** rather than plugin config: `skipWaiting()` + `clients.claim()` and
+the NetworkFirst HTML-shell route live there directly. Keep them intact when
+editing the SW.
 
 ## The model
 
 Three pieces work together:
 
-1. **`registerType: "autoUpdate"`** (`vite.config.ts`). A newly deployed SW
-   calls `skipWaiting()` + `clientsClaim()`, so it activates and takes control
-   of the open page immediately instead of waiting for every tab to close.
+1. **`skipWaiting()` + `clients.claim()`** (`src/sw.ts`). A newly deployed SW
+   activates and takes control of the open page immediately instead of waiting
+   for every tab to close. (`registerType: "autoUpdate"` stays set in
+   `vite.config.ts`; under `injectManifest` the take-control calls are ours.)
 
 2. **Auto-reload on `controllerchange`** (`src/lib/pwa.ts`). We register the SW
    ourselves (`injectRegister: null` disables the plugin's bare
@@ -25,9 +33,10 @@ Three pieces work together:
      long-open/idle tabs pick up deploys without waiting for the browser's
      ~24h SW update throttle.
 
-3. **NetworkFirst HTML shell** (`vite.config.ts` `workbox.runtimeCaching`).
-   Navigations are served `NetworkFirst` (with a short `networkTimeoutSeconds`
-   and offline fallback to the runtime cache) rather than cache-first from the
+3. **NetworkFirst HTML shell** (`src/sw.ts`, a workbox `registerRoute` for
+   `request.mode === "navigate"`). Navigations are served `NetworkFirst` (with a
+   short `networkTimeoutSeconds` and offline fallback to the runtime cache)
+   rather than cache-first from the
    precached `index.html`. Online users get the fresh shell — and its new
    hashed asset references — on the first load after a deploy instead of one
    deploy behind. Hashed `assets/*` stay precached (content-addressed, always

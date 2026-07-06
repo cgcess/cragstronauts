@@ -1,6 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Env } from "../types";
-import { getTripDO, getAccountIndexDO } from "../do";
+import { getTripDO, getAccountDO } from "../do";
 import { getAccountId } from "../lib/auth";
 import { trackTripEvent, nameOf } from "../events";
 import {
@@ -101,7 +101,7 @@ userRoutes.openapi(claimUserRoute, async (c) => {
     if (accountId && user.linked) {
       const trip = await stub.getTrip();
       if (trip) {
-        await getAccountIndexDO(c.env, accountId)
+        await getAccountDO(c.env, accountId)
           .ensureMember(tripId, {
             name: trip.name,
             location: trip.location,
@@ -176,13 +176,13 @@ userRoutes.openapi(getMyTripUserRoute, async (c) => {
   const me = await stub.findUserByAccount(accountId);
   // Self-heal "my trips" for public-trip members: a signed-in account bound to
   // a slot here never went through the private join path, so land the trip in
-  // its AccountIndexDO now. ensureMember preserves an owner's role; private
+  // its AccountDO now. ensureMember preserves an owner's role; private
   // non-members resolve to null above and write nothing. Best-effort so an
   // index hiccup never breaks the read.
   if (me) {
     const trip = await stub.getTrip();
     if (trip) {
-      await getAccountIndexDO(c.env, accountId)
+      await getAccountDO(c.env, accountId)
         .ensureMember(tripId, {
           name: trip.name,
           location: trip.location,

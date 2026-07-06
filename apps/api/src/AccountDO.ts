@@ -1,8 +1,8 @@
 import { DurableObject } from "cloudflare:workers";
 import { migrate, createDb, eq, type Database } from "do-orm";
 import type { Env } from "./types";
-import { accountIndexMigrations } from "./db/account-index-migrations";
-import { accountTripIndex } from "./db/account-index-schema";
+import { accountMigrations } from "./db/account-migrations";
+import { accountTripIndex } from "./db/account-schema";
 
 type Role = "owner" | "member";
 type AccountTripEntry = {
@@ -22,7 +22,7 @@ type Meta = {
 
 // One instance per account (idFromName(accountId)). Holds the trips that
 // account owns or joined, with denormalized meta so list() is a single read.
-export class AccountIndexDO extends DurableObject<Env> {
+export class AccountDO extends DurableObject<Env> {
   db: Database;
 
   constructor(ctx: DurableObjectState, env: Env) {
@@ -30,7 +30,7 @@ export class AccountIndexDO extends DurableObject<Env> {
     this.db = createDb(ctx.storage);
 
     ctx.blockConcurrencyWhile(async () => {
-      migrate(ctx.storage, accountIndexMigrations);
+      migrate(ctx.storage, accountMigrations);
     });
   }
 

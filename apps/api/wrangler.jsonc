@@ -29,8 +29,8 @@
         "class_name": "TripIndexDO"
       },
       {
-        "name": "ACCOUNT_INDEX",
-        "class_name": "AccountIndexDO"
+        "name": "ACCOUNT_DO",
+        "class_name": "AccountDO"
       }
     ]
   },
@@ -46,6 +46,10 @@
     {
       "tag": "v3",
       "new_sqlite_classes": ["AccountIndexDO"]
+    },
+    {
+      "tag": "v4",
+      "renamed_classes": [{ "from": "AccountIndexDO", "to": "AccountDO" }]
     }
   ]
 }

@@ -1,6 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Env } from "../types";
-import { getTripDO, getTripIndexDO, getAccountIndexDO } from "../do";
+import { getTripDO, getTripIndexDO, getAccountDO } from "../do";
 import { getAccountId } from "../lib/auth";
 import { trackEvent } from "../events";
 import {
@@ -19,7 +19,7 @@ export const tripRoutes = new OpenAPIHono<{ Bindings: Env }>();
 tripRoutes.openapi(listTripsRoute, async (c) => {
   const accountId = getAccountId(c);
   if (!accountId) return c.json({ detail: "Sign in to view your trips" }, 401);
-  const trips = await getAccountIndexDO(c.env, accountId).list();
+  const trips = await getAccountDO(c.env, accountId).list();
   return c.json([...trips], 200);
 });
 
@@ -33,7 +33,7 @@ tripRoutes.openapi(createTripRoute, async (c) => {
     const stub = c.env.TRIP_DO.get(id) as DurableObjectStub<import("../TripDO").TripDO>;
     const result = await stub.initialize({ ...body, organizer_account_id: accountId });
 
-    await getAccountIndexDO(c.env, accountId).add(tripId, "owner", {
+    await getAccountDO(c.env, accountId).add(tripId, "owner", {
       name: body.name,
       location: body.location,
       start_date: body.start_date ?? null,
@@ -78,7 +78,7 @@ tripRoutes.openapi(updateTripRoute, async (c) => {
     };
     await Promise.all(
       accountIds.map((a) =>
-        getAccountIndexDO(c.env, a).updateMeta(tripId, meta).catch(() => {})
+        getAccountDO(c.env, a).updateMeta(tripId, meta).catch(() => {})
       )
     );
     trackEvent(c.env, (p) => c.executionCtx.waitUntil(p), {
@@ -109,7 +109,7 @@ tripRoutes.openapi(deleteTripRoute, async (c) => {
     const accountIds = await stub.memberAccountIds();
     const doomed = await stub.getTrip();
     await Promise.all(
-      accountIds.map((a) => getAccountIndexDO(c.env, a).remove(tripId).catch(() => {}))
+      accountIds.map((a) => getAccountDO(c.env, a).remove(tripId).catch(() => {}))
     );
     await stub.destroy();
     trackEvent(c.env, (p) => c.executionCtx.waitUntil(p), {
@@ -146,7 +146,7 @@ tripRoutes.openapi(joinTripRoute, async (c) => {
       tripName: trip.name,
       userName: member.name,
     });
-    await getAccountIndexDO(c.env, accountId).add(tripId, "member", {
+    await getAccountDO(c.env, accountId).add(tripId, "member", {
       name: trip.name,
       location: trip.location,
       start_date: trip.start_date,

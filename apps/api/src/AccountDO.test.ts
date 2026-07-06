@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { createMockStorage } from "do-orm/src/test-utils";
 
-// AccountIndexDO extends DurableObject from the workers runtime, which isn't
+// AccountDO extends DurableObject from the workers runtime, which isn't
 // available under plain vitest. Stub the base class: the methods only touch
 // this.db, built in the constructor from ctx.storage.
 vi.mock("cloudflare:workers", () => ({
@@ -17,9 +17,9 @@ vi.mock("cloudflare:workers", () => ({
 
 // The migrations module imports a raw .sql file, which vitest can't parse.
 // The mock storage auto-creates tables on first insert, so no migration needed.
-vi.mock("./db/account-index-migrations", () => ({ accountIndexMigrations: {} }));
+vi.mock("./db/account-migrations", () => ({ accountMigrations: {} }));
 
-import { AccountIndexDO } from "./AccountIndexDO";
+import { AccountDO } from "./AccountDO";
 import type { Env } from "./types";
 
 function makeDO() {
@@ -28,7 +28,7 @@ function makeDO() {
     storage,
     blockConcurrencyWhile: async (fn: () => unknown) => fn(),
   } as unknown as DurableObjectState;
-  return new AccountIndexDO(ctx, {} as Env);
+  return new AccountDO(ctx, {} as Env);
 }
 
 const meta = {
@@ -38,7 +38,7 @@ const meta = {
   end_date: "2025-05-04",
 };
 
-describe("AccountIndexDO.ensureMember", () => {
+describe("AccountDO.ensureMember", () => {
   it("inserts an absent trip with role member and the given meta", async () => {
     const doo = makeDO();
     await doo.ensureMember("trip1", meta);

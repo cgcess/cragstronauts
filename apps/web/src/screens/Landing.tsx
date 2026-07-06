@@ -45,7 +45,15 @@ export default function Landing() {
   const navigate = useNavigate();
   const [signoffIndex, setSignoffIndex] = useState(0);
 
-  const joined = currentUserId != null;
+  // The Landing is for non-members. A member who lands here (from "My trips",
+  // a shared link, or a bookmark) is bounced straight to the board: the mirror
+  // of the board guard, which bounces non-members back here. Together they drop
+  // the redundant "open, then view" double click for anyone already joined.
+  useEffect(() => {
+    if (currentUserId != null) {
+      navigate(tripPath(trip.name, tripId, "board"), { replace: true });
+    }
+  }, [currentUserId, trip.name, tripId, navigate]);
 
   // The CTA is a fixed overlay, so it never reserves scroll space on its own —
   // a page that fits the screen doesn't scroll. We only reserve bottom
@@ -267,19 +275,9 @@ export default function Landing() {
       </div>
 
       <div className="bottom-cta landing-cta-bar">
-        {joined ? (
-          <Button
-            variant="primary"
-            fullWidth
-            onClick={() => navigate(tripPath(trip.name, tripId, "board"))}
-          >
-            View trip →
-          </Button>
-        ) : (
-          <Button variant="primary" fullWidth onClick={joinTrip}>
-            Join trip
-          </Button>
-        )}
+        <Button variant="primary" fullWidth onClick={joinTrip}>
+          Join trip
+        </Button>
       </div>
 
       <div className="landing-cta-scrim" aria-hidden="true">

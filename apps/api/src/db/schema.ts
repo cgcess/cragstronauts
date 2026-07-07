@@ -130,3 +130,29 @@ export const feedback = table("feedback", {
   created_at: column.text().notNull(),
 });
 
+// A trip announcement ("Blast"). A NULL parent_id is a top-level post; a set
+// parent_id (pointing at a top-level row) is a one-level reply. author_name /
+// author_avatar_url are snapshotted at post time so the feed survives the author
+// leaving the trip (user_id then goes NULL via ON DELETE SET NULL).
+export const announcement = table("announcement", {
+  id: column.integer().notNull().primaryKey().autoIncrement(),
+  // Self-referential FK to announcement(id); enforced by the SQL migration. Left
+  // without a schema ref() since the table object can't reference itself here.
+  parent_id: column.integer(),
+  user_id: column.integer().references(ref(user, "id")),
+  author_name: column.text().notNull(),
+  author_avatar_url: column.text(),
+  body: column.text().notNull(),
+  created_at: column.text().notNull(),
+});
+
+// One row per (message, user, emoji). The UNIQUE index makes a repeat tap a
+// no-op at the DB level; the DO toggles by deleting an existing row instead.
+export const announcementReaction = table("announcement_reaction", {
+  id: column.integer().notNull().primaryKey().autoIncrement(),
+  announcement_id: column.integer().notNull().references(ref(announcement, "id")),
+  user_id: column.integer().notNull().references(ref(user, "id")),
+  emoji: column.text().notNull(),
+  created_at: column.text().notNull(),
+});
+

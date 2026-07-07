@@ -18,6 +18,8 @@ import {
   poll,
   pollOption,
   pollAnswer,
+  announcement,
+  announcementReaction,
 } from "./db/schema";
 import type { z } from "zod";
 import type {
@@ -34,6 +36,9 @@ import type {
   FeedbackSchema,
   PollSchema,
   PollAnswerSchema,
+  AnnouncementSchema,
+  AnnouncementReplySchema,
+  CreatedAnnouncementSchema,
 } from "@cragstronauts/contract";
 import { computeSimplifiedBalances, distributeEqual } from "./lib/balances";
 import { decideClaimBinding } from "./lib/claim";
@@ -52,6 +57,9 @@ type Expense = z.infer<typeof ExpenseSchema>;
 type Settlement = z.infer<typeof SettlementSchema>;
 type Poll = z.infer<typeof PollSchema>;
 type PollAnswer = z.infer<typeof PollAnswerSchema>;
+type Announcement = z.infer<typeof AnnouncementSchema>;
+type AnnouncementReply = z.infer<typeof AnnouncementReplySchema>;
+type CreatedAnnouncement = z.infer<typeof CreatedAnnouncementSchema>;
 
 type PollInput = {
   question: string;
@@ -417,6 +425,8 @@ export class TripDO extends DurableObject<Env> {
 
   async destroy(): Promise<{ ok: boolean }> {
     // Wipe all tables — order matters for foreign keys
+    this.db.raw("DELETE FROM announcement_reaction", []);
+    this.db.raw("DELETE FROM announcement", []);
     this.db.raw("DELETE FROM feedback", []);
     this.db.raw("DELETE FROM expense_split", []);
     this.db.raw("DELETE FROM expense", []);
@@ -1132,6 +1142,173 @@ export class TripDO extends DurableObject<Env> {
       emoji: r.emoji ?? null,
       position: r.position,
       options,
+    };
+  }
+
+  // ---- Announcements ----
+
+  async listAnnouncements(): Promise<Announcement[]> {
+    const rows = this.db.all(announcement);
+    // Newest-first for top-level; id breaks ties when timestamps collide.
+    const tops = rows
+      .filter((r) => r.parent_id == null)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id);
+    return tops.map((r) => {
+      const replies = rows
+        .filter((c) => c.parent_id === r.id)
+        .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id - b.id)
+        .map((c) => this.formatReply(c));
+      return {
+        id: r.id,
+        parent_id: null,
+        user_id: r.user_id ?? null,
+        author_name: r.author_name,
+        author_avatar_url: r.author_avatar_url ?? null,
+        body: r.body,
+        created_at: r.created_at,
+        reactions: this.reactionsFor(r.id),
+        replies,
+      };
+    });
+  }
+
+  async createAnnouncement(data: {
+    user_id: number;
+    body: string;
+    author_avatar_url?: string | null;
+    parent_id?: number;
+  }): Promise<CreatedAnnouncement> {
+    const author = this.db.get(user, { where: eq("id", data.user_id) });
+    if (!author) throw new Error("User not found");
+
+    const body = data.body.trim();
+    if (!body) throw new Error("Announcement can't be empty");
+
+    // Replies are one level deep: the parent must exist and be a top-level post.
+    if (data.parent_id != null) {
+      const parent = this.db.get(announcement, { where: eq("id", data.parent_id) });
+      if (!parent) throw new Error("Parent announcement not found");
+      if (parent.parent_id != null) throw new Error("Can't reply to a reply");
+    }
+
+    const row = this.db.insertReturning(
+      announcement,
+      {
+        parent_id: data.parent_id ?? null,
+        user_id: data.user_id,
+        author_name: author.name,
+        author_avatar_url: data.author_avatar_url?.trim() || null,
+        body,
+        created_at: new Date().toISOString(),
+      },
+      ["id"]
+    );
+
+    const created = this.db.get(announcement, { where: eq("id", row.id) })!;
+    return {
+      id: created.id,
+      parent_id: created.parent_id ?? null,
+      user_id: created.user_id ?? null,
+      author_name: created.author_name,
+      author_avatar_url: created.author_avatar_url ?? null,
+      body: created.body,
+      created_at: created.created_at,
+      reactions: [],
+    };
+  }
+
+  /** Author id + parent id for a message — lets the route target push and gate deletes. */
+  async getAnnouncementMeta(
+    announcementId: number
+  ): Promise<{ user_id: number | null; parent_id: number | null } | null> {
+    const row = this.db.get(announcement, { where: eq("id", announcementId) });
+    if (!row) return null;
+    return { user_id: row.user_id ?? null, parent_id: row.parent_id ?? null };
+  }
+
+  async deleteAnnouncement(
+    announcementId: number,
+    requesterUserId: number
+  ): Promise<{ ok: boolean }> {
+    const row = this.db.get(announcement, { where: eq("id", announcementId) });
+    if (!row) throw new Error("Announcement not found");
+
+    const requester = this.db.get(user, { where: eq("id", requesterUserId) });
+    const isAuthor = row.user_id != null && row.user_id === requesterUserId;
+    const isOrganizer = !!requester && !!requester.is_organizer;
+    if (!isAuthor && !isOrganizer) throw new Error("Not allowed");
+
+    // Reactions + one level of replies (and their reactions) cascade via the FKs.
+    this.db.delete(announcement, { where: eq("id", announcementId) });
+    return { ok: true };
+  }
+
+  async toggleReaction(
+    announcementId: number,
+    data: { user_id: number; emoji: string }
+  ): Promise<{ reactions: { emoji: string; user_ids: number[] }[] }> {
+    const row = this.db.get(announcement, { where: eq("id", announcementId) });
+    if (!row) throw new Error("Announcement not found");
+    const u = this.db.get(user, { where: eq("id", data.user_id) });
+    if (!u) throw new Error("User not found");
+
+    const existing = this.db
+      .all(announcementReaction)
+      .find(
+        (r) =>
+          r.announcement_id === announcementId &&
+          r.user_id === data.user_id &&
+          r.emoji === data.emoji
+      );
+    if (existing) {
+      this.db.delete(announcementReaction, { where: eq("id", existing.id) });
+    } else {
+      this.db.insert(announcementReaction, {
+        announcement_id: announcementId,
+        user_id: data.user_id,
+        emoji: data.emoji,
+        created_at: new Date().toISOString(),
+      });
+    }
+
+    return { reactions: this.reactionsFor(announcementId) };
+  }
+
+  /** Reactions on one message, grouped by emoji (insertion order preserved). */
+  private reactionsFor(
+    announcementId: number
+  ): { emoji: string; user_ids: number[] }[] {
+    const rows = this.db
+      .all(announcementReaction)
+      .filter((r) => r.announcement_id === announcementId)
+      .sort((a, b) => a.id - b.id);
+    const groups: { emoji: string; user_ids: number[] }[] = [];
+    for (const r of rows) {
+      const g = groups.find((x) => x.emoji === r.emoji);
+      if (g) g.user_ids.push(r.user_id);
+      else groups.push({ emoji: r.emoji, user_ids: [r.user_id] });
+    }
+    return groups;
+  }
+
+  private formatReply(r: {
+    id: number;
+    parent_id: number | null;
+    user_id: number | null;
+    author_name: string;
+    author_avatar_url: string | null;
+    body: string;
+    created_at: string;
+  }): AnnouncementReply {
+    return {
+      id: r.id,
+      parent_id: r.parent_id as number,
+      user_id: r.user_id ?? null,
+      author_name: r.author_name,
+      author_avatar_url: r.author_avatar_url ?? null,
+      body: r.body,
+      created_at: r.created_at,
+      reactions: this.reactionsFor(r.id),
     };
   }
 

@@ -44,6 +44,8 @@ export type AppEvent =
   | { type: "poll_answered"; tripName: string | null; userName: string | null; question: string | null }
   | { type: "poll_added"; tripName: string | null; question: string | null }
   | { type: "poll_removed"; tripName: string | null }
+  // Announcements
+  | { type: "announcement_posted"; tripName: string | null; userName: string | null; isReply: boolean }
   // Expenses
   | { type: "expense_added"; tripName: string | null; payerName: string | null; description: string | null; amountCents: number | null }
   | { type: "expense_updated"; tripName: string | null; description: string | null }
@@ -116,6 +118,10 @@ export const formatEvent = (event: AppEvent): string => {
       return `🗳️ New poll on ${trip(event.tripName)}${event.question ? `: ${event.question}` : ""}`;
     case "poll_removed":
       return `🗳️ A poll was removed from ${trip(event.tripName)}`;
+    case "announcement_posted":
+      return event.isReply
+        ? `📣 ${who(event.userName)} replied to an announcement on ${trip(event.tripName)}`
+        : `📣 ${who(event.userName)} posted an announcement on ${trip(event.tripName)}`;
     case "expense_added": {
       const amount = money(event.amountCents);
       const detail = [event.description, amount && `€${amount}`].filter(Boolean).join(" · ");

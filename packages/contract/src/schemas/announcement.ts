@@ -54,6 +54,11 @@ export const CreateAnnouncementBodySchema = z.object({
   author_avatar_url: z.string().nullable().optional(),
   // Omit for a top-level announcement; set to a top-level id to reply (one level).
   parent_id: z.number().optional(),
+  // Trip user ids the author @-mentioned in the body. The client resolves these
+  // from its member list at compose time; the server maps them to Clerk accounts
+  // and pushes each a "mentioned you" notification (deduped against the post's
+  // other recipients). Non-members simply don't resolve and are ignored.
+  mentioned_user_ids: z.array(z.number()).optional(),
 });
 
 export const ToggleReactionBodySchema = z.object({

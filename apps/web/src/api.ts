@@ -276,7 +276,13 @@ export const api = {
     req<Announcement[]>("GET", `/api/trips/${tripId}/announcements`),
   createAnnouncement: (
     tripId: string,
-    data: { user_id: number; body: string; author_avatar_url?: string | null; parent_id?: number }
+    data: {
+      user_id: number;
+      body: string;
+      author_avatar_url?: string | null;
+      parent_id?: number;
+      mentioned_user_ids?: number[];
+    }
   ) => req<CreatedAnnouncement>("POST", `/api/trips/${tripId}/announcements`, data),
   deleteAnnouncement: (tripId: string, id: number, userId: number) =>
     req<Ok>("DELETE", `/api/trips/${tripId}/announcements/${id}`, { user_id: userId }),

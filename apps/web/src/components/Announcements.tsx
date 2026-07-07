@@ -5,7 +5,7 @@ import { api, type Announcement } from "../api";
 import { useTripContext } from "../context/TripContext";
 import { Button, useConfirm } from "./ui";
 import Avatar from "./Avatar";
-import Linkify from "./Linkify";
+import { MentionTextarea, MentionText, type MentionMember } from "./Mentions";
 import "./Announcements.css";
 
 const REACTIONS = ANNOUNCEMENT_REACTIONS;
@@ -48,6 +48,7 @@ export default function Announcements() {
 
   const [items, setItems] = useState<Announcement[]>([]);
   const [body, setBody] = useState("");
+  const [mentionIds, setMentionIds] = useState<number[]>([]);
   const [posting, setPosting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -83,6 +84,7 @@ export default function Announcements() {
         user_id: currentUserId,
         body: text,
         author_avatar_url: user?.imageUrl ?? null,
+        ...(mentionIds.length ? { mentioned_user_ids: mentionIds } : {}),
       });
       setBody("");
       await load();
@@ -100,12 +102,14 @@ export default function Announcements() {
       <div className="ann__composer">
         <Avatar name={me?.name ?? "You"} src={user?.imageUrl} size={36} />
         <div className="ann__composer-main">
-          <textarea
+          <MentionTextarea
             className="ann__input"
             rows={2}
             placeholder="Share an update with everyone…"
             value={body}
-            onChange={(e) => setBody(e.target.value)}
+            onChange={setBody}
+            members={users}
+            onMentionsChange={setMentionIds}
           />
           {err && <div className="error-banner">{err}</div>}
           <div className="ann__composer-actions">
@@ -134,6 +138,7 @@ export default function Announcements() {
               isOrganizer={isOrganizer}
               meName={me?.name ?? "You"}
               meAvatar={user?.imageUrl ?? null}
+              members={users}
               announcement={a}
               confirm={confirm}
               onChanged={load}
@@ -154,6 +159,7 @@ function AnnouncementCard({
   isOrganizer,
   meName,
   meAvatar,
+  members,
   announcement,
   confirm,
   onChanged,
@@ -164,6 +170,7 @@ function AnnouncementCard({
   isOrganizer: boolean;
   meName: string;
   meAvatar: string | null;
+  members: MentionMember[];
   announcement: Announcement;
   confirm: ReturnType<typeof useConfirm>;
   onChanged: () => Promise<void>;
@@ -171,6 +178,7 @@ function AnnouncementCard({
 }) {
   const [replying, setReplying] = useState(false);
   const [replyBody, setReplyBody] = useState("");
+  const [replyMentionIds, setReplyMentionIds] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
 
   const sendReply = async () => {
@@ -183,6 +191,7 @@ function AnnouncementCard({
         body: text,
         author_avatar_url: meAvatar,
         parent_id: announcement.id,
+        ...(replyMentionIds.length ? { mentioned_user_ids: replyMentionIds } : {}),
       });
       setReplyBody("");
       setReplying(false);
@@ -236,6 +245,7 @@ function AnnouncementCard({
         avatar={announcement.author_avatar_url}
         createdAt={announcement.created_at}
         body={announcement.body}
+        members={members}
         reactions={announcement.reactions}
         currentUserId={currentUserId}
         canDelete={isOrganizer || announcement.user_id === currentUserId}
@@ -252,6 +262,7 @@ function AnnouncementCard({
             avatar={r.author_avatar_url}
             createdAt={r.created_at}
             body={r.body}
+            members={members}
             reactions={r.reactions}
             currentUserId={currentUserId}
             canDelete={isOrganizer || r.user_id === currentUserId}
@@ -264,12 +275,14 @@ function AnnouncementCard({
           <div className="ann-reply-composer">
             <Avatar name={meName} src={meAvatar} size={28} />
             <div className="ann-reply-composer__main">
-              <textarea
+              <MentionTextarea
                 className="ann__input"
                 rows={1}
                 placeholder="Write a reply…"
                 value={replyBody}
-                onChange={(e) => setReplyBody(e.target.value)}
+                onChange={setReplyBody}
+                members={members}
+                onMentionsChange={setReplyMentionIds}
                 autoFocus
               />
               <div className="ann-reply-composer__actions">
@@ -298,6 +311,7 @@ function MessageRow({
   avatar,
   createdAt,
   body,
+  members,
   reactions,
   currentUserId,
   canDelete,
@@ -309,6 +323,7 @@ function MessageRow({
   avatar: string | null;
   createdAt: string;
   body: string;
+  members: MentionMember[];
   reactions: Reaction[];
   currentUserId: number;
   canDelete: boolean;
@@ -359,7 +374,7 @@ function MessageRow({
           )}
         </div>
         <div className="ann-msg__body">
-          <Linkify>{body}</Linkify>
+          <MentionText body={body} members={members} />
         </div>
         <div className="ann-msg__reactions">
           {reactions

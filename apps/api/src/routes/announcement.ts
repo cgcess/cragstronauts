@@ -39,31 +39,41 @@ announcementRoutes.openapi(createAnnouncementRoute, async (c) => {
       isReply,
     }));
 
-    // Notify by push. A top-level post fans out to every trip member account
-    // except the author; a reply pings only the parent post's author. Push is
-    // account-scoped, so cooperative members with no account are silent no-ops.
+    // Notify by push. @-mentions come first with the most specific message, then
+    // the default recipients (a top-level post → every member; a reply → the
+    // parent author) fill in — deduped so nobody gets two pushes and the author
+    // never self-notifies. Push is account-scoped, so members with no account
+    // are silent no-ops.
     const authorAccount = getAccountId(c);
     const schedule = (p: Promise<unknown>) => c.executionCtx.waitUntil(p);
-    const notify = (account: string, title: string) =>
+    const notified = new Set<string>();
+    const notify = (account: string | null, title: string) => {
+      if (!account || account === authorAccount || notified.has(account)) return;
+      notified.add(account);
       sendPushToAccount(c.env, schedule, getAccountDO(c.env, account), tripId, {
         title,
         body: preview(created.body),
         url: `/trips/${tripId}/board`,
       });
+    };
+
+    if (body.mentioned_user_ids?.length) {
+      const accounts = await stub.accountIdsForUsers(body.mentioned_user_ids);
+      for (const account of accounts) {
+        notify(account, `${created.author_name} mentioned you`);
+      }
+    }
 
     if (isReply) {
       const parent = await stub.getAnnouncementMeta(body.parent_id!);
-      const parentAuthorId = parent?.user_id ?? null;
-      if (parentAuthorId != null) {
-        const account = await stub.getUserAccountId(parentAuthorId);
-        if (account && account !== authorAccount) {
-          notify(account, `${created.author_name} replied to your announcement`);
-        }
+      if (parent?.user_id != null) {
+        notify(
+          await stub.getUserAccountId(parent.user_id),
+          `${created.author_name} replied to your announcement`,
+        );
       }
     } else {
-      const accounts = await stub.memberAccountIds();
-      for (const account of accounts) {
-        if (account === authorAccount) continue;
+      for (const account of await stub.memberAccountIds()) {
         notify(account, `${created.author_name} posted an announcement`);
       }
     }

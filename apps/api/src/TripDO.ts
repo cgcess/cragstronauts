@@ -507,6 +507,20 @@ export class TripDO extends DurableObject<Env> {
     return row?.account_id ?? null;
   }
 
+  /**
+   * Distinct Clerk accounts for the given trip user ids — used to push @-mention
+   * notifications. Ids that aren't trip members (or have no bound account) are
+   * silently dropped, so a mention can only ever reach someone on this trip.
+   */
+  async accountIdsForUsers(userIds: number[]): Promise<string[]> {
+    const accounts = new Set<string>();
+    for (const id of userIds) {
+      const row = this.db.get(user, { where: eq("id", id) });
+      if (row?.account_id) accounts.add(row.account_id);
+    }
+    return [...accounts];
+  }
+
   async deleteUser(userId: number): Promise<{ ok: boolean }> {
     const row = this.db.get(user, { where: eq("id", userId) });
     if (!row) throw new Error("User not found");

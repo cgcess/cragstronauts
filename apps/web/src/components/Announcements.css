@@ -220,3 +220,58 @@
   justify-content: flex-end;
   gap: 6px;
 }
+
+/* ---- @-mentions ---- */
+.mention-field {
+  position: relative;
+  width: 100%;
+  display: flex;
+}
+.mention-field > .ann__input {
+  flex: 1 1 auto;
+}
+/* Autocomplete popover anchored under the textarea. */
+.mention-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--min-surface);
+  border: 1px solid var(--min-line);
+  border-radius: 12px;
+  box-shadow: var(--min-shadow);
+  max-height: 240px;
+  overflow-y: auto;
+}
+.mention-menu__opt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--min-ink);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.mention-menu__opt:hover,
+.mention-menu__opt.is-active {
+  background: var(--min-accent-soft);
+}
+.mention-menu__at {
+  color: var(--min-accent);
+  font-weight: 700;
+}
+/* Highlighted mention inside a posted message body. */
+.ann-mention {
+  color: var(--min-accent);
+  font-weight: 600;
+}

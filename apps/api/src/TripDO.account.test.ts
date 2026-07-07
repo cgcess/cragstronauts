@@ -78,3 +78,27 @@ describe("TripDO.getUserAccountId", () => {
     expect(await doo.getUserAccountId(9999)).toBeNull();
   });
 });
+
+describe("TripDO.accountIdsForUsers", () => {
+  it("maps user ids to distinct bound accounts, dropping unbound and unknown ids", async () => {
+    const doo = makeDO();
+    const orgId = await seedOrganizer(doo); // acct_1
+    const member = await doo.join("acct_2", "Sam"); // bound account
+    const coop = await doo.createUser({ name: "Robin", joining: true }); // no account
+
+    const accounts = await doo.accountIdsForUsers([orgId, member.id, coop.id, 9999]);
+    expect(accounts.sort()).toEqual(["acct_1", "acct_2"]);
+  });
+
+  it("dedupes ids that resolve to the same account", async () => {
+    const doo = makeDO();
+    const orgId = await seedOrganizer(doo);
+    expect(await doo.accountIdsForUsers([orgId, orgId])).toEqual(["acct_1"]);
+  });
+
+  it("returns an empty array for no ids", async () => {
+    const doo = makeDO();
+    await seedOrganizer(doo);
+    expect(await doo.accountIdsForUsers([])).toEqual([]);
+  });
+});

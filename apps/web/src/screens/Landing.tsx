@@ -113,7 +113,7 @@ export default function Landing() {
       <div className="content" ref={scrollRef}>
         <div className="column landing-column" ref={cardsRef}>
         <div className="landing-hero">
-          <div className="h1"><img src="/logo-circle.png" alt="" className="fl-logo-icon" style={{ verticalAlign: "middle", marginRight: 8 }} />{trip.name}</div>
+          <div className="h1">{trip.name}</div>
           <div className="landing-hero__glance">
             {countdownLabel && (
               <Tag variant="ember" dot>
@@ -225,7 +225,7 @@ export default function Landing() {
               )}
               <div className="landing-fact">
                 <span className="landing-fact__icon" aria-hidden="true">
-                  <img src="/logo-circle.png" alt="" className="fl-logo-icon" style={{ width: 20, height: 20 }} />
+                  🧗
                 </span>
                 <div className="landing-fact__text">
                   <span className="landing-fact__label">Who</span>

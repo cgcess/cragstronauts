@@ -21,3 +21,11 @@ export const pushSubscription = table("push_subscription", {
   auth: column.text().notNull(),
   created_at: column.text().notNull(),
 });
+
+// Account-wide notification preferences. A single row (id = 1). `scope` is the
+// push breadth ("always" | "trip"); absent row means the account never changed
+// it, which we treat as the "always" default.
+export const notificationSettings = table("notification_settings", {
+  id: column.integer().notNull().primaryKey(),
+  scope: column.text().notNull(),
+});

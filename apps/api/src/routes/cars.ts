@@ -78,6 +78,7 @@ carRoutes.openapi(carSignupRoute, async (c) => {
         c.env,
         (p) => c.executionCtx.waitUntil(p),
         getAccountDO(c.env, driverAccountId),
+        tripId,
         {
           title: "Someone joined your car",
           body: `${passengerName} hopped into your car`,

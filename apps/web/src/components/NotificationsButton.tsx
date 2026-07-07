@@ -93,7 +93,7 @@ export default function NotificationsButton() {
           <span className="dash-nudge__sub">
             {state === "denied"
               ? "Allow them in your browser settings"
-              : "Get pinged when someone joins your car"}
+              : "Get pinged about car joins and trip announcements"}
           </span>
         </span>
       </button>

@@ -15,9 +15,10 @@ import type { AccountDO } from "./AccountDO";
 
 type Sub = { endpoint: string; keys: { p256dh: string; auth: string } };
 
-function makeStub(subs: Sub[]) {
+function makeStub(subs: Sub[], notify = true) {
   const deleted: string[] = [];
   const stub = {
+    shouldNotifyForTrip: vi.fn(async () => notify),
     listPushSubscriptions: vi.fn(async () => subs),
     deletePushSubscription: vi.fn(async (endpoint: string) => {
       deleted.push(endpoint);
@@ -26,6 +27,8 @@ function makeStub(subs: Sub[]) {
   } as unknown as DurableObjectStub<AccountDO>;
   return { stub, deleted };
 }
+
+const TRIP_ID = "trip-1";
 
 const env = (over: Partial<Env> = {}): Env =>
   ({
@@ -62,7 +65,7 @@ describe("sendPushToAccount", () => {
     const fetchMock = vi.spyOn(globalThis, "fetch");
     const { stub } = makeStub([{ endpoint: "https://push/a", keys: { p256dh: "p", auth: "a" } }]);
 
-    sendPushToAccount(env({ VAPID_PRIVATE_KEY: "" }), schedule, stub, notification);
+    sendPushToAccount(env({ VAPID_PRIVATE_KEY: "" }), schedule, stub, TRIP_ID, notification);
     await flush();
 
     expect(scheduled).toHaveLength(0);
@@ -80,7 +83,7 @@ describe("sendPushToAccount", () => {
     ];
     const { stub, deleted } = makeStub(subs);
 
-    sendPushToAccount(env(), schedule, stub, notification);
+    sendPushToAccount(env(), schedule, stub, TRIP_ID, notification);
     await flush();
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -97,7 +100,7 @@ describe("sendPushToAccount", () => {
       { endpoint: "https://push/gone", keys: { p256dh: "p", auth: "a" } },
     ]);
 
-    sendPushToAccount(env(), schedule, stub, notification);
+    sendPushToAccount(env(), schedule, stub, TRIP_ID, notification);
     await flush();
 
     expect(deleted).toEqual(["https://push/gone"]);
@@ -110,8 +113,25 @@ describe("sendPushToAccount", () => {
       { endpoint: "https://push/a", keys: { p256dh: "p", auth: "a" } },
     ]);
 
-    sendPushToAccount(env(), schedule, stub, notification);
+    sendPushToAccount(env(), schedule, stub, TRIP_ID, notification);
     await expect(flush()).resolves.toBeDefined();
     expect(deleted).toEqual([]);
+  });
+
+  it("skips delivery when the account's scope excludes this trip", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    // notify=false → shouldNotifyForTrip resolves false (e.g. scope "trip" while
+    // the trip isn't running). We gate before listing subscriptions or fetching.
+    const { stub } = makeStub(
+      [{ endpoint: "https://push/a", keys: { p256dh: "p", auth: "a" } }],
+      false,
+    );
+
+    sendPushToAccount(env(), schedule, stub, TRIP_ID, notification);
+    await flush();
+
+    expect(stub.shouldNotifyForTrip).toHaveBeenCalledWith(TRIP_ID);
+    expect(stub.listPushSubscriptions).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

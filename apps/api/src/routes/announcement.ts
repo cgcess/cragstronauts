@@ -45,7 +45,7 @@ announcementRoutes.openapi(createAnnouncementRoute, async (c) => {
     const authorAccount = getAccountId(c);
     const schedule = (p: Promise<unknown>) => c.executionCtx.waitUntil(p);
     const notify = (account: string, title: string) =>
-      sendPushToAccount(c.env, schedule, getAccountDO(c.env, account), {
+      sendPushToAccount(c.env, schedule, getAccountDO(c.env, account), tripId, {
         title,
         body: preview(created.body),
         url: `/trips/${tripId}/board`,

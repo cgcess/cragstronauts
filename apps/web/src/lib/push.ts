@@ -2,6 +2,9 @@
 // API, or tear it down. The heavy lifting (encryption, VAPID, delivery) is the
 // server's; here we only manage the browser PushSubscription and POST/DELETE it.
 import { api } from "../api";
+import type { NotificationScope } from "@cragstronauts/contract";
+
+export type { NotificationScope };
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY ?? "";
 
@@ -87,4 +90,18 @@ export async function disablePush(): Promise<void> {
   const endpoint = sub.endpoint;
   await sub.unsubscribe();
   await api.pushUnsubscribe(endpoint);
+}
+
+/**
+ * The account's notification scope. Account-wide (not per device), so it's read
+ * from the server rather than the browser. Defaults to "always" server-side.
+ */
+export async function getNotificationScope(): Promise<NotificationScope> {
+  const { scope } = await api.getNotificationSettings();
+  return scope;
+}
+
+/** Persist the account's notification scope. */
+export async function setNotificationScope(scope: NotificationScope): Promise<void> {
+  await api.setNotificationSettings(scope);
 }

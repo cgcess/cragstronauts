@@ -10,34 +10,40 @@ export type PushNotification = {
 };
 
 /**
- * Targeted Web Push: notify every device an account has registered. Mirrors
- * `trackEvent` — no-ops when VAPID is unset (so local dev and CI stay silent)
- * and backgrounds the send via `schedule` (`(p) => c.executionCtx.waitUntil(p)`)
- * so a slow or failing push never touches the mutation response. Encryption and
- * VAPID live behind PushForge's `buildPushHTTPRequest`; we own the `fetch`, so a
- * 404/410 lets us prune a dead subscription and errors are swallowed like
- * `notifyDiscord`.
+ * Targeted Web Push: notify every device an account has registered about an
+ * event on `tripId`. Mirrors `trackEvent` — no-ops when VAPID is unset (so local
+ * dev and CI stay silent) and backgrounds the send via `schedule`
+ * (`(p) => c.executionCtx.waitUntil(p)`) so a slow or failing push never touches
+ * the mutation response. The account's notification scope gates delivery
+ * (`shouldNotifyForTrip`): "always" always sends, "trip" only while that trip is
+ * running. Encryption and VAPID live behind PushForge's `buildPushHTTPRequest`;
+ * we own the `fetch`, so a 404/410 lets us prune a dead subscription and errors
+ * are swallowed like `notifyDiscord`.
  */
 export const sendPushToAccount = (
   env: Env,
   schedule: (promise: Promise<unknown>) => void,
   stub: DurableObjectStub<AccountDO>,
+  tripId: string,
   notification: PushNotification,
 ): void => {
   const privateJWK = env.VAPID_PRIVATE_KEY;
   const subject = env.VAPID_SUBJECT;
   if (!privateJWK || !subject) return;
 
-  schedule(deliver(stub, notification, privateJWK, subject));
+  schedule(deliver(stub, tripId, notification, privateJWK, subject));
 };
 
 async function deliver(
   stub: DurableObjectStub<AccountDO>,
+  tripId: string,
   notification: PushNotification,
   privateJWK: string,
   subject: string,
 ): Promise<void> {
   try {
+    // Respect the recipient's scope before doing any encryption/network work.
+    if (!(await stub.shouldNotifyForTrip(tripId))) return;
     const subs = await stub.listPushSubscriptions();
     await Promise.all(
       subs.map((sub) => deliverOne(stub, sub, notification, privateJWK, subject)),

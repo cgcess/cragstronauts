@@ -17,3 +17,16 @@ export const PushSubscribeBodySchema = z.object({
 export const PushUnsubscribeBodySchema = z.object({
   endpoint: z.string().url(),
 });
+
+// How wide a net the account's push notifications cast. Account-scoped (not per
+// device): `always` fires for any trip event; `trip` fires only while the trip
+// the event belongs to is currently running (today within its start/end dates).
+// `always` is the default so existing subscribers keep getting everything.
+export const NOTIFICATION_SCOPES = ["trip", "always"] as const;
+export const NotificationScopeSchema = z.enum(NOTIFICATION_SCOPES);
+export type NotificationScope = z.infer<typeof NotificationScopeSchema>;
+
+export const NotificationSettingsSchema = z.object({
+  scope: NotificationScopeSchema,
+});
+export type NotificationSettings = z.infer<typeof NotificationSettingsSchema>;

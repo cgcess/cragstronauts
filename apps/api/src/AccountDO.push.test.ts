@@ -65,3 +65,44 @@ describe("AccountDO push subscriptions", () => {
     expect(await doo.listPushSubscriptions()).toEqual([subB]);
   });
 });
+
+describe("AccountDO notification scope", () => {
+  const meta = (start: string | null, end: string | null) => ({
+    name: "Trip",
+    location: "Crag",
+    start_date: start,
+    end_date: end,
+  });
+
+  it("round-trips the scope as a single upserted row", async () => {
+    const doo = makeDO();
+
+    await doo.setNotificationScope("always");
+    expect(await doo.getNotificationScope()).toBe("always");
+
+    await doo.setNotificationScope("trip");
+    expect(await doo.getNotificationScope()).toBe("trip");
+  });
+
+  it("'trip' scope only notifies while the trip is running today", async () => {
+    const doo = makeDO();
+    await doo.setNotificationScope("trip");
+    const today = new Date().toISOString().slice(0, 10);
+
+    await doo.add("t-live", "member", meta(today, today));
+    await doo.add("t-past", "member", meta("2000-01-01", "2000-01-02"));
+
+    expect(await doo.shouldNotifyForTrip("t-live")).toBe(true);
+    expect(await doo.shouldNotifyForTrip("t-past")).toBe(false);
+    // Unknown trip errs toward notifying rather than silently dropping.
+    expect(await doo.shouldNotifyForTrip("t-missing")).toBe(true);
+  });
+
+  it("'always' scope notifies regardless of trip dates", async () => {
+    const doo = makeDO();
+    await doo.setNotificationScope("always");
+    await doo.add("t-past", "member", meta("2000-01-01", "2000-01-02"));
+
+    expect(await doo.shouldNotifyForTrip("t-past")).toBe(true);
+  });
+});

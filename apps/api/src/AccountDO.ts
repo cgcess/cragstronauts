@@ -1,10 +1,27 @@
 import { DurableObject } from "cloudflare:workers";
 import { migrate, createDb, eq, type Database } from "do-orm";
+import type { NotificationScope } from "@cragstronauts/contract";
 import type { Env } from "./types";
 import { accountMigrations } from "./db/account-migrations";
-import { accountTripIndex, pushSubscription } from "./db/account-schema";
+import {
+  accountTripIndex,
+  pushSubscription,
+  notificationSettings,
+} from "./db/account-schema";
 
 type PushSub = { endpoint: string; keys: { p256dh: string; auth: string } };
+
+/**
+ * Is `tripId`'s trip running today? Inclusive of both endpoints; a null bound is
+ * treated as open (unbounded), so a trip with unknown dates always counts as
+ * running. ISO `YYYY-MM-DD` strings compare correctly lexicographically.
+ */
+function isTripRunning(start: string | null, end: string | null): boolean {
+  const today = new Date().toISOString().slice(0, 10);
+  if (start && today < start) return false;
+  if (end && today > end) return false;
+  return true;
+}
 
 type Role = "owner" | "member";
 type AccountTripEntry = {
@@ -157,5 +174,37 @@ export class AccountDO extends DurableObject<Env> {
   async deletePushSubscription(endpoint: string): Promise<{ ok: boolean }> {
     this.db.delete(pushSubscription, { where: eq("endpoint", endpoint) });
     return { ok: true };
+  }
+
+  // ---- Notification settings ----
+
+  /** This account's push scope. Defaults to "always" when never set. */
+  async getNotificationScope(): Promise<NotificationScope> {
+    const row = this.db.get(notificationSettings, { where: eq("id", 1) });
+    return (row?.scope as NotificationScope | undefined) ?? "always";
+  }
+
+  /** Persist the account's push scope (single-row upsert). */
+  async setNotificationScope(scope: NotificationScope): Promise<{ ok: boolean }> {
+    const existing = this.db.get(notificationSettings, { where: eq("id", 1) });
+    if (existing) {
+      this.db.update(notificationSettings, { scope }, { where: eq("id", 1) });
+    } else {
+      this.db.insert(notificationSettings, { id: 1, scope });
+    }
+    return { ok: true };
+  }
+
+  /**
+   * Gate a push for `tripId` against this account's scope. "always" always
+   * passes; "trip" passes only while that trip is running today. An unknown trip
+   * (not in this account's index) errs toward passing, so we never silently drop
+   * a legitimately-scoped push over a missing index row.
+   */
+  async shouldNotifyForTrip(tripId: string): Promise<boolean> {
+    if ((await this.getNotificationScope()) === "always") return true;
+    const entry = this.db.get(accountTripIndex, { where: eq("trip_id", tripId) });
+    if (!entry) return true;
+    return isTripRunning(entry.start_date ?? null, entry.end_date ?? null);
   }
 }

@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { SignInButton, useClerk, useUser } from "@clerk/clerk-react";
-import { ToggleRow } from "./controls";
+import { RadioGroup, ToggleRow } from "./controls";
 import {
   disablePush,
   enablePush,
+  getNotificationScope,
   pushEnabled,
   pushPermission,
   pushSupported,
+  setNotificationScope,
+  type NotificationScope,
 } from "../../lib/push";
 
 // The "Account" tab — Clerk lives here now (it used to be the standalone top-right
@@ -87,20 +90,28 @@ export default function AccountTab() {
   );
 }
 
-// The permanent notifications control (per device). Reflects live state
-// (permission + a live browser subscription) and flips enable/disable. When the
-// browser can't subscribe or permission is denied, it's shown disabled with a
-// hint. This is also the re-enable path after a device dismissed the one-time
-// dashboard prompt.
+// The permanent notifications control. The toggle is per device (permission + a
+// live browser subscription); the scope below it is account-wide (persisted
+// server-side) and only shown once notifications are on. When the browser can't
+// subscribe or permission is denied, the toggle is shown with a hint. This is
+// also the re-enable path after a device dismissed the one-time dashboard prompt.
 function NotificationsToggle() {
   const [enabled, setEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [scope, setScope] = useState<NotificationScope>("always");
 
   useEffect(() => {
     let alive = true;
     pushEnabled().then((on) => {
       if (alive) setEnabled(on);
     });
+    // Account-wide, so it's loaded regardless of this device's subscription.
+    // Best-effort: on failure we keep the "always" default and let the user retry.
+    getNotificationScope()
+      .then((s) => {
+        if (alive) setScope(s);
+      })
+      .catch(() => {});
     return () => {
       alive = false;
     };
@@ -111,9 +122,9 @@ function NotificationsToggle() {
   const denied = pushPermission() === "denied";
   const hint = denied
     ? "Blocked — allow notifications in your browser settings"
-    : "Get pinged when someone joins your car";
+    : "Get pinged about car joins and trip announcements";
 
-  const onChange = async (next: boolean) => {
+  const onToggle = async (next: boolean) => {
     if (busy || denied) return;
     setBusy(true);
     try {
@@ -131,14 +142,34 @@ function NotificationsToggle() {
     }
   };
 
+  const onScope = async (next: NotificationScope) => {
+    const prev = scope;
+    setScope(next); // optimistic; revert if the write fails
+    try {
+      await setNotificationScope(next);
+    } catch {
+      setScope(prev);
+    }
+  };
+
   return (
     <div className="pf-account__notify">
       <ToggleRow
         checked={enabled}
-        onChange={onChange}
+        onChange={onToggle}
         label="Notifications"
         hint={hint}
       />
+      {enabled && (
+        <RadioGroup
+          value={scope}
+          onChange={onScope}
+          options={[
+            { value: "trip", label: "Only during a trip" },
+            { value: "always", label: "Always" },
+          ]}
+        />
+      )}
     </div>
   );
 }

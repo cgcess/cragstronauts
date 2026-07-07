@@ -59,6 +59,43 @@ export function Segmented<T extends string>({
   );
 }
 
+interface RadioGroupProps<T extends string> {
+  value: T | undefined;
+  onChange: (next: T) => void;
+  options: { value: T; label: string; hint?: string }[];
+}
+
+/** Vertical list of true radio buttons (circular indicator + label per row). */
+export function RadioGroup<T extends string>({
+  value,
+  onChange,
+  options,
+}: RadioGroupProps<T>) {
+  return (
+    <div className="pf-radios" role="radiogroup">
+      {options.map((o) => {
+        const checked = value === o.value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            role="radio"
+            aria-checked={checked}
+            className={`pf-radio${checked ? " is-checked" : ""}`}
+            onClick={() => onChange(o.value)}
+          >
+            <span className="pf-radio__dot" aria-hidden="true" />
+            <span className="pf-radio__text">
+              <span className="pf-radio__label">{o.label}</span>
+              {o.hint && <span className="pf-radio__hint">{o.hint}</span>}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Crisp, perfectly centered ✕ (the text glyph sits off-center in most fonts). */
 export function XIcon({ size = 14 }: { size?: number }) {
   return (

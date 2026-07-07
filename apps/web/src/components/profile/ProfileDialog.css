@@ -415,6 +415,69 @@
   box-shadow: var(--min-shadow-sm);
 }
 
+/* radio group — true radio buttons. Rendered unboxed and indented so the
+   options read as a subsection of the toggle above them, not standalone cards. */
+.pf-radios {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 6px;
+  margin-top: 6px;
+}
+.pf-radio {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 8px 6px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+.pf-radio:hover .pf-radio__label {
+  color: var(--min-ink);
+}
+.pf-radio__dot {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  border: 2px solid var(--min-line-strong);
+  position: relative;
+  transition: border-color 140ms ease;
+}
+.pf-radio.is-checked .pf-radio__dot {
+  border-color: var(--min-accent);
+}
+.pf-radio.is-checked .pf-radio__dot::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 999px;
+  background: var(--min-accent);
+}
+.pf-radio__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.pf-radio__label {
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--min-ink-2);
+}
+.pf-radio.is-checked .pf-radio__label {
+  color: var(--min-ink);
+}
+.pf-radio__hint {
+  font-size: 12px;
+  color: var(--min-ink-3);
+}
+
 /* ---------- account tab ---------- */
 .pf-account {
   display: flex;

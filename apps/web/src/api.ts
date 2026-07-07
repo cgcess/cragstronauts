@@ -21,6 +21,7 @@ import type {
   AnnouncementSchema,
   CreatedAnnouncementSchema,
 } from "@cragstronauts/contract";
+import type { NotificationScope } from "@cragstronauts/contract";
 
 type Trip = z.infer<typeof TripSchema>;
 export type TripLink = z.infer<typeof TripLinkSchema>;
@@ -264,6 +265,11 @@ export const api = {
   ) => req<Ok>("POST", `/api/push/subscriptions`, { subscription }),
   pushUnsubscribe: (endpoint: string) =>
     req<Ok>("DELETE", `/api/push/subscriptions`, { endpoint }),
+  // Account-wide notification scope ("always" | "trip").
+  getNotificationSettings: () =>
+    req<{ scope: NotificationScope }>("GET", `/api/push/settings`),
+  setNotificationSettings: (scope: NotificationScope) =>
+    req<Ok>("PUT", `/api/push/settings`, { scope }),
 
   // Announcements ("Blasts")
   listAnnouncements: (tripId: string) =>

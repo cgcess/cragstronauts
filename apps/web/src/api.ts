@@ -18,6 +18,8 @@ import type {
   ExpenseSchema,
   SettlementSchema,
   FeedbackSchema,
+  AnnouncementSchema,
+  CreatedAnnouncementSchema,
 } from "@cragstronauts/contract";
 
 type Trip = z.infer<typeof TripSchema>;
@@ -41,6 +43,8 @@ type PollInput = {
 type Expense = z.infer<typeof ExpenseSchema>;
 type Settlement = z.infer<typeof SettlementSchema>;
 type Feedback = z.infer<typeof FeedbackSchema>;
+export type Announcement = z.infer<typeof AnnouncementSchema>;
+type CreatedAnnouncement = z.infer<typeof CreatedAnnouncementSchema>;
 type Ok = { ok: boolean };
 
 // Clerk session-token getter, registered by ClerkTokenBridge while signed in.
@@ -260,6 +264,26 @@ export const api = {
   ) => req<Ok>("POST", `/api/push/subscriptions`, { subscription }),
   pushUnsubscribe: (endpoint: string) =>
     req<Ok>("DELETE", `/api/push/subscriptions`, { endpoint }),
+
+  // Announcements ("Blasts")
+  listAnnouncements: (tripId: string) =>
+    req<Announcement[]>("GET", `/api/trips/${tripId}/announcements`),
+  createAnnouncement: (
+    tripId: string,
+    data: { user_id: number; body: string; author_avatar_url?: string | null; parent_id?: number }
+  ) => req<CreatedAnnouncement>("POST", `/api/trips/${tripId}/announcements`, data),
+  deleteAnnouncement: (tripId: string, id: number, userId: number) =>
+    req<Ok>("DELETE", `/api/trips/${tripId}/announcements/${id}`, { user_id: userId }),
+  toggleReaction: (
+    tripId: string,
+    id: number,
+    data: { user_id: number; emoji: string }
+  ) =>
+    req<{ reactions: { emoji: string; user_ids: number[] }[] }>(
+      "POST",
+      `/api/trips/${tripId}/announcements/${id}/reactions`,
+      data
+    ),
 
   // Feedback
   createFeedback: (

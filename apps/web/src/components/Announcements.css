@@ -1,0 +1,218 @@
+.ann {
+  margin-top: 16px;
+  padding: 16px;
+}
+.ann__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--min-ink-3);
+  margin-bottom: 14px;
+}
+
+/* ---- Composer ---- */
+.ann__composer {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.ann__composer-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ann__input {
+  width: 100%;
+  resize: vertical;
+  line-height: 1.45;
+}
+.ann__composer-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.ann__empty {
+  font-size: 13px;
+  margin: 16px 0 4px;
+}
+
+/* ---- Feed ---- */
+.ann__feed {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ann-post {
+  padding: 14px 0;
+  border-top: 1px solid var(--min-line);
+}
+.ann-post__thread {
+  margin-left: 50px;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ---- One message (post or reply) ---- */
+.ann-msg {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.ann-msg__main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.ann-msg__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.ann-msg__name {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--min-ink);
+}
+.ann-msg__time {
+  font-size: 12px;
+  color: var(--min-ink-3);
+}
+.ann-msg__del {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: var(--min-ink-3);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: 6px;
+}
+.ann-msg__del:hover {
+  color: var(--min-danger);
+}
+.ann-msg__body {
+  margin-top: 2px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--min-ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ann-msg__body a {
+  color: var(--min-accent);
+  text-decoration: underline;
+}
+.ann-msg--reply .ann-msg__name {
+  font-size: 13px;
+}
+.ann-msg--reply .ann-msg__body {
+  font-size: 13px;
+}
+
+/* ---- Reactions ---- */
+.ann-msg__reactions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.ann-react {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid var(--min-line);
+  background: var(--min-surface-2);
+  color: var(--min-ink);
+  font-size: 13px;
+  cursor: pointer;
+  transition: transform 0.08s ease, background 0.12s ease, border-color 0.12s ease;
+}
+.ann-react:active {
+  transform: scale(0.94);
+}
+.ann-react.is-mine {
+  background: var(--min-accent-soft);
+  border-color: var(--min-accent);
+  color: var(--min-accent);
+}
+.ann-react__count {
+  font-weight: 700;
+  font-size: 12px;
+}
+.ann-react--add {
+  color: var(--min-ink-3);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.ann-react-add {
+  position: relative;
+  display: inline-flex;
+}
+.ann-react-picker {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 999px;
+  background: var(--min-surface);
+  border: 1px solid var(--min-line);
+  box-shadow: var(--min-shadow);
+}
+.ann-react-picker__opt {
+  border: 0;
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.08s ease, background 0.12s ease;
+}
+.ann-react-picker__opt:hover {
+  background: var(--min-surface-2);
+  transform: scale(1.15);
+}
+
+/* ---- Reply affordance + composer ---- */
+.ann-post__reply-btn {
+  align-self: flex-start;
+  border: 0;
+  background: transparent;
+  color: var(--min-ink-3);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.ann-post__reply-btn:hover {
+  color: var(--min-accent);
+}
+.ann-reply-composer {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.ann-reply-composer__main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ann-reply-composer__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}

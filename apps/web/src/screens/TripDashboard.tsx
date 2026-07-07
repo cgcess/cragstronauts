@@ -1098,8 +1098,8 @@ export default function TripDashboard() {
   });
 
   // Equal-tile grid. Urgent cards bubble to the top; otherwise stable
-  // [cars, gear, roster, expenses] order.
-  const CARD_ORDER = ["cars", "gear", "roster", "expenses"];
+  // [expenses, rides, gear, polls, dogs, roster] order (feedback is always last).
+  const CARD_ORDER = ["expenses", "cars", "gear", "polls", "dogs", "roster"];
   cards.sort((a, b) => {
     const aUrg = a.urgent ? 1 : 0;
     const bUrg = b.urgent ? 1 : 0;

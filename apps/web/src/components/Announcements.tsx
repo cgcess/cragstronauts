@@ -13,6 +13,17 @@ const REACTIONS = ANNOUNCEMENT_REACTIONS;
 type Reaction = { emoji: string; user_ids: number[] };
 type Reply = Announcement["replies"][number];
 
+/** Outline smiley used as the "add a reaction" affordance. */
+function SmileyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8.5 14.5a4.5 4.5 0 0 0 7 0" />
+      <path d="M9 9.5h.01M15 9.5h.01" />
+    </svg>
+  );
+}
+
 /** Compact relative time: "just now", "5m", "3h", "2d", else a short date. */
 function timeAgo(iso: string): string {
   const then = new Date(iso).getTime();
@@ -305,11 +316,29 @@ function MessageRow({
   onDelete: () => void;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const addRef = useRef<HTMLDivElement>(null);
 
   const react = async (emoji: string) => {
     setPickerOpen(false);
     await onToggleReaction(emoji);
   };
+
+  // Dismiss the reaction picker on any click outside it (or Escape).
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!addRef.current?.contains(e.target as Node)) setPickerOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPickerOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [pickerOpen]);
 
   return (
     <div className={"ann-msg" + (reply ? " ann-msg--reply" : "")}>
@@ -350,14 +379,16 @@ function MessageRow({
               );
             })}
 
-          <div className="ann-react-add">
+          <div className="ann-react-add" ref={addRef}>
             <button
               type="button"
               className="ann-react ann-react--add"
               aria-label="Add reaction"
+              aria-haspopup="menu"
+              aria-expanded={pickerOpen}
               onClick={() => setPickerOpen((v) => !v)}
             >
-              ☺+
+              <SmileyIcon />
             </button>
             {pickerOpen && (
               <div className="ann-react-picker" role="menu">

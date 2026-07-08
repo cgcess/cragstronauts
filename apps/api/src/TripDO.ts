@@ -336,6 +336,17 @@ export class TripDO extends DurableObject<Env> {
       .filter((a): a is string => a !== null);
   }
 
+  /** User ids in a car: the driver + all passengers. */
+  async carMemberUserIds(carId: number): Promise<number[]> {
+    const c = this.db.get(car, { where: eq("id", carId) });
+    if (!c) return [];
+    const passengerIds = this.db
+      .all(carSignup)
+      .filter((cs) => cs.car_id === carId)
+      .map((cs) => cs.user_id);
+    return [c.driver_user_id, ...passengerIds];
+  }
+
   /** Join as a signed-in account (idempotent: returns any existing slot). */
   async join(accountId: string, name: string): Promise<User> {
     const existing = this.db.get(user, { where: eq("account_id", accountId) });
@@ -1181,6 +1192,7 @@ export class TripDO extends DurableObject<Env> {
         body: r.body,
         created_at: r.created_at,
         reactions: this.reactionsFor(r.id),
+        car_id: r.car_id ?? null,
         replies,
       };
     });
@@ -1191,6 +1203,7 @@ export class TripDO extends DurableObject<Env> {
     body: string;
     author_avatar_url?: string | null;
     parent_id?: number;
+    car_id?: number;
   }): Promise<CreatedAnnouncement> {
     const author = this.db.get(user, { where: eq("id", data.user_id) });
     if (!author) throw new Error("User not found");
@@ -1205,6 +1218,13 @@ export class TripDO extends DurableObject<Env> {
       if (parent.parent_id != null) throw new Error("Can't reply to a reply");
     }
 
+    // Car-scoped announcements: the author must be the driver of the car.
+    if (data.car_id != null) {
+      const c = this.db.get(car, { where: eq("id", data.car_id) });
+      if (!c) throw new Error("Car not found");
+      if (c.driver_user_id !== data.user_id) throw new Error("Only the driver can post to their car");
+    }
+
     const row = this.db.insertReturning(
       announcement,
       {
@@ -1214,6 +1234,7 @@ export class TripDO extends DurableObject<Env> {
         author_avatar_url: data.author_avatar_url?.trim() || null,
         body,
         created_at: new Date().toISOString(),
+        car_id: data.car_id ?? null,
       },
       ["id"]
     );
@@ -1228,6 +1249,7 @@ export class TripDO extends DurableObject<Env> {
       body: created.body,
       created_at: created.created_at,
       reactions: [],
+      car_id: created.car_id ?? null,
     };
   }
 
@@ -1313,6 +1335,7 @@ export class TripDO extends DurableObject<Env> {
     author_avatar_url: string | null;
     body: string;
     created_at: string;
+    car_id?: number | null;
   }): AnnouncementReply {
     return {
       id: r.id,
@@ -1323,6 +1346,7 @@ export class TripDO extends DurableObject<Env> {
       body: r.body,
       created_at: r.created_at,
       reactions: this.reactionsFor(r.id),
+      car_id: r.car_id ?? null,
     };
   }
 

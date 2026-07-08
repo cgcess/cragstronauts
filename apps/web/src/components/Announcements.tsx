@@ -6,6 +6,8 @@ import {
   useState,
 } from "react";
 import { useUser } from "@clerk/clerk-react";
+import type { z } from "zod";
+import type { CarSchema } from "@cragstronauts/contract";
 import { ANNOUNCEMENT_REACTIONS } from "@cragstronauts/contract";
 import { api, type Announcement } from "../api";
 import { useTripContext } from "../context/TripContext";
@@ -13,6 +15,8 @@ import { Button, useConfirm } from "./ui";
 import Avatar from "./Avatar";
 import { MentionTextarea, MentionText, type MentionMember } from "./Mentions";
 import "./Announcements.css";
+
+type Car = z.infer<typeof CarSchema>;
 
 const REACTIONS = ANNOUNCEMENT_REACTIONS;
 
@@ -44,6 +48,14 @@ function timeAgo(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+/** Is `userId` in the given car (driver or passenger)? */
+function isInCar(car: Car, userId: number): boolean {
+  return (
+    car.driver_user_id === userId ||
+    car.passengers.some((p) => p.user_id === userId)
+  );
+}
+
 export default function Announcements() {
   const { tripId, users, currentUserId, subscribeToChanges } = useTripContext();
   const { user } = useUser();
@@ -53,14 +65,21 @@ export default function Announcements() {
   const isOrganizer = me?.is_organizer ?? false;
 
   const [items, setItems] = useState<Announcement[]>([]);
+  const [cars, setCars] = useState<Car[]>([]);
   const [body, setBody] = useState("");
   const [mentionIds, setMentionIds] = useState<number[]>([]);
+  const [carScope, setCarScope] = useState(false);
   const [posting, setPosting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      setItems(await api.listAnnouncements(tripId));
+      const [ann, c] = await Promise.all([
+        api.listAnnouncements(tripId),
+        api.listCars(tripId),
+      ]);
+      setItems(ann);
+      setCars(c);
     } catch {
       /* transient; leave the last good list in place */
     }
@@ -80,6 +99,8 @@ export default function Announcements() {
 
   if (currentUserId == null) return null;
 
+  const myCar = cars.find((c) => c.driver_user_id === currentUserId);
+
   const post = async () => {
     const text = body.trim();
     if (!text || posting) return;
@@ -91,8 +112,10 @@ export default function Announcements() {
         body: text,
         author_avatar_url: user?.imageUrl ?? null,
         ...(mentionIds.length ? { mentioned_user_ids: mentionIds } : {}),
+        ...(carScope && myCar ? { car_id: myCar.id } : {}),
       });
       setBody("");
+      setCarScope(false);
       await load();
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -100,6 +123,13 @@ export default function Announcements() {
       setPosting(false);
     }
   };
+
+  // Filter: hide car-scoped announcements from people not in that car.
+  const visible = items.filter((a) => {
+    if (a.car_id == null) return true;
+    const car = cars.find((c) => c.id === a.car_id);
+    return car != null && isInCar(car, currentUserId);
+  });
 
   return (
     <section className="card ann">
@@ -111,14 +141,39 @@ export default function Announcements() {
           <MentionTextarea
             className="ann__input"
             rows={2}
-            placeholder="Share an update with everyone…"
+            placeholder={
+              carScope && myCar
+                ? "Message your car…"
+                : "Share an update with everyone…"
+            }
             value={body}
             onChange={setBody}
-            members={users}
+            members={
+              carScope && myCar
+                ? users.filter((u) => isInCar(myCar, u.id))
+                : users
+            }
             onMentionsChange={setMentionIds}
           />
           {err && <div className="error-banner">{err}</div>}
           <div className="ann__composer-actions">
+            {myCar && (
+              <button
+                type="button"
+                className={
+                  "ann__car-toggle" + (carScope ? " ann__car-toggle--on" : "")
+                }
+                onClick={() => setCarScope((v) => !v)}
+                title={
+                  carScope
+                    ? "Posting to your car only"
+                    : "Post to everyone"
+                }
+              >
+                <span aria-hidden="true">🚗</span>
+                <span>My car only</span>
+              </button>
+            )}
             <Button
               variant="primary"
               disabled={!body.trim() || posting}
@@ -130,13 +185,13 @@ export default function Announcements() {
         </div>
       </div>
 
-      {items.length === 0 ? (
+      {visible.length === 0 ? (
         <p className="muted ann__empty">
           No announcements yet. Post the first update — everyone gets notified.
         </p>
       ) : (
         <div className="ann__feed">
-          {items.map((a) => (
+          {visible.map((a) => (
             <AnnouncementCard
               key={a.id}
               tripId={tripId}
@@ -146,6 +201,7 @@ export default function Announcements() {
               meAvatar={user?.imageUrl ?? null}
               members={users}
               announcement={a}
+              cars={cars}
               confirm={confirm}
               onChanged={load}
               onLocalPatch={(next) =>
@@ -167,6 +223,7 @@ function AnnouncementCard({
   meAvatar,
   members,
   announcement,
+  cars,
   confirm,
   onChanged,
   onLocalPatch,
@@ -178,10 +235,15 @@ function AnnouncementCard({
   meAvatar: string | null;
   members: MentionMember[];
   announcement: Announcement;
+  cars: Car[];
   confirm: ReturnType<typeof useConfirm>;
   onChanged: () => Promise<void>;
   onLocalPatch: (next: Announcement) => void;
 }) {
+  const carTag =
+    announcement.car_id != null
+      ? cars.find((c) => c.id === announcement.car_id)
+      : null;
   const [replying, setReplying] = useState(false);
   const [replyBody, setReplyBody] = useState("");
   const [replyMentionIds, setReplyMentionIds] = useState<number[]>([]);
@@ -257,6 +319,7 @@ function AnnouncementCard({
         canDelete={isOrganizer || announcement.user_id === currentUserId}
         onToggleReaction={toggleTop}
         onDelete={() => remove(announcement.id, false)}
+        carDriverName={carTag?.driver_name}
       />
 
       <div className="ann-post__thread">
@@ -323,6 +386,7 @@ function MessageRow({
   canDelete,
   onToggleReaction,
   onDelete,
+  carDriverName,
 }: {
   reply?: boolean;
   name: string;
@@ -335,6 +399,7 @@ function MessageRow({
   canDelete: boolean;
   onToggleReaction: (emoji: string) => void | Promise<void>;
   onDelete: () => void;
+  carDriverName?: string;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const addRef = useRef<HTMLDivElement>(null);
@@ -386,6 +451,11 @@ function MessageRow({
       <div className="ann-msg__main">
         <div className="ann-msg__head">
           <span className="ann-msg__name">{name}</span>
+          {carDriverName && (
+            <span className="ann-msg__car-badge">
+              <span aria-hidden="true">🚗</span> {carDriverName}'s car
+            </span>
+          )}
           <span className="ann-msg__time">{timeAgo(createdAt)}</span>
           {canDelete && (
             <button

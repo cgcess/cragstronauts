@@ -282,6 +282,7 @@ export const api = {
       author_avatar_url?: string | null;
       parent_id?: number;
       mentioned_user_ids?: number[];
+      car_id?: number;
     }
   ) => req<CreatedAnnouncement>("POST", `/api/trips/${tripId}/announcements`, data),
   deleteAnnouncement: (tripId: string, id: number, userId: number) =>

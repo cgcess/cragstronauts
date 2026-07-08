@@ -31,7 +31,34 @@
 }
 .ann__composer-actions {
   display: flex;
+  align-items: center;
+  gap: 8px;
   justify-content: flex-end;
+}
+
+/* ---- Car-scope toggle ---- */
+.ann__car-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--min-line);
+  background: var(--min-surface-2);
+  color: var(--min-ink-3);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.ann__car-toggle:hover {
+  color: var(--min-ink);
+}
+.ann__car-toggle--on {
+  background: var(--min-accent-soft);
+  border-color: var(--min-accent);
+  color: var(--min-accent);
 }
 .ann__empty {
   font-size: 13px;
@@ -76,6 +103,17 @@
   font-weight: 700;
   font-size: 14px;
   color: var(--min-ink);
+}
+.ann-msg__car-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--min-accent);
+  background: var(--min-accent-soft);
+  border-radius: 999px;
+  padding: 1px 8px;
 }
 .ann-msg__time {
   font-size: 12px;

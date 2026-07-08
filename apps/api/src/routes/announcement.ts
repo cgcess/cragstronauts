@@ -72,6 +72,12 @@ announcementRoutes.openapi(createAnnouncementRoute, async (c) => {
           `${created.author_name} replied to your announcement`,
         );
       }
+    } else if (body.car_id != null) {
+      const carUserIds = await stub.carMemberUserIds(body.car_id);
+      const accounts = await stub.accountIdsForUsers(carUserIds);
+      for (const account of accounts) {
+        notify(account, `${created.author_name} posted to your car`);
+      }
     } else {
       for (const account of await stub.memberAccountIds()) {
         notify(account, `${created.author_name} posted an announcement`);

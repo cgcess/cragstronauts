@@ -1,0 +1,1 @@
+ALTER TABLE `announcement` ADD COLUMN `car_id` INTEGER REFERENCES `car`(`id`) ON DELETE SET NULL;

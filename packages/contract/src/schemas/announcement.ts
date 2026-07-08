@@ -24,6 +24,8 @@ const messageBase = {
   body: z.string(),
   created_at: z.string(),
   reactions: z.array(AnnouncementReactionSchema),
+  // Non-null when the announcement is scoped to a single car (driver → passengers).
+  car_id: z.number().nullable(),
 };
 
 // A one-level reply. Same shape as an announcement minus the nested `replies`.
@@ -59,6 +61,8 @@ export const CreateAnnouncementBodySchema = z.object({
   // and pushes each a "mentioned you" notification (deduped against the post's
   // other recipients). Non-members simply don't resolve and are ignored.
   mentioned_user_ids: z.array(z.number()).optional(),
+  // Scope to a single car — only the driver + passengers see it and get notified.
+  car_id: z.number().optional(),
 });
 
 export const ToggleReactionBodySchema = z.object({

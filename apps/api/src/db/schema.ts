@@ -144,6 +144,7 @@ export const announcement = table("announcement", {
   author_avatar_url: column.text(),
   body: column.text().notNull(),
   created_at: column.text().notNull(),
+  car_id: column.integer().references(ref(car, "id")),
 });
 
 // One row per (message, user, emoji). The UNIQUE index makes a repeat tap a

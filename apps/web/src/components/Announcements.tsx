@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useUser } from "@clerk/clerk-react";
 import { ANNOUNCEMENT_REACTIONS } from "@cragstronauts/contract";
 import { api, type Announcement } from "../api";
@@ -332,11 +338,30 @@ function MessageRow({
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const addRef = useRef<HTMLDivElement>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
+  // Horizontal nudge (px) that keeps the popover inside the viewport. On a
+  // deep reply the add button sits far right, so a left-anchored picker would
+  // spill off-screen; measure once on open and shift it back in.
+  const [pickerShift, setPickerShift] = useState(0);
 
   const react = async (emoji: string) => {
     setPickerOpen(false);
     await onToggleReaction(emoji);
   };
+
+  useLayoutEffect(() => {
+    if (!pickerOpen) {
+      setPickerShift(0);
+      return;
+    }
+    const el = pickerRef.current;
+    if (!el) return;
+    const margin = 8;
+    const rect = el.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth;
+    if (rect.right > vw - margin) setPickerShift(vw - margin - rect.right);
+    else if (rect.left < margin) setPickerShift(margin - rect.left);
+  }, [pickerOpen]);
 
   // Dismiss the reaction picker on any click outside it (or Escape).
   useEffect(() => {
@@ -406,7 +431,16 @@ function MessageRow({
               <SmileyIcon />
             </button>
             {pickerOpen && (
-              <div className="ann-react-picker" role="menu">
+              <div
+                className="ann-react-picker"
+                role="menu"
+                ref={pickerRef}
+                style={
+                  pickerShift
+                    ? { transform: `translateX(${pickerShift}px)` }
+                    : undefined
+                }
+              >
                 {REACTIONS.map((emoji) => (
                   <button
                     key={emoji}

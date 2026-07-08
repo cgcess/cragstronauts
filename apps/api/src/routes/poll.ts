@@ -1,7 +1,9 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Env } from "../types";
-import { getTripDO } from "../do";
+import { getTripDO, getAccountDO } from "../do";
+import { getAccountId } from "../lib/auth";
 import { trackTripEvent, nameOf } from "../events";
+import { sendPushToAccount } from "../push";
 import {
   listPollsRoute,
   addPollRoute,
@@ -31,6 +33,18 @@ pollRoutes.openapi(addPollRoute, async (c) => {
       tripName,
       question: p.question,
     }));
+
+    const authorAccount = getAccountId(c);
+    const schedule = (pr: Promise<unknown>) => c.executionCtx.waitUntil(pr);
+    for (const account of await stub.memberAccountIds()) {
+      if (!account || account === authorAccount) continue;
+      sendPushToAccount(c.env, schedule, getAccountDO(c.env, account), tripId, {
+        title: "New poll",
+        body: p.question,
+        url: `/trips/${tripId}/board`,
+      });
+    }
+
     return c.json(p, 200);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

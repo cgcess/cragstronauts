@@ -3,7 +3,7 @@ import { z } from "zod";
 // The fixed set of reactions offered on announcements + replies. Kept in the
 // contract so the API and web agree on what's allowed; the toggle route rejects
 // anything outside it.
-export const ANNOUNCEMENT_REACTIONS = ["❤️", "👍", "🎉", "😂", "🔥", "🙌"] as const;
+export const ANNOUNCEMENT_REACTIONS = ["❤️", "👍", "👎", "😂", "🔥", "🙌"] as const;
 
 // One entry per distinct emoji used on a message. The client derives the count
 // (`user_ids.length`) and whether the viewer reacted (`user_ids.includes(me)`),

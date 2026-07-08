@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import { DayPicker, type DateRange } from "react-day-picker";
 import type { z } from "zod";
 import type { CarSchema, DogSchema, GearContributionSchema, ExpenseSchema, SettlementSchema, FeedbackSchema } from "@cragstronauts/contract";
+import { parseBoardSection } from "@cragstronauts/contract";
 import { api } from "../api";
 import { tripPath, slugify } from "../lib/tripUrl";
 import { cleanLinks } from "../lib/links";
@@ -625,9 +626,11 @@ export default function TripDashboard() {
     deleteTrip,
   } = useTripContext();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const confirm = useConfirm();
   const me = users.find((u) => u.id === currentUserId) ?? null;
   const isOrganizer = me?.is_organizer ?? false;
+  const announcementsRef = useRef<HTMLDivElement | null>(null);
 
   const [cars, setCars] = useState<Car[]>([]);
   const [dogs, setDogs] = useState<Dog[]>([]);
@@ -731,6 +734,30 @@ export default function TripDashboard() {
       navigate(tripPath(trip.name, tripId), { replace: true });
     }
   }, [currentUserId, tripId, trip.location, navigate]);
+
+  // Deep link from a push notification (`?card=<section>`): open the matching
+  // card's sheet, or scroll to the inline Announcements feed, then clear the
+  // param so a refresh/back doesn't re-fire the action. The decision (string →
+  // section) lives in the pure `parseBoardSection`; here we only map it to a
+  // sheet-open or a scroll.
+  useEffect(() => {
+    if (currentUserId == null) return;
+    const section = parseBoardSection(searchParams);
+    if (!section) return;
+    if (section === "announcements") {
+      // The feed loads async and grows; scroll after paint so the target has
+      // its height. A slight offset is acceptable.
+      requestAnimationFrame(() =>
+        announcementsRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        }),
+      );
+    } else {
+      setExpandedId(section);
+    }
+    setSearchParams({}, { replace: true });
+  }, [currentUserId, searchParams, setSearchParams]);
 
   // Leave the trip from the topbar: removes you (+ your car/gear) after a
   // confirm, then exits to the trips list. Organizers can't leave outright —
@@ -1505,8 +1532,11 @@ export default function TripDashboard() {
         </div>
 
         {/* Partiful-style broadcast feed: anyone posts, everyone reacts/replies,
-            and a new post notifies the trip. Owns its own data + realtime. */}
-        <Announcements />
+            and a new post notifies the trip. Owns its own data + realtime.
+            Wrapped so an announcements deep link has a scroll target. */}
+        <div ref={announcementsRef}>
+          <Announcements />
+        </div>
         </div>
       </div>
 

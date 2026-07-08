@@ -171,8 +171,10 @@ export default function TripLayout() {
     const stem = slug ? `${slug}-${tripId}` : tripId;
     if (tripParam === stem) return;
     const sub = routeLocation.pathname.endsWith("/board") ? "/board" : "";
-    navigate(`/trips/${stem}${sub}`, { replace: true });
-  }, [loading, trip, tripId, tripParam, routeLocation.pathname, navigate]);
+    // Preserve the query string so a deep link (`?card=cars`) survives the
+    // bare-id → slug rewrite and reaches the board.
+    navigate(`/trips/${stem}${sub}${routeLocation.search}`, { replace: true });
+  }, [loading, trip, tripId, tripParam, routeLocation.pathname, routeLocation.search, navigate]);
 
   // Memoized so it is stable across renders — TripAccountSync depends on it in
   // an effect, and an unstable identity would re-fire the /users/me lookup.

@@ -11,6 +11,7 @@ import {
   deletePollRoute,
   listPollAnswersRoute,
   setPollAnswerRoute,
+  boardPath,
 } from "@cragstronauts/contract";
 
 export const pollRoutes = new OpenAPIHono<{ Bindings: Env }>();
@@ -41,7 +42,7 @@ pollRoutes.openapi(addPollRoute, async (c) => {
       sendPushToAccount(c.env, schedule, getAccountDO(c.env, account), tripId, {
         title: "New poll",
         body: p.question,
-        url: `/trips/${tripId}/board`,
+        url: boardPath(tripId, "polls"),
       });
     }
 

@@ -23,7 +23,8 @@ carSignup route ─▶ stub.getUserAccountId(driverUserId)  ← TripDO (trip-loc
                 fetch(endpoint, …)  ← the push service (FCM / Mozilla / …)
                       │  404/410 ⇒ accountStub.deletePushSubscription(endpoint)
                       ▼
-                browser SW `push` handler → showNotification → click opens board
+                browser SW `push` handler → showNotification → click opens the
+                relevant board section (`url` carries `?card=<section>`)
 ```
 
 ### Subscription storage — in the `AccountDO`
@@ -59,6 +60,11 @@ module that hides encryption, VAPID, `fetch`, and dead-subscription pruning. It
 depends only on the `AccountDO` seam; the trip→account resolution lives in the
 car route. It deliberately mirrors `trackEvent`/`trackTripEvent` (the Discord
 event system):
+
+The `url` is built with `boardPath(tripId, section)` from
+`@cragstronauts/contract` — the shared deep-link seam the board decodes with
+`parseBoardSection` to open the right card (or scroll to Announcements). Car
+joins point at `cars`, new polls at `polls`, announcements at `announcements`.
 
 - **No-ops** when `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` are unset, so local dev
   and CI stay silent.
@@ -158,7 +164,9 @@ limited by design — a product decision deferred past this slice.
    On the driver's device, tap **Enable notifications** and allow the prompt (or
    flip the toggle in Profile → Account).
 4. From the other user, join the driver's car. The driver's device shows the
-   notification; tapping it opens the trip board.
+   notification; tapping it opens the relevant board section — a car join opens
+   the Rides card, a new poll opens Polls, an announcement scrolls to the
+   Announcements feed.
 5. iOS: add the app to the Home Screen first, then repeat.
 
 Automated tests cover the seams: `AccountDO` subscription methods,

@@ -14,6 +14,7 @@ import {
   deleteDogRoute,
   assignDogRoute,
   unassignDogRoute,
+  boardPath,
 } from "@cragstronauts/contract";
 
 export const carRoutes = new OpenAPIHono<{ Bindings: Env }>();
@@ -82,7 +83,7 @@ carRoutes.openapi(carSignupRoute, async (c) => {
         {
           title: "Someone joined your car",
           body: `${passengerName} hopped into your car`,
-          url: `/trips/${tripId}/board`,
+          url: boardPath(tripId, "cars"),
         },
       );
     }

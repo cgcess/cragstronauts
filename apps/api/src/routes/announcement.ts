@@ -9,6 +9,7 @@ import {
   createAnnouncementRoute,
   deleteAnnouncementRoute,
   toggleReactionRoute,
+  boardPath,
 } from "@cragstronauts/contract";
 
 export const announcementRoutes = new OpenAPIHono<{ Bindings: Env }>();
@@ -53,7 +54,7 @@ announcementRoutes.openapi(createAnnouncementRoute, async (c) => {
       sendPushToAccount(c.env, schedule, getAccountDO(c.env, account), tripId, {
         title,
         body: preview(created.body),
-        url: `/trips/${tripId}/board`,
+        url: boardPath(tripId, "announcements"),
       });
     };
 

@@ -9,6 +9,7 @@ export * from "./schemas/expense";
 export * from "./schemas/feedback";
 export * from "./schemas/announcement";
 export * from "./schemas/push";
+export * from "./schemas/board-link";
 
 // Catalog
 export * from "./catalog/gear";

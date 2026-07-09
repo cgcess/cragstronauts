@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -31,6 +32,165 @@ function SmileyIcon() {
       <path d="M8.5 14.5a4.5 4.5 0 0 0 7 0" />
       <path d="M9 9.5h.01M15 9.5h.01" />
     </svg>
+  );
+}
+
+// How long a press must be held (ms) before the "who reacted" popover opens
+// instead of the release counting as a toggle tap.
+const REACTORS_HOLD_MS = 420;
+
+/**
+ * A single reaction pill: emoji + count. A quick tap toggles the caller's own
+ * reaction (as before); a press-and-hold (or right-click on desktop) reveals a
+ * popover listing who reacted with that emoji — mirroring the long-press
+ * "reactions" sheet familiar from chat apps. Names come from the trip member
+ * list; the viewer shows as "You".
+ */
+function ReactionChip({
+  reaction,
+  members,
+  currentUserId,
+  onToggle,
+}: {
+  reaction: Reaction;
+  members: MentionMember[];
+  currentUserId: number;
+  onToggle: () => void | Promise<void>;
+}) {
+  const mine = reaction.user_ids.includes(currentUserId);
+  const [open, setOpen] = useState(false);
+  const [shift, setShift] = useState(0);
+  const popRef = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLSpanElement>(null);
+  const holdTimer = useRef<number | null>(null);
+  // Set true once a hold opens the popover, so the click that follows the
+  // release (or the right-click) doesn't also toggle the reaction.
+  const heldOpen = useRef(false);
+
+  const nameById = useMemo(
+    () => new Map(members.map((m) => [m.id, m.name])),
+    [members],
+  );
+
+  const reactors = reaction.user_ids.map((id) => ({
+    id,
+    isMe: id === currentUserId,
+    name: nameById.get(id) ?? null,
+  }));
+
+  const clearHold = () => {
+    if (holdTimer.current != null) {
+      clearTimeout(holdTimer.current);
+      holdTimer.current = null;
+    }
+  };
+  const startHold = () => {
+    clearHold();
+    heldOpen.current = false;
+    holdTimer.current = window.setTimeout(() => {
+      heldOpen.current = true;
+      setOpen(true);
+    }, REACTORS_HOLD_MS);
+  };
+  const onClick = () => {
+    // A hold or an open popover swallows the tap; otherwise it's a toggle.
+    if (heldOpen.current) {
+      heldOpen.current = false;
+      return;
+    }
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    onToggle();
+  };
+
+  // Keep the popover inside the viewport, same nudge trick as the picker.
+  useLayoutEffect(() => {
+    if (!open) {
+      setShift(0);
+      return;
+    }
+    const el = popRef.current;
+    if (!el) return;
+    const margin = 8;
+    const rect = el.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth;
+    if (rect.right > vw - margin) setShift(vw - margin - rect.right);
+    else if (rect.left < margin) setShift(margin - rect.left);
+  }, [open]);
+
+  // Dismiss on an outside press, Escape, or any scroll.
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    const onScroll = () => setOpen(false);
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", onScroll, true);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", onScroll, true);
+    };
+  }, [open]);
+
+  const count = reaction.user_ids.length;
+
+  return (
+    <span className="ann-react-wrap" ref={wrapRef}>
+      <button
+        type="button"
+        className={"ann-react ann-react--react" + (mine ? " is-mine" : "")}
+        onClick={onClick}
+        onPointerDown={startHold}
+        onPointerUp={clearHold}
+        onPointerLeave={clearHold}
+        onPointerCancel={clearHold}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          heldOpen.current = true;
+          setOpen(true);
+        }}
+        aria-label={`${reaction.emoji} reaction, ${count}. Hold to see who reacted`}
+      >
+        <span aria-hidden="true">{reaction.emoji}</span>
+        <span className="ann-react__count">{count}</span>
+      </button>
+      {open && (
+        <div
+          className="ann-reactors"
+          role="dialog"
+          aria-label={`Who reacted ${reaction.emoji}`}
+          ref={popRef}
+          style={shift ? { transform: `translateX(${shift}px)` } : undefined}
+        >
+          <div className="ann-reactors__head">
+            <span className="ann-reactors__emoji" aria-hidden="true">
+              {reaction.emoji}
+            </span>
+            <span>
+              {count} {count === 1 ? "reaction" : "reactions"}
+            </span>
+          </div>
+          <ul className="ann-reactors__list">
+            {reactors.map((r) => (
+              <li key={r.id} className="ann-reactors__row">
+                <Avatar name={r.name ?? "?"} src={null} size={26} />
+                <span className="ann-reactors__name">
+                  {r.isMe ? "You" : r.name ?? "Someone"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </span>
   );
 }
 
@@ -474,20 +634,15 @@ function MessageRow({
         <div className="ann-msg__reactions">
           {reactions
             .filter((r) => r.user_ids.length > 0)
-            .map((r) => {
-              const mine = r.user_ids.includes(currentUserId);
-              return (
-                <button
-                  key={r.emoji}
-                  type="button"
-                  className={"ann-react" + (mine ? " is-mine" : "")}
-                  onClick={() => react(r.emoji)}
-                >
-                  <span aria-hidden="true">{r.emoji}</span>
-                  <span className="ann-react__count">{r.user_ids.length}</span>
-                </button>
-              );
-            })}
+            .map((r) => (
+              <ReactionChip
+                key={r.emoji}
+                reaction={r}
+                members={members}
+                currentUserId={currentUserId}
+                onToggle={() => react(r.emoji)}
+              />
+            ))}
 
           <div className="ann-react-add" ref={addRef}>
             <button

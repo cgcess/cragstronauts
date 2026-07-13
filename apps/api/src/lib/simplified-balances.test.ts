@@ -293,6 +293,207 @@ describe("computeSimplifiedBalances", () => {
   });
 });
 
+describe("computeSimplifiedBalances — remove middlemen only (no cross-group routing)", () => {
+  // Users: Nico=1, Bohdan=2, Lotti=3, Sashi=4, Lisa=5, Sara=6, Sam=7
+  it("Löbejün: two unrelated cars stay separate (no stranger payments)", () => {
+    const result = computeSimplifiedBalances([
+      // Nico's car: gas €63 split 4 ways (Nico, Bohdan, Lotti, Sashi)
+      {
+        payer_user_id: 1,
+        amount_cents: 6300,
+        splits: [{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }, { user_id: 4 }],
+      },
+      // Nico's car: car €341 split 4 ways
+      {
+        payer_user_id: 1,
+        amount_cents: 34100,
+        splits: [{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }, { user_id: 4 }],
+      },
+      // Lotti settles €101 with Nico
+      {
+        payer_user_id: 3,
+        amount_cents: 10100,
+        splits: [{ user_id: 1, amount_cents: 10100 }],
+      },
+      // Sashi settles €101 with Nico
+      {
+        payer_user_id: 4,
+        amount_cents: 10100,
+        splits: [{ user_id: 1, amount_cents: 10100 }],
+      },
+      // Lisa's car: Minka car €211.11 split 3 ways (Lisa, Sara, Sam)
+      {
+        payer_user_id: 5,
+        amount_cents: 21111,
+        splits: [{ user_id: 5 }, { user_id: 6 }, { user_id: 7 }],
+      },
+    ]);
+
+    // Exactly three honest transfers.
+    expect(result).toHaveLength(3);
+    expect(result).toContainEqual({ from_user_id: 2, to_user_id: 1, amount_cents: 10100 });
+    expect(result).toContainEqual({ from_user_id: 6, to_user_id: 5, amount_cents: 7037 });
+    expect(result).toContainEqual({ from_user_id: 7, to_user_id: 5, amount_cents: 7037 });
+
+    // No settlement links the two cars.
+    const crossGroup = result.filter(
+      (s) =>
+        (s.to_user_id === 1 && s.from_user_id !== 2) || // paying Nico who isn't Bohdan
+        (s.to_user_id === 5 && s.from_user_id === 2), // Bohdan paying Lisa
+    );
+    expect(crossGroup).toEqual([]);
+  });
+
+  it("pure payers/receivers are left alone (no minimization)", () => {
+    // Two pure creditors X(10), Y(20); two pure debtors A(1), B(2).
+    // A and B each owe X and Y €5 (via X and Y each paying a €10 shared expense).
+    // X pays €10 split with A, B → A owes 5, B owes 5.
+    // Y pays €10 split with A, B → A owes 5, B owes 5.
+    const result = computeSimplifiedBalances([
+      {
+        payer_user_id: 10,
+        amount_cents: 1000,
+        splits: [
+          { user_id: 10, amount_cents: 0 },
+          { user_id: 1, amount_cents: 500 },
+          { user_id: 2, amount_cents: 500 },
+        ],
+      },
+      {
+        payer_user_id: 20,
+        amount_cents: 1000,
+        splits: [
+          { user_id: 20, amount_cents: 0 },
+          { user_id: 1, amount_cents: 500 },
+          { user_id: 2, amount_cents: 500 },
+        ],
+      },
+    ]);
+    // Honest: 4 transfers, NOT the 2-transfer minimized form.
+    expect(result).toHaveLength(4);
+    expect(result).toContainEqual({ from_user_id: 1, to_user_id: 10, amount_cents: 500 });
+    expect(result).toContainEqual({ from_user_id: 1, to_user_id: 20, amount_cents: 500 });
+    expect(result).toContainEqual({ from_user_id: 2, to_user_id: 10, amount_cents: 500 });
+    expect(result).toContainEqual({ from_user_id: 2, to_user_id: 20, amount_cents: 500 });
+  });
+
+  it("every settlement respects reachability in the pairwise digraph; net preserved; no self-edges", () => {
+    // Build the step-2 pairwise digraph independently and check the property.
+    const cases: Expense[][] = [
+      // Löbejün
+      [
+        { payer_user_id: 1, amount_cents: 6300, splits: [{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }, { user_id: 4 }] },
+        { payer_user_id: 1, amount_cents: 34100, splits: [{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }, { user_id: 4 }] },
+        { payer_user_id: 3, amount_cents: 10100, splits: [{ user_id: 1, amount_cents: 10100 }] },
+        { payer_user_id: 4, amount_cents: 10100, splits: [{ user_id: 1, amount_cents: 10100 }] },
+        { payer_user_id: 5, amount_cents: 21111, splits: [{ user_id: 5 }, { user_id: 6 }, { user_id: 7 }] },
+      ],
+      // Chain A→B→C
+      [
+        { payer_user_id: 1, amount_cents: 1000, splits: [{ user_id: 2, amount_cents: 1000 }] },
+        { payer_user_id: 2, amount_cents: 1000, splits: [{ user_id: 3, amount_cents: 1000 }] },
+      ],
+      // Longer chain 1→2→3→4
+      [
+        { payer_user_id: 1, amount_cents: 500, splits: [{ user_id: 2, amount_cents: 500 }] },
+        { payer_user_id: 2, amount_cents: 500, splits: [{ user_id: 3, amount_cents: 500 }] },
+        { payer_user_id: 3, amount_cents: 500, splits: [{ user_id: 4, amount_cents: 500 }] },
+      ],
+      // Mixed
+      [
+        { payer_user_id: 1, amount_cents: 6000, splits: [{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }] },
+        { payer_user_id: 2, amount_cents: 3000, splits: [{ user_id: 1 }, { user_id: 3 }] },
+        { payer_user_id: 3, amount_cents: 1200, splits: [{ user_id: 4, amount_cents: 1200 }] },
+      ],
+    ];
+
+    for (const expenses of cases) {
+      // Reference: pairwise directed debts (debtor -> payer), then net opposing pairs.
+      const edge = new Map<string, number>();
+      const bump = (from: number, to: number, amt: number) => {
+        if (amt === 0) return;
+        const k = `${from}->${to}`;
+        edge.set(k, (edge.get(k) ?? 0) + amt);
+      };
+      for (const exp of expenses) {
+        const n = exp.splits.length;
+        if (n === 0) continue;
+        const shares = distributeEqual(exp.amount_cents, n);
+        exp.splits.forEach((s, i) => {
+          const share = s.amount_cents != null ? s.amount_cents : shares[i];
+          if (s.user_id === exp.payer_user_id) return;
+          if (share === 0) return;
+          bump(s.user_id, exp.payer_user_id, share);
+        });
+      }
+      const users = new Set<number>();
+      for (const k of edge.keys()) {
+        const [f, t] = k.split("->").map(Number);
+        users.add(f);
+        users.add(t);
+      }
+      const get = (f: number, t: number) => edge.get(`${f}->${t}`) ?? 0;
+      const set = (f: number, t: number, v: number) => {
+        if (v === 0) edge.delete(`${f}->${t}`);
+        else edge.set(`${f}->${t}`, v);
+      };
+      const arr = [...users];
+      for (let i = 0; i < arr.length; i++) {
+        for (let j = i + 1; j < arr.length; j++) {
+          const a = arr[i], b = arr[j];
+          const m = Math.min(get(a, b), get(b, a));
+          if (m > 0) {
+            set(a, b, get(a, b) - m);
+            set(b, a, get(b, a) - m);
+          }
+        }
+      }
+      // Reachability over the netted digraph.
+      const adj = new Map<number, Set<number>>();
+      for (const k of edge.keys()) {
+        const [f, t] = k.split("->").map(Number);
+        if (!adj.has(f)) adj.set(f, new Set());
+        adj.get(f)!.add(t);
+      }
+      const reachable = (from: number, to: number): boolean => {
+        const seen = new Set<number>();
+        const stack = [from];
+        while (stack.length) {
+          const cur = stack.pop()!;
+          if (cur === to) return true;
+          for (const nxt of adj.get(cur) ?? []) {
+            if (!seen.has(nxt)) {
+              seen.add(nxt);
+              stack.push(nxt);
+            }
+          }
+        }
+        return false;
+      };
+
+      const result = computeSimplifiedBalances(expenses);
+
+      // Per-user net from the emitted settlements matches the netted-digraph net.
+      const refNet = new Map<number, number>();
+      for (const [k, v] of edge) {
+        const [f, t] = k.split("->").map(Number);
+        refNet.set(f, (refNet.get(f) ?? 0) - v);
+        refNet.set(t, (refNet.get(t) ?? 0) + v);
+      }
+      const outNet = new Map<number, number>();
+      for (const s of result) {
+        expect(s.from_user_id).not.toBe(s.to_user_id); // no self-edges
+        expect(reachable(s.from_user_id, s.to_user_id)).toBe(true); // no phantom links
+        outNet.set(s.from_user_id, (outNet.get(s.from_user_id) ?? 0) - s.amount_cents);
+        outNet.set(s.to_user_id, (outNet.get(s.to_user_id) ?? 0) + s.amount_cents);
+      }
+      for (const u of users) {
+        expect(outNet.get(u) ?? 0).toBe(refNet.get(u) ?? 0);
+      }
+    }
+  });
+});
+
 describe("distributeEqual", () => {
   it("splits evenly when no remainder", () => {
     expect(distributeEqual(900, 3)).toEqual([300, 300, 300]);

@@ -1,6 +1,6 @@
 # Secrets
 
-All Cragstronauts secrets live in [ZeroVault](https://zerovault.juanibiapina.dev),
+All Cragstronauts secrets live in [ZeroVault](https://vault.apps.juanibiapina.dev),
 the self-hosted secrets manager. The local dev files and the Cloudflare Worker
 production secrets are **generated artifacts** pulled from ZeroVault — never
 hand-edit them.
@@ -35,18 +35,18 @@ this repo's directory:
 ```bash
 # 1. Create a personal API key (ZeroVault web portal, or `zv keys create`).
 # 2. Register it as a named context (base URL defaults to the prod deployment):
-npx zerovault-cli@0.2.0 context add cragstronauts --api-key zv_...
+npx zerovault-cli@0.2.1 context add cragstronauts --api-key zv_...
 
 # 3. Bind this repo directory (and subdirs) to that context:
 cd <this repo>
-npx zerovault-cli@0.2.0 context use cragstronauts
+npx zerovault-cli@0.2.1 context use cragstronauts
 ```
 
 Why the directory binding matters: resolution precedence is
 `--api-key flag > per-dir context > env > default`. The binding **beats** any
 global `ZEROVAULT_API_KEY` you may have exported for a different org, so plain
 `zv` inside this repo always targets Cragstronauts. It also needs no
-`ZEROVAULT_API_URL` — the CLI defaults to `https://zerovault.juanibiapina.dev`.
+`ZEROVAULT_API_URL` — the CLI defaults to `https://vault.apps.juanibiapina.dev`.
 
 Keys are per-person, not shared; each teammate makes their own.
 

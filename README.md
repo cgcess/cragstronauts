@@ -14,7 +14,7 @@ A small webapp for coordinating a single group climbing trip: the organizer sets
 
 ## Running locally
 
-Secrets are managed with [ZeroVault](https://zerovault.juanibiapina.dev). One-time:
+Secrets are managed with [ZeroVault](https://vault.apps.juanibiapina.dev). One-time:
 join the org and bind this repo to a context (see [`docs/secrets.md`](docs/secrets.md)).
 Then fetch the gitignored local secret files (`apps/api/.dev.vars`,
 `apps/web/.env.local`, `apps/web/.env.production`):

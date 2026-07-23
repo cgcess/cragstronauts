@@ -15,8 +15,8 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/debug@4.1.13)(terser@5.48.0)
       zerovault-cli:
-        specifier: 0.2.0
-        version: 0.2.0
+        specifier: 0.2.1
+        version: 0.2.1
 
   apps/api:
     dependencies:
@@ -3155,8 +3155,8 @@ packages:
   youch@4.1.0-beta.10:
     resolution: {integrity: sha512-rLfVLB4FgQneDr0dv1oddCVZmKjcJ6yX6mS4pU82Mq/Dt9a3cLZQ62pDBL4AUO+uVrCvtWz3ZFUL2HFAFJ/BXQ==}
 
-  zerovault-cli@0.2.0:
-    resolution: {integrity: sha512-xBq2YZLaSnXrFGlrNEc7VxX2BQsVivJoHhcvUzApC0wEn6oEstlvTTDttChYug8jqc2Y99QHLQgD5X/cpc+QRA==}
+  zerovault-cli@0.2.1:
+    resolution: {integrity: sha512-xN9PR+i4cUtK8/2rizOs1dNeHPp44C6Gzr44UjEQ+6WzOhbmRREyD8ZVEitDXnxaND9nWf2qyh5nGldyTkKR0Q==}
     hasBin: true
 
   zod@3.25.76:
@@ -6615,7 +6615,7 @@ snapshots:
       cookie: 1.1.1
       youch-core: 0.3.3
 
-  zerovault-cli@0.2.0:
+  zerovault-cli@0.2.1:
     dependencies:
       commander: 15.0.0
 

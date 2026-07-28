@@ -8,6 +8,8 @@ claude_instructions.md
 # Ignore personal Claude settings, but share slash commands with the crew.
 .claude/*
 !.claude/commands/
+# Zero skills are symlinks into .agents/skills; share them too.
+!.claude/skills/
 .pnpm-store
 .DS_Store
 # Local Worker secrets (Clerk secret key). Never commit.

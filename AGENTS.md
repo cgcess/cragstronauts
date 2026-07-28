@@ -41,6 +41,13 @@ files `apps/api/.dev.vars` and `apps/web/.env.local` / `.env.production` are
 `bin/fetch-secrets`). Production Worker secrets sync from ZeroVault with
 `bin/sync-secrets-to-cloudflare` (or the full `bin/deploy`).
 
+The ZeroVault agent skill (`zv` CLI reference) is committed at
+`.agents/skills/zerovault/`, installed with `npx skills add
+juanibiapina/zero-skills -s zerovault` and refreshed with `npx skills update`.
+Two things it gets wrong for this repo: we pin `zerovault-cli` 0.2.1 (do not bump
+it to the version its docs suggest), and our vault is self-hosted at
+`https://vault.apps.juanibiapina.dev`, not the default `api.zeroapps.dev`.
+
 ## Checks
 
 Run all checks before pushing:

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "zerovault": {
+      "source": "juanibiapina/zero-skills",
+      "sourceType": "github",
+      "skillPath": "zerovault/SKILL.md",
+      "computedHash": "15a12fde20dce4955f3d76206a7d1adb93e9cf5342731f484d43a81d4390a19d"
+    }
+  }
+}

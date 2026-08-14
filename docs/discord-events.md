@@ -69,7 +69,7 @@ Set them in ZeroVault, then propagate:
 
 ```bash
 # development or production
-zv secrets set CLERK_WEBHOOK_SIGNING_SECRET=whsec_... \
+zero vault secrets set CLERK_WEBHOOK_SIGNING_SECRET=whsec_... \
   DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/... \
   -p cragstronauts-worker -e development
 

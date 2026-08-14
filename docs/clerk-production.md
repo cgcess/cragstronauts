@@ -62,13 +62,13 @@ How auth is wired (so the steps below make sense):
 2. Set the backend keys in ZeroVault (`cragstronauts-worker` / `production`) —
    paste `*_live` for Path A, `*_test` for Path B. Both are required:
    ```bash
-   zv secrets set CLERK_SECRET_KEY=sk_live_... CLERK_PUBLISHABLE_KEY=pk_live_... \
+   zero vault secrets set CLERK_SECRET_KEY=sk_live_... CLERK_PUBLISHABLE_KEY=pk_live_... \
      -p cragstronauts-worker -e production
    ```
 3. Set the frontend build key in ZeroVault (`cragstronauts-web` / `production`;
    publishable keys are public and ship in the bundle):
    ```bash
-   zv secrets set VITE_CLERK_PUBLISHABLE_KEY=pk_live_... \
+   zero vault secrets set VITE_CLERK_PUBLISHABLE_KEY=pk_live_... \
      -p cragstronauts-web -e production   # or pk_test_... for Path B
    ```
    Without this, the deployed frontend shows no sign-in until rebuilt with it.

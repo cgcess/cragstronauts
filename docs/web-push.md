@@ -132,7 +132,7 @@ npx @pushforge/builder vapid
 
 It prints a **Public Key** (base64url) and a **Private Key (JWK)** JSON string.
 
-All four live in ZeroVault. Set them with `zv secrets set`, then propagate
+All four live in ZeroVault. Set them with `zero vault secrets set`, then propagate
 (`bin/fetch-secrets` for local, `bin/sync-secrets-to-cloudflare` for prod).
 
 | Value                    | ZeroVault location                                          | Secret? |

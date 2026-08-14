@@ -8,15 +8,15 @@ importers:
 
   .:
     devDependencies:
+      '@zeroapps/cli':
+        specifier: 0.4.1
+        version: 0.4.1
       turbo:
         specifier: ^2.8.11
         version: 2.9.14
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/debug@4.1.13)(terser@5.48.0)
-      zerovault-cli:
-        specifier: 0.2.3
-        version: 0.2.3
 
   apps/api:
     dependencies:
@@ -1650,6 +1650,10 @@ packages:
   '@vitest/utils@3.2.4':
     resolution: {integrity: sha512-fB2V0JFrQSMsCo9HiSq3Ezpdv4iYaXRG1Sx8edX3MwxfyNn83mKiGzOcH+Fkxt4MHxr3y42fQi1oeAInqgX2QA==}
 
+  '@zeroapps/cli@0.4.1':
+    resolution: {integrity: sha512-vbEmKJxnNF6SYKHaO5sdp1TThGjdl36eRlL73RLB6nupxU/6eWaAPwI0oeT5XN9E77pBzUGO5k2sh9ia718xDA==}
+    hasBin: true
+
   acorn@8.16.0:
     resolution: {integrity: sha512-UVJyE9MttOsBQIDKw1skb9nAwQuR5wuGD3+82K6JgJlm/Y+KI92oNsMNGZCYdDsVtRHSak0pcV5Dno5+4jh9sw==}
     engines: {node: '>=0.4.0'}
@@ -3155,10 +3159,6 @@ packages:
   youch@4.1.0-beta.10:
     resolution: {integrity: sha512-rLfVLB4FgQneDr0dv1oddCVZmKjcJ6yX6mS4pU82Mq/Dt9a3cLZQ62pDBL4AUO+uVrCvtWz3ZFUL2HFAFJ/BXQ==}
 
-  zerovault-cli@0.2.3:
-    resolution: {integrity: sha512-WUtQS4UhpUimJRwD6b8n7N7LdlPmv7Yjb10R0HpW77hyEDlZsxa6SvxUCg7VlQoaS3QfM+oD8NvbktQ2NNdHAQ==}
-    hasBin: true
-
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
@@ -4586,6 +4586,10 @@ snapshots:
       '@vitest/pretty-format': 3.2.4
       loupe: 3.2.1
       tinyrainbow: 2.0.0
+
+  '@zeroapps/cli@0.4.1':
+    dependencies:
+      commander: 15.0.0
 
   acorn@8.16.0: {}
 
@@ -6614,10 +6618,6 @@ snapshots:
       '@speed-highlight/core': 1.2.15
       cookie: 1.1.1
       youch-core: 0.3.3
-
-  zerovault-cli@0.2.3:
-    dependencies:
-      commander: 15.0.0
 
   zod@3.25.76: {}
 

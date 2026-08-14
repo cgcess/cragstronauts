@@ -37,15 +37,15 @@ Frontend runs at http://localhost:3000, API at http://localhost:8787.
 Secrets are managed via [ZeroVault](https://api.zeroapps.dev/vault). The
 files `apps/api/.dev.vars` and `apps/web/.env.local` / `.env.production` are
 **generated** — never hand-edit them. To set up or refresh local secrets, follow
-[`docs/secrets.md`](docs/secrets.md) (bind the repo to a `zv` context, then run
-`bin/fetch-secrets`). Production Worker secrets sync from ZeroVault with
-`bin/sync-secrets-to-cloudflare` (or the full `bin/deploy`).
+[`docs/secrets.md`](docs/secrets.md) (`pnpm exec zero login` and pick the
+Cragstronauts org, then run `bin/fetch-secrets`). Production Worker secrets sync
+from ZeroVault with `bin/sync-secrets-to-cloudflare` (or the full `bin/deploy`).
 
-The ZeroVault agent skill (`zv` CLI reference) is committed at
+The ZeroVault agent skill (`zero` CLI reference) is committed at
 `.agents/skills/zerovault/`, installed with `npx skills add
 juanibiapina/zero-skills -s zerovault` and refreshed with `npx skills update`.
-The repo pins `zerovault-cli` in `package.json`, and that pin carries the vault
-host default, so bump it when upstream moves hosts.
+Never hand-edit it: `skills-lock.json` holds a hash that must match upstream.
+The repo pins `@zeroapps/cli` in `package.json`; bump it to pick up CLI changes.
 
 ## Checks
 

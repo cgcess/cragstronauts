@@ -1,12 +1,12 @@
 # Secrets
 
-All Cragstronauts secrets live in [ZeroVault](https://api.zeroapps.dev/vault),
-the self-hosted secrets manager. The local dev files and the Cloudflare Worker
-production secrets are **generated artifacts** pulled from ZeroVault — never
-hand-edit them.
+All Cragstronauts secrets live in [ZeroVault](https://dash.zeroapps.dev/vault),
+the secrets manager. The local dev files and the Cloudflare Worker production
+secrets are **generated artifacts** pulled from ZeroVault — never hand-edit
+them.
 
-The `zv` CLI is pinned as a root dev dependency (`zerovault-cli`), so the scripts
-call it via `pnpm exec zv`. Run `pnpm install` first.
+The `zero` CLI is pinned as a root dev dependency (`@zeroapps/cli`), so the
+scripts call it via `pnpm exec zero`. Run `pnpm install` first.
 
 ## Projects and files
 
@@ -29,36 +29,59 @@ project is self-contained).
 ## One-time setup
 
 You need to be a member of the Cragstronauts ZeroVault org (ask an existing
-member to invite you). Then create your **own** personal API key and bind it to
-this repo's directory:
+member to invite you). Then sign in from this repo — no API key to copy:
 
 ```bash
-# 1. Create a personal API key (ZeroVault web portal, or `zv keys create`).
-# 2. Register it as a named context (base URL defaults to the prod deployment):
-npx zerovault-cli@0.2.2 context add cragstronauts --api-key zv_...
-
-# 3. Bind this repo directory (and subdirs) to that context:
-cd <this repo>
-npx zerovault-cli@0.2.2 context use cragstronauts
+pnpm install
+pnpm exec zero login     # approve in the browser, pick **Cragstronauts**
 ```
 
-A context created with an explicit `--base-url` stores that URL and wins over the
-CLI default, so if yours points at a retired host, re-run `context add` without
-`--base-url`.
-
-Why the directory binding matters: resolution precedence is
-`--api-key flag > per-dir context > env > default`. The binding **beats** any
-global `ZEROVAULT_API_KEY` you may have exported for a different org, so plain
-`zv` inside this repo always targets Cragstronauts. It also needs no
-`ZEROVAULT_API_URL` — the CLI defaults to `https://api.zeroapps.dev/vault`.
-
-Keys are per-person, not shared; each teammate makes their own.
+Picking the organization matters: the sign-in reaches exactly the one you choose
+on the consent screen. Run `zero login` again to switch. It belongs to you and
+this machine, and `pnpm exec zero logout` ends it without affecting anyone else.
 
 Sanity check (must print the Cragstronauts org):
 
 ```bash
-pnpm exec zv whoami
+pnpm exec zero whoami
 ```
+
+```
+User ID: user_…
+Org ID: org_3G8KRCwWMC05TmtRhJLixykNhpf
+Credential: signed in as you@example.com
+```
+
+The `Credential:` line says which credential answered. If it says `api key` when
+you expected your sign-in, an exported `ZERO_API_KEY` is shadowing it.
+
+### If you work across several orgs
+
+A sign-in is machine-wide, so bind this directory to a named context instead and
+it wins everywhere inside the repo:
+
+```bash
+pnpm exec zero context add cragstronauts --api-key zv_...   # `zero keys create`
+cd <this repo>
+pnpm exec zero context use cragstronauts
+```
+
+Precedence, first match wins: `--api-key flag > per-dir context > ZERO_API_KEY >
+sign-in`. So the binding beats a key you exported for another org, and a sign-in
+never overrides either.
+
+Keys are per-person, not shared; each teammate makes their own. Do not set
+`ZERO_API_URL`: the CLI defaults to `https://api.zeroapps.dev`, a bare origin it
+appends `/vault/v1` to. A value ending in `/vault` (from the old `zv` CLI)
+produces 404s.
+
+### If you used the old `zv` CLI
+
+`zv` is gone, and nothing carries over. Contexts under `~/.config/zerovault/`
+are not read, and `ZEROVAULT_API_KEY` / `ZEROVAULT_API_URL` are ignored — which
+is silent, so a stale export looks like "no credentials". Run `zero login`, or
+re-add the context with `zero context add`. Your existing `zv_…` keys still
+work; only the tool changed.
 
 ## Fetch local secrets
 
@@ -70,9 +93,9 @@ pnpm turbo dev
 ## Managing values
 
 ```bash
-zv secrets list -p cragstronauts-worker -e development
-zv secrets get  CLERK_SECRET_KEY -p cragstronauts-worker -e development
-zv secrets set  ADMIN_SECRET=new-value -p cragstronauts-worker -e development
+zero vault secrets list -p cragstronauts-worker -e development
+zero vault secrets get  CLERK_SECRET_KEY -p cragstronauts-worker -e development
+zero vault secrets set  ADMIN_SECRET=new-value -p cragstronauts-worker -e development
 ```
 
 After changing a value, re-run `bin/fetch-secrets` (local) or
@@ -94,7 +117,12 @@ Cloudflare secrets are write-only, so ZeroVault is the source of truth.
 
 ## CI
 
-CI has no local context binding, so it uses the env-var path: the GitHub Actions
-secret `ZEROVAULT_API_KEY` feeds `bin/fetch-secrets` before the build. Fork PRs
-have no secret access, so the fetch step is skipped; the build tolerates missing
-web vars (Clerk/VAPID reads throw only at runtime), so the check still passes.
+CI has no browser and no local context binding, so it uses the env-var path: the
+GitHub Actions secret `ZERO_API_KEY` feeds `bin/fetch-secrets` before the build.
+Fork PRs have no secret access, so the fetch step is skipped; the build tolerates
+missing web vars (Clerk/VAPID reads throw only at runtime), so the check still
+passes.
+
+The CLI exits `1` when the API refuses a request (bad key, missing project) and
+`75` when it could not be reached or was failing, so a retry wrapper can tell the
+two apart.

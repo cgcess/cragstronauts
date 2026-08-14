@@ -9,8 +9,8 @@ importers:
   .:
     devDependencies:
       '@zeroapps/cli':
-        specifier: 0.4.1
-        version: 0.4.1
+        specifier: 0.5.0
+        version: 0.5.0
       turbo:
         specifier: ^2.8.11
         version: 2.9.14
@@ -1650,8 +1650,8 @@ packages:
   '@vitest/utils@3.2.4':
     resolution: {integrity: sha512-fB2V0JFrQSMsCo9HiSq3Ezpdv4iYaXRG1Sx8edX3MwxfyNn83mKiGzOcH+Fkxt4MHxr3y42fQi1oeAInqgX2QA==}
 
-  '@zeroapps/cli@0.4.1':
-    resolution: {integrity: sha512-vbEmKJxnNF6SYKHaO5sdp1TThGjdl36eRlL73RLB6nupxU/6eWaAPwI0oeT5XN9E77pBzUGO5k2sh9ia718xDA==}
+  '@zeroapps/cli@0.5.0':
+    resolution: {integrity: sha512-WxWKO0UKLIk/pCqyMYt8alqn3r4wlMJQhSuvBlWBCdGK0ExrhLx3d+c/6tATNRq1ey2+G7cpYhu8WiopyIa0WQ==}
     hasBin: true
 
   acorn@8.16.0:
@@ -4587,7 +4587,7 @@ snapshots:
       loupe: 3.2.1
       tinyrainbow: 2.0.0
 
-  '@zeroapps/cli@0.4.1':
+  '@zeroapps/cli@0.5.0':
     dependencies:
       commander: 15.0.0
 

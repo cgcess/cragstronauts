@@ -8,10 +8,11 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    # Job-level env so the Fetch step's `if` can read it (step-level env is not
-    # available to that step's own `if`). Empty on fork PRs (no secret access).
-    env:
-      ZERO_API_KEY: ${{ secrets.ZERO_API_KEY }}
+    # The job authenticates to ZeroVault as itself: no API key is stored here.
+    # ZeroVault trusts this repository for pushes to main only.
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v6
 
@@ -24,10 +25,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Pull build-time web vars from ZeroVault. Skipped on fork PRs (no secret
-      # access) — the build tolerates missing vars, so the check still passes.
+      # Pull build-time web vars from ZeroVault. Only pushes to main can: a
+      # pull request runs code that has not been reviewed yet, and this
+      # repository is public, so it is not trusted for that event. The build
+      # tolerates missing vars, so pull request checks still pass.
       - name: Fetch secrets
-        if: ${{ env.ZERO_API_KEY != '' }}
+        if: ${{ github.event_name == 'push' }}
         run: bin/fetch-secrets
 
       - run: pnpm turbo typecheck build

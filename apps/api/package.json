@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "zero vault run -p cragstronauts-worker -e development --mount .dev.vars -- wrangler dev",
     "build": "echo 'no build step'",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",

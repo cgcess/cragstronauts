@@ -21,8 +21,8 @@ Then fetch the gitignored local secret files (`apps/api/.dev.vars`,
 
 ```bash
 pnpm install
-bin/fetch-secrets
-pnpm turbo dev
+pnpm exec zero login   # pick the Cragstronauts organization
+pnpm dev
 ```
 
 This starts both servers:

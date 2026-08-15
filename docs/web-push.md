@@ -132,8 +132,9 @@ npx @pushforge/builder vapid
 
 It prints a **Public Key** (base64url) and a **Private Key (JWK)** JSON string.
 
-All four live in ZeroVault. Set them with `zero vault secrets set`, then propagate
-(`bin/fetch-secrets` for local, `bin/sync-secrets-to-cloudflare` for prod).
+All four live in ZeroVault. Set them with `zero vault secrets set`. Local
+development picks the new value up on the next `pnpm dev`; for production run
+`bin/sync-secrets-to-cloudflare`.
 
 | Value                    | ZeroVault location                                          | Secret? |
 | ------------------------ | ---------------------------------------------------------- | ------- |
@@ -156,9 +157,8 @@ limited by design — a product decision deferred past this slice.
 ## Testing locally
 
 1. Generate keys (above); set the three worker vars in `cragstronauts-worker` and
-   `VITE_VAPID_PUBLIC_KEY` in `cragstronauts-web` (both `development`), then run
-   `bin/fetch-secrets` to write `apps/api/.dev.vars` and `apps/web/.env.local`.
-2. `pnpm turbo dev`.
+   `VITE_VAPID_PUBLIC_KEY` in `cragstronauts-web` (both `development`).
+2. `pnpm dev`.
 3. Open the trip on two devices/profiles (Android or desktop Chrome first). Both
    the driver and the joining user must be **signed in** (push is account-scoped).
    On the driver's device, tap **Enable notifications** and allow the prompt (or

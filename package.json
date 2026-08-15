@@ -4,14 +4,14 @@
   "type": "module",
   "packageManager": "pnpm@10.33.3",
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "zero vault run -p cragstronauts-web -e development -- turbo run dev",
     "build": "turbo run build",
-    "deploy": "turbo run deploy",
+    "deploy": "zero vault run -p cragstronauts-web -e production -- turbo run deploy",
     "typecheck": "turbo run typecheck",
     "seed": "bash scripts/seed-local.sh"
   },
   "devDependencies": {
-    "@zeroapps/cli": "0.5.0",
+    "@zeroapps/cli": "0.6.1",
     "turbo": "^2.8.11",
     "vitest": "^3.2.4"
   }

@@ -8,11 +8,13 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    # The job authenticates to ZeroVault as itself: no API key is stored here.
-    # ZeroVault trusts this repository for pushes to main only.
-    permissions:
-      id-token: write
-      contents: read
+    # No ZeroVault credential. The two build-time values below are public (a
+    # Clerk publishable key and a VAPID public key) and only decide what the
+    # bundle embeds, which this job never deploys. Real values reach the bundle
+    # through `pnpm run deploy`, which reads them from ZeroVault.
+    env:
+      VITE_CLERK_PUBLISHABLE_KEY: pk_test_ci
+      VITE_VAPID_PUBLIC_KEY: ci-vapid-public-key
     steps:
       - uses: actions/checkout@v6
 
@@ -24,14 +26,6 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
-
-      # Pull build-time web vars from ZeroVault. Only pushes to main can: a
-      # pull request runs code that has not been reviewed yet, and this
-      # repository is public, so it is not trusted for that event. The build
-      # tolerates missing vars, so pull request checks still pass.
-      - name: Fetch secrets
-        if: ${{ github.event_name == 'push' }}
-        run: bin/fetch-secrets
 
       - run: pnpm turbo typecheck build
 

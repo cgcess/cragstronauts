@@ -88,7 +88,6 @@ How auth is wired (so the steps below make sense):
   backend secrets can be set before or after a deploy.
 - **Rotate** the dev Google client secret that was shared in chat earlier. Clerk
   dev does not use it, but it is good hygiene.
-- Local dev keys live in `apps/api/.dev.vars` and `apps/web/.env.local` (both
-  gitignored, generated from ZeroVault). Because Clerk is required, these must
-  exist before `pnpm turbo dev`. Populate them with `bin/fetch-secrets` — see
-  `docs/secrets.md`.
+- Local dev keys come from ZeroVault at the moment `pnpm dev` starts, and no
+  file is written. Because Clerk is required, `pnpm dev` needs a working
+  sign-in — see `docs/secrets.md`.

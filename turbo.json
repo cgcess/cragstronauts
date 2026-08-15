@@ -1,6 +1,7 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalEnv": ["CLOUDFLARE_API_TOKEN"],
+  "globalPassThroughEnv": ["ZERO_API_KEY", "ZERO_API_URL"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -8,6 +9,7 @@
       "outputs": ["dist/**"]
     },
     "dev": {
+      "env": ["VITE_CLERK_PUBLISHABLE_KEY", "VITE_VAPID_PUBLIC_KEY"],
       "persistent": true,
       "cache": false
     },

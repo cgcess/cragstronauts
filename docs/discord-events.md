@@ -73,7 +73,7 @@ zero vault secrets set CLERK_WEBHOOK_SIGNING_SECRET=whsec_... \
   DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/... \
   -p cragstronauts-worker -e development
 
-bin/fetch-secrets              # writes apps/api/.dev.vars (dev)
+# development needs nothing further: `pnpm dev` reads the new value
 bin/sync-secrets-to-cloudflare # pushes production to the Worker
 ```
 

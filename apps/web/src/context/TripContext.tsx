@@ -52,8 +52,8 @@ export interface TripContextValue {
    */
   subscribeToChanges: (listener: () => void) => () => void;
   deleteTrip: () => Promise<void>;
-  /** Join a private trip as the signed-in account, then load member data. */
-  joinPrivateTrip: () => Promise<void>;
+  /** Join a private trip with the signed-in account's resolved display name. */
+  joinPrivateTrip: (name: string) => Promise<void>;
 }
 
 const TripContext = createContext<TripContextValue | null>(null);

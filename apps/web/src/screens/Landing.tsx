@@ -1,6 +1,7 @@
 import React, { Fragment, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useTripContext } from "../context/TripContext";
+import { preferredMemberName, useProfile } from "../lib/profile";
 import { tripPath } from "../lib/tripUrl";
 import { formatDateRange } from "../dateUtils";
 import { Button, Tag } from "../components/ui";
@@ -40,10 +41,24 @@ function daysUntil(dateStr: string | null): number | null {
 }
 
 export default function Landing() {
-  const { tripId, trip, users, currentUserId, ensureUser, joinPrivateTrip } =
-    useTripContext();
+  const {
+    tripId,
+    trip,
+    users,
+    currentUserId,
+    ensureUser,
+    joinPrivateTrip,
+  } = useTripContext();
+  const {
+    ready: profileReady,
+    profile,
+    accountName,
+  } = useProfile();
+  const privateJoinName = preferredMemberName(profile, accountName);
   const navigate = useNavigate();
   const [signoffIndex, setSignoffIndex] = useState(0);
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
 
   // The Landing is for non-members. A member who lands here (from "My trips",
   // a shared link, or a bookmark) is bounced straight to the board: the mirror
@@ -79,13 +94,28 @@ export default function Landing() {
   // Public trips run the cooperative identity flow; private trips bind the
   // signed-in account as a member. Either way, land on the board once in.
   const joinTrip = async () => {
-    if (trip.public) {
-      const id = await ensureUser();
-      if (id != null) navigate(tripPath(trip.name, tripId, "board"));
-      return;
+    if (joining) return;
+    setJoinError(null);
+    setJoining(true);
+    try {
+      if (trip.public) {
+        const id = await ensureUser();
+        if (id != null) navigate(tripPath(trip.name, tripId, "board"));
+        return;
+      }
+      if (!profileReady) {
+        throw new Error("Your profile is still loading. Try again.");
+      }
+      if (!privateJoinName) {
+        throw new Error("Set your name in your profile before joining.");
+      }
+      await joinPrivateTrip(privateJoinName);
+      navigate(tripPath(trip.name, tripId, "board"));
+    } catch (e) {
+      setJoinError(e instanceof Error ? e.message : "Couldn't join. Try again.");
+    } finally {
+      setJoining(false);
     }
-    await joinPrivateTrip();
-    navigate(tripPath(trip.name, tripId, "board"));
   };
 
   const accom = accomMeta(trip.accommodation_type);
@@ -275,8 +305,22 @@ export default function Landing() {
       </div>
 
       <div className="bottom-cta landing-cta-bar">
-        <Button variant="primary" fullWidth onClick={joinTrip}>
-          Join trip
+        {joinError && (
+          <div className="error-banner" role="alert">
+            {joinError}
+          </div>
+        )}
+        <Button
+          variant="primary"
+          fullWidth
+          disabled={joining || (!trip.public && !profileReady)}
+          onClick={joinTrip}
+        >
+          {!trip.public && !profileReady
+            ? "Loading your profile…"
+            : joining
+              ? "Joining…"
+              : "Join trip"}
         </Button>
       </div>
 

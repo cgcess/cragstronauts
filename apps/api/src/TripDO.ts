@@ -352,7 +352,8 @@ export class TripDO extends DurableObject<Env> {
     const existing = this.db.get(user, { where: eq("account_id", accountId) });
     if (existing) return formatUser(existing);
 
-    const trimmed = name.trim() || "Climber";
+    const trimmed = name.trim();
+    if (!trimmed) throw new Error("Name required");
     const row = this.db.insertReturning(
       user,
       {

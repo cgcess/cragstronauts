@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { JoinTripBodySchema } from "./trip";
 import { UserSchema, CreateUserBodySchema } from "./user";
 
 describe("UserSchema", () => {
@@ -38,6 +39,17 @@ describe("UserSchema", () => {
       claimed: true,
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("JoinTripBodySchema", () => {
+  it("requires a non-empty member name", () => {
+    expect(JoinTripBodySchema.safeParse({}).success).toBe(false);
+    expect(JoinTripBodySchema.safeParse({ name: "   " }).success).toBe(false);
+  });
+
+  it("trims the member name", () => {
+    expect(JoinTripBodySchema.parse({ name: "  Ada  " })).toEqual({ name: "Ada" });
   });
 });
 

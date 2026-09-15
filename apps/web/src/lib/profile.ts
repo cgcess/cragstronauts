@@ -78,6 +78,40 @@ export function normalizeProfile(raw: unknown): CragProfile {
   return EMPTY_PROFILE;
 }
 
+type AccountIdentity = {
+  fullName?: string | null;
+  firstName?: string | null;
+  username?: string | null;
+  primaryEmailAddress?: { emailAddress?: string | null } | null;
+};
+
+export function accountNameFromIdentity(
+  user: AccountIdentity | null | undefined
+): string | undefined {
+  return (
+    user?.firstName?.trim() ||
+    user?.username?.trim() ||
+    undefined
+  );
+}
+
+export function preferredMemberName(
+  profile: CragProfile | null | undefined,
+  accountName: string | null | undefined
+): string | undefined {
+  return profile?.username?.trim() || accountName?.trim() || undefined;
+}
+
+export function replacementForGeneratedMemberName(
+  storedName: string,
+  preferredName: string | null | undefined
+): string | undefined {
+  const replacement = preferredName?.trim();
+  return storedName === "Climber" && replacement && replacement !== storedName
+    ? replacement
+    : undefined;
+}
+
 export interface UseProfile {
   /** Clerk has finished loading the user. */
   ready: boolean;
@@ -86,9 +120,9 @@ export interface UseProfile {
   /** The current, normalized profile (empty when none saved yet). */
   profile: CragProfile;
   /**
-   * The signed-in account's own display name (from Clerk / the SSO provider,
-   * e.g. Google). Used to prefill the join name and back-fill the profile
-   * username for a member who never set one. Undefined when signed out.
+   * The signed-in account's trip-safe Clerk identity: first name, then Clerk
+   * username. Used as the trip-name fallback
+   * when no profile nickname exists. Undefined when signed out.
    */
   accountName?: string;
   /** Persist a new profile. Throws if signed out or the network write fails. */
@@ -98,8 +132,7 @@ export interface UseProfile {
 
 export function useProfile(): UseProfile {
   const { isLoaded, user } = useUser();
-  const accountName =
-    user?.fullName?.trim() || user?.firstName?.trim() || undefined;
+  const accountName = accountNameFromIdentity(user);
   const profile = useMemo(
     () =>
       normalizeProfile(

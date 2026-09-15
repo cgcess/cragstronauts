@@ -133,14 +133,8 @@ tripRoutes.openapi(joinTripRoute, async (c) => {
     const trip = await stub.getTrip();
     if (!trip) return c.json({ detail: "Trip not found" }, 404);
 
-    let displayName = "Climber";
-    try {
-      const body = (await c.req.json()) as { name?: string };
-      if (body?.name?.trim()) displayName = body.name.trim();
-    } catch {
-      // no/invalid body
-    }
-    const member = await stub.join(accountId, displayName);
+    const { name } = c.req.valid("json");
+    const member = await stub.join(accountId, name);
     trackEvent(c.env, (p) => c.executionCtx.waitUntil(p), {
       type: "user_joined",
       tripName: trip.name,

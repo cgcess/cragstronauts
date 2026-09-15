@@ -4,6 +4,7 @@ import {
   TripSchema,
   CreateTripBodySchema,
   CreateTripResponseSchema,
+  JoinTripBodySchema,
   UpdateTripBodySchema,
   TripIndexEntrySchema,
 } from "../schemas/trip";
@@ -129,6 +130,9 @@ export const joinTripRoute = createRoute({
   summary: "Join a private trip as the signed-in account",
   request: {
     params: TripParamsSchema,
+    body: {
+      content: { "application/json": { schema: JoinTripBodySchema } },
+    },
   },
   responses: {
     200: {

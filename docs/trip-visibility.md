@@ -15,7 +15,9 @@ How trips are gated after PR 1 (ownership + privacy).
   `account_id`. Owner = organizer with a bound account. New trips are created
   private and owned.
 - **Membership.** An account is a member of a trip iff it has a `user` row there
-  with a matching `account_id`.
+  with a matching `account_id`. A private join also requires a non-empty display
+  name resolved from the saved profile or Clerk identity; it never generates a
+  placeholder name.
 - **Per-account trip index.** `AccountDO` (one per account,
   `idFromName(accountId)`) holds the trips an account owns or joined, with
   denormalized meta so "my trips" renders in one read. Trip edits/deletes fan

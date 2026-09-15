@@ -344,6 +344,9 @@ button:disabled:active { transform: none; }
   position: fixed;
   bottom: 0;
   max-width: var(--landing-col);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 /* Bottom clearance, rendered only when the cards overflow the viewport, so the
    last card can scroll fully clear of the fixed CTA. Height ≈ the CTA's footprint

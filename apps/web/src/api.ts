@@ -136,9 +136,9 @@ export const api = {
   updateTrip: (tripId: string, data: Record<string, unknown>) =>
     req<Trip>("PATCH", `/api/trips/${tripId}`, data),
   deleteTrip: (tripId: string) => req<Ok>("DELETE", `/api/trips/${tripId}`),
-  // Join a private trip as the signed-in account; optional display name.
-  joinTrip: (tripId: string, name?: string) =>
-    req<User>("POST", `/api/trips/${tripId}/join`, name ? { name } : {}),
+  // Join a private trip as the signed-in account with its resolved display name.
+  joinTrip: (tripId: string, name: string) =>
+    req<User>("POST", `/api/trips/${tripId}/join`, { name }),
   // Transitional finder: every pre-migration trip (frozen global index).
   legacyTrips: () => req<TripIndexEntry[]>("GET", "/api/legacy-trips"),
 

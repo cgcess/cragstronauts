@@ -15,9 +15,12 @@ import { extractTripId, slugify } from "../lib/tripUrl";
 import { useTripSocket } from "../lib/useTripSocket";
 import IdentityFlow from "./IdentityFlow";
 import TripAccountSync from "../components/TripAccountSync";
-import ProfileBridge from "../components/ProfileBridge";
 import SignInPrompt from "../components/SignInPrompt";
-import type { CragProfile } from "../lib/profile";
+import {
+  preferredMemberName,
+  replacementForGeneratedMemberName,
+  useProfile,
+} from "../lib/profile";
 
 const userKey = (tripId: string) => `climbingTrip.userId.${tripId}`;
 
@@ -36,6 +39,11 @@ export default function TripLayout() {
   const tripId = extractTripId(tripParam ?? "");
   const navigate = useNavigate();
   const routeLocation = useLocation();
+  const {
+    ready: profileReady,
+    profile: prefillProfile,
+    accountName,
+  } = useProfile();
 
   const [trip, setTrip] = useState<Trip | null>(null);
   const [users, setUsers] = useState<User[]>([]);
@@ -61,13 +69,6 @@ export default function TripLayout() {
   // poll and gear-category lists while open; null means closed.
   const [questionPolls, setQuestionPolls] = useState<Poll[] | null>(null);
   const [questionCategories, setQuestionCategories] = useState<Category[]>([]);
-
-  // Signed-in member's saved kit, lifted from Clerk by ProfileBridge, to
-  // prefill the identify questionnaire. Null when signed out.
-  const [prefillProfile, setPrefillProfile] = useState<CragProfile | null>(null);
-  // The signed-in account's own display name (e.g. Google), used to prefill the
-  // join name for a member who hasn't set a username yet. Null when signed out.
-  const [accountName, setAccountName] = useState<string | null>(null);
 
   const loadMemberData = useCallback(async () => {
     const [u, c, g, gd, p, pa] = await Promise.all([
@@ -204,15 +205,51 @@ export default function TripLayout() {
     });
   }, [tripId]);
 
-  // Join a private trip; name defaults to the account's username/display name.
-  const joinPrivateTrip = useCallback(async () => {
-    const name = prefillProfile?.username?.trim() || accountName?.trim() || undefined;
+  // Bind the signed-in account and load the newly accessible member data.
+  // Landing owns Clerk readiness and name resolution because it is the only
+  // caller that starts a private join.
+  const joinPrivateTrip = useCallback(async (name: string) => {
     const member = await api.joinTrip(tripId, name);
     localStorage.setItem(userKey(tripId), String(member.id));
     setCurrentUserId(member.id);
     setAccess("member");
     await loadMemberData();
-  }, [tripId, prefillProfile, accountName, loadMemberData]);
+  }, [tripId, loadMemberData]);
+
+  // Repair rows created by the old private-join fallback once the affected
+  // member revisits with a usable account name. Restrict this to the linked
+  // current member so an intentional cooperative name is never changed.
+  const nameRepairAttempted = useRef<string | null>(null);
+  useEffect(() => {
+    if (!profileReady || trip?.public !== false || currentUserId == null) return;
+    const currentUser = users.find((u) => u.id === currentUserId);
+    if (!currentUser?.linked) return;
+
+    const replacement = replacementForGeneratedMemberName(
+      currentUser.name,
+      preferredMemberName(prefillProfile, accountName)
+    );
+    if (!replacement) return;
+
+    const key = `${tripId}:${currentUserId}:${replacement}`;
+    if (nameRepairAttempted.current === key) return;
+    nameRepairAttempted.current = key;
+    api
+      .updateUser(tripId, currentUserId, { name: replacement })
+      .then(() => refresh())
+      .catch(() => {
+        nameRepairAttempted.current = null;
+      });
+  }, [
+    profileReady,
+    trip,
+    currentUserId,
+    users,
+    prefillProfile,
+    accountName,
+    tripId,
+    refresh,
+  ]);
 
   const openQuestions = useCallback(
     (polls: Poll[], cats: Category[] = []) => {
@@ -284,10 +321,6 @@ export default function TripLayout() {
     >
       {/* Public trips only — private-trip identity is the account itself. */}
       {isPublic && <TripAccountSync />}
-      <ProfileBridge
-        onProfile={setPrefillProfile}
-        onAccountName={setAccountName}
-      />
       <Outlet />
       {isPublic && (
         <IdentityFlow

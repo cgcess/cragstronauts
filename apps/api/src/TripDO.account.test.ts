@@ -58,6 +58,24 @@ async function seedOrganizer(doo: TripDO): Promise<number> {
   return organizer_user_id;
 }
 
+describe("TripDO.join", () => {
+  it("stores a trimmed member name", async () => {
+    const doo = makeDO();
+    await seedOrganizer(doo);
+
+    const member = await doo.join("acct_2", "  Ada  ");
+    expect(member.name).toBe("Ada");
+  });
+
+  it("rejects a blank name without adding a member", async () => {
+    const doo = makeDO();
+    await seedOrganizer(doo);
+
+    await expect(doo.join("acct_2", "   ")).rejects.toThrow("Name required");
+    expect(await doo.listUsers()).toHaveLength(1);
+  });
+});
+
 describe("TripDO.getUserAccountId", () => {
   it("returns the account bound to a user", async () => {
     const doo = makeDO();

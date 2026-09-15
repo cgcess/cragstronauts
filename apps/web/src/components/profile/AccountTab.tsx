@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { SignInButton, useClerk, useUser } from "@clerk/clerk-react";
+import { accountNameFromIdentity } from "../../lib/profile";
 import { RadioGroup, ToggleRow } from "./controls";
 import {
   disablePush,
@@ -41,7 +42,7 @@ export default function AccountTab() {
   }
 
   const email = user.primaryEmailAddress?.emailAddress;
-  const name = user.fullName || user.firstName || email || "Climber";
+  const name = accountNameFromIdentity(user) ?? "Account";
 
   return (
     <div className="pf-account">

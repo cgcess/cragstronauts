@@ -70,6 +70,10 @@ export const CreateTripBodySchema = z.object({
   organizer_name: z.string().min(1),
 });
 
+export const JoinTripBodySchema = z.object({
+  name: z.string().trim().min(1),
+});
+
 export const CreateTripResponseSchema = z.object({
   trip_id: z.string(),
   organizer_user_id: z.number(),
